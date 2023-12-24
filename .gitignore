@@ -1,0 +1,6 @@
+examples/euler1d
+examples/euler1d_gpu
+examples/array_demo
+examples/array_demo_gpu
+examples/hdf5_demo
+*.h5
