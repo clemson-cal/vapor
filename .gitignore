@@ -3,4 +3,5 @@ examples/euler1d_gpu
 examples/array_demo
 examples/array_demo_gpu
 examples/hdf5_demo
+examples/config_demo
 *.h5

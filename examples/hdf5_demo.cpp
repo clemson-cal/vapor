@@ -27,21 +27,6 @@ VISITABLE_STRUCT(config_t, a, b, c, d, e, f, g);
 
 int main(int argc, const char **argv)
 {
-    for (int n = 1; n < argc; ++n)
-    {
-        try {
-            vapor::scan_key_val(argv[n], ' ', [] (auto l, auto nl, auto r, auto nr)
-            {
-                printf("L: %.*s\n", int(nl), l);
-                printf("R: %.*s\n", int(nr), r);
-            });
-        }
-        catch (std::exception&)
-        {
-
-        }
-    }
-
     auto conf1 = config_t{
         5,
         2.3,

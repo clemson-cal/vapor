@@ -44,7 +44,7 @@ static inline void print(const std::string& s)
 }
 template<typename T, uint S> void print(vapor::vec_t<T, S> v)
 {
-    print("vapor::vec(");
+    print("vec(");
     for (size_t n = 0; n < S; ++n)
     {
         print(v[n]);
@@ -54,7 +54,7 @@ template<typename T, uint S> void print(vapor::vec_t<T, S> v)
 }
 template<uint D, typename T> void print(const vapor::array_t<D, T>& v)
 {
-    print("vapor::array(");
+    print("array(");
     for (size_t n = 0; n < v.size(); ++n)
     {
         print(v[n]);
