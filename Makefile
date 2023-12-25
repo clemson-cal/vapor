@@ -5,6 +5,7 @@ NVCC = nvcc
 default: \
  examples/array_demo \
  examples/euler1d \
+ examples/srhd1d \
  examples/hdf5_demo \
  examples/config_demo
 
@@ -21,6 +22,9 @@ examples/euler1d: examples/euler1d.cpp include/*.hpp
 
 examples/euler1d_gpu: examples/euler1d.cpp include/*.hpp
 	$(NVCC) $(CUDAFLAGS) -x cu $< -o $@ -I include
+
+examples/srhd1d: examples/srhd1d.cpp include/*.hpp
+	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include
 
 examples/hdf5_demo: examples/hdf5_demo.cpp include/*.hpp
 	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include -lhdf5

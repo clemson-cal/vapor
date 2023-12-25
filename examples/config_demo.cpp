@@ -46,6 +46,7 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
         expect_comma,
         expect_end,
     };
+
     auto state = lexer_state::ready;
     unsigned int m = 0;
 
@@ -63,7 +64,7 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
             break;
 
         case lexer_state::expect_comma:
-            if (str[n] == ',')
+            if (str[n] == ',' || str[n] == ' ')
                 state = lexer_state::ready;
             break;
 

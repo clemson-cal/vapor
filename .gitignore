@@ -1,4 +1,5 @@
 examples/euler1d
+examples/srhd1d
 examples/euler1d_gpu
 examples/array_demo
 examples/array_demo_gpu
