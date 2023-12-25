@@ -4,6 +4,8 @@
 namespace vapor {
 
 
+
+
 /**
  * Invoke a parser callback on key-value pairs found in a string
  *
@@ -47,10 +49,12 @@ static void scan_key_val(const char *str, char sep, F parser)
             }
             else if (isalpha(c) || c == '\n' || c == '\0') {
                 state = lexer_state::lhs;
+                // printf("ready -> lhs\n");
                 lhs_start = str;
             }
             else if (c == '#') {
                 state = lexer_state::comment;
+                // printf("ready -> comment\n");
             }
             else {
                 throw std::runtime_error("[ready] bad identifier");
@@ -60,11 +64,16 @@ static void scan_key_val(const char *str, char sep, F parser)
         case lexer_state::lhs:
             if (c == '=') {
                 state = lexer_state::expect_rhs;
+                // printf("lhs -> expect_lhs\n");
                 lhs_final = str;
             }
             else if (isspace(c)) {
                 state = lexer_state::expect_equals;
+                // printf("lhs -> expect_equals\n");
                 lhs_final = str;
+            }
+            else if (c == '\0') {
+                throw std::runtime_error("[lhs] line ended without '='");
             }
             break;
 
@@ -73,6 +82,7 @@ static void scan_key_val(const char *str, char sep, F parser)
             }
             else if (c == '=') {
                 state = lexer_state::expect_rhs;
+                // printf("expect_equals -> expect_rhs\n");
             }
             else {
                 throw std::runtime_error("[expect_equals] line ended without '='");
@@ -85,6 +95,7 @@ static void scan_key_val(const char *str, char sep, F parser)
             }
             else if (! isspace(c)) {
                 state = lexer_state::rhs;
+                // printf("expect_rhs -> rhs\n");
                 rhs_start = str;
             }
             break;
@@ -92,12 +103,14 @@ static void scan_key_val(const char *str, char sep, F parser)
         case lexer_state::rhs:
             if (c == '#') {
                 state = lexer_state::comment;
+                // printf("rhs -> comment\n");
                 rhs_final = str;
                 parser(lhs_start, lhs_final - lhs_start,
                        rhs_start, rhs_final - rhs_start);
             }
             else if (c == sep || c == '\0') {
                 state = lexer_state::ready;
+                // printf("rhs -> ready\n");
                 rhs_final = str;
                 parser(lhs_start, lhs_final - lhs_start,
                        rhs_start, rhs_final - rhs_start);
@@ -107,6 +120,7 @@ static void scan_key_val(const char *str, char sep, F parser)
         case lexer_state::comment:
             if (c == '\n') {
                 state = lexer_state::ready;
+                // printf("comment -> ready\n");
             }
             break;
         }
