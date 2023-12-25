@@ -106,20 +106,20 @@ int main()
         return u;
     };
 
-    auto cons_to_prim = [=] (dvec_t<num_cons> cons)
+    auto cons_to_prim = [=] (dvec_t<num_cons> cons, double p)
     {
         auto newton_iter_max = 500;
-        auto error_tolerance = 1e-12 * (cons[index_density] + cons[index_pressure]);
+        auto error_tolerance = 1e-12 * (cons[index_density] + cons[index_energy]);
         auto gm              = gamma;
         auto m               = cons[index_density];
         auto tau             = cons[index_energy];
         auto ss              = momentum_squared(cons);
         auto iteration = 0;
-        auto p = 1.0;
         auto f = 0.0;
         auto w0 = 0.0;
 
-        while (true) {
+        while (true)
+        {
             auto et = tau + p + m;
             auto b2 = min2(ss / et / et, 1.0 - 1e-10);
             auto w2 = 1.0 / (1.0 - b2);
@@ -235,14 +235,14 @@ int main()
     auto exec = default_executor_t();
 
     auto t_final = 0.2;
-    auto N = 10000;
+    auto N = 100000;
     auto dx = 1.0 / N;
     auto iv = range(N + 1);
     auto ic = range(N);
     auto xc = (ic + 0.5) * dx;
     auto dt = dx * 0.3;
-    auto u = xc.map(initial_primitive).map(prim_to_cons).cache(exec);
-
+    auto p = xc.map(initial_primitive).cache(exec);
+    auto u = p.map(prim_to_cons).cache(exec);
     auto interior_faces = index_space(uvec(1), uvec(N - 1));
     auto interior_cells = index_space(uvec(1), uvec(N - 2));
     auto t = 0.0;
@@ -255,7 +255,11 @@ int main()
 
         for (int m = 0; m < fold; ++m)
         {
-            auto p = u.map(cons_to_prim).cache(exec);
+            p = ic.map([cons_to_prim, p, u] (auto i)
+            {
+                return cons_to_prim(u[i], p[i][index_pressure]);
+            }).cache(exec);
+
             auto fhat = iv[interior_faces].map([p, u, riemann_hlle] HD (uint i)
             {
                 auto ul = u[i - 1];
