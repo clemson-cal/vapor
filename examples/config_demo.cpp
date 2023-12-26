@@ -6,18 +6,6 @@
 
 
 
-struct config_t
-{
-    int num_zones = 100;
-    double tfinal = 0.0;
-    vapor::ivec_t<2> shape;
-    vapor::dvec_t<5> priml;
-};
-VISITABLE_STRUCT(config_t, num_zones, tfinal, shape, priml);
-
-
-
-
 void scan(const char* str, unsigned int, unsigned int& val)
 {
     sscanf(str, "%u", &val);
@@ -82,32 +70,76 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
 
 
 
+
+template<unsigned int S=1024, typename... Args>
+auto message(const char* format, Args... args)
+{
+    vapor::vec_t<char, 1024> message;
+    snprintf(message, 1024, format, args...);
+    return message;
+}
+
+
+
+
+template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
+auto set_from_key_vals(T& target, const char *str)
+{
+    auto found = false;
+
+    vapor::scan_key_val(str, '\n', [&target, &found] (auto l, auto nl, auto r, auto nr)
+    {
+        visit_struct::for_each(target, [l, nl, r, nr, &found] (auto key, auto& val)
+        {
+
+            if (strncmp(l, key, nl) == 0)
+            {
+                scan(r, nr, val);
+                found = true;
+            }                    
+        });
+        if (! found)
+        {
+            throw std::runtime_error(message("key not found: %.*s", int(nl), l));
+        }
+    });
+}
+
+
+
+
+template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
+auto set_from_key_vals(T& target, int argc, const char **argv)
+{
+    for (int n = 1; n < argc; ++n)
+    {
+        set_from_key_vals(target, argv[n]);
+    }
+}
+
+
+
+
+struct config_t
+{
+    int num_zones = 100;
+    double tfinal = 0.0;
+    vapor::ivec_t<2> shape;
+    vapor::dvec_t<5> left;
+    vapor::dvec_t<5> right;
+};
+VISITABLE_STRUCT(config_t, num_zones, tfinal, shape, left, right);
+
+
+
+
 int main(int argc, const char **argv)
 {
     auto config = config_t();
 
     try {
-        for (int n = 1; n < argc; ++n)
-        {
-            auto found = false;
+        set_from_key_vals(config, argc, argv);
 
-            vapor::scan_key_val(argv[n], '\n', [&config, &found] (auto l, auto nl, auto r, auto nr)
-            {
-                visit_struct::for_each(config, [&found, l, nl, r, nr] (auto key, auto& val)
-                {
-
-                    if (strncmp(l, key, nl) == 0)
-                    {
-                        scan(r, nr, val);
-                        found = true;
-                    }                    
-                });
-                if (! found)
-                {
-                    throw std::runtime_error("key not found");
-                }
-            });
-        }
         auto print_pair = [] (auto n, const auto& v)
         {
             vapor::print(n);
