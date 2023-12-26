@@ -37,17 +37,8 @@ int main(int argc, const char **argv)
         {0, 1, 2, 3, 4}};
     auto conf2 = config_t();
 
-    {
-        auto h5f = H5Fcreate("hdf5_demo.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-        vapor::hdf5_write(h5f, "conf", conf1);
-        H5Fclose(h5f);
-    }
-
-    {
-        auto h5f = H5Fopen("hdf5_demo.h5", H5P_DEFAULT, H5P_DEFAULT);
-        vapor::hdf5_read(h5f, "conf", conf2);
-        H5Fclose(h5f);
-    }
+    vapor::hdf5_write_file("hdf5_demo.h5", conf1);
+    vapor::hdf5_read_file("hdf5_demo.h5", conf2);
 
     auto print_pair = [] (auto n, const auto& v)
     {

@@ -43,7 +43,7 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
 {
     enum class lexer_state {
         ready,
-        expect_comma,
+        expect_sep,
         expect_end,
     };
 
@@ -60,10 +60,10 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
             if (m == S)
                 state = lexer_state::expect_end;
             else
-                state = lexer_state::expect_comma;
+                state = lexer_state::expect_sep;
             break;
 
-        case lexer_state::expect_comma:
+        case lexer_state::expect_sep:
             if (str[n] == ',' || str[n] == ' ')
                 state = lexer_state::ready;
             break;
@@ -89,15 +89,23 @@ int main(int argc, const char **argv)
     try {
         for (int n = 1; n < argc; ++n)
         {
-            vapor::scan_key_val(argv[n], ' ', [&config] (auto l, auto nl, auto r, auto nr)
+            auto found = false;
+
+            vapor::scan_key_val(argv[n], '\n', [&config, &found] (auto l, auto nl, auto r, auto nr)
             {
-                visit_struct::for_each(config, [l, nl, r, nr] (auto key, auto& val)
+                visit_struct::for_each(config, [&found, l, nl, r, nr] (auto key, auto& val)
                 {
+
                     if (strncmp(l, key, nl) == 0)
                     {
                         scan(r, nr, val);
+                        found = true;
                     }                    
                 });
+                if (! found)
+                {
+                    throw std::runtime_error("key not found");
+                }
             });
         }
         auto print_pair = [] (auto n, const auto& v)

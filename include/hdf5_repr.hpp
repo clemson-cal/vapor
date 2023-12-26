@@ -10,7 +10,8 @@ namespace vapor {
 /**
  * A template struct to explain how a type is represented to HDF5
  *
- * A minimal example implementation to represent a type T looks like this:
+ * A template specialization to represent a POD type T to HDF5 looks something
+ * like this:
  *
  * 
  * template<> struct hdf5_repr<T>
@@ -19,7 +20,7 @@ namespace vapor {
  *     static T* data(T& val) { return &val; }
  *     static void allocate(T&, hid_t space, hid_t type) { }
  *     static hid_t space(const T&) { return H5Screate(H5S_SCALAR); }
- *     static hid_t type(const T&) { return H5Tcopy(h); }
+ *     static hid_t type(const T&) { return H5Tcopy(...); }
  * }
  */
 template<typename T> struct hdf5_repr;
@@ -90,6 +91,31 @@ void hdf5_read(hid_t location, const char *name, T& val)
         H5Sclose(space);
         H5Dclose(set);
     }
+}
+
+
+
+
+template<typename T>
+void hdf5_write_file(const char *filename, const T& val)
+{
+    auto h5f = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    visit_struct::for_each(val, [h5f] (const char *name, const auto& val)
+    {
+        hdf5_write(h5f, name, val);
+    });
+    H5Fclose(h5f);
+}
+
+template<typename T>
+void hdf5_read_file(const char *filename, T& val)
+{
+    auto h5f = H5Fopen(filename, H5P_DEFAULT, H5P_DEFAULT);
+    visit_struct::for_each(val, [h5f] (const char *name, auto& val)
+    {
+        hdf5_read(h5f, name, val);
+    });
+    H5Fclose(h5f);
 }
 
 } // namespace vapor
