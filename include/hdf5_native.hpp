@@ -33,6 +33,29 @@ HDF5_REPR_POD(unsigned long long, H5T_NATIVE_ULLONG);
 HDF5_REPR_POD(float, H5T_NATIVE_FLOAT);
 HDF5_REPR_POD(double, H5T_NATIVE_DOUBLE);
 HDF5_REPR_POD(long double, H5T_NATIVE_LDOUBLE);
-HDF5_REPR_POD(bool, H5T_NATIVE_B8);
+
+
+
+
+/**
+ * Representation of C++ bool type in HDF5, compatible with h5py
+ */
+template<> struct hdf5_repr<bool>
+{
+    using T = bool;
+    static const T* data(const T& val) { return &val; }
+    static T* data(T& val) { return &val; }
+    static void allocate(T&, hid_t space, hid_t type) { }
+    static hid_t space(const T&) { return H5Screate(H5S_SCALAR); }
+    static hid_t type(const T&)
+    {
+        auto t = true;
+        auto f = false;
+        auto type = H5Tcreate(H5T_ENUM, sizeof(bool));
+        H5Tenum_insert(type, "FALSE", &f);
+        H5Tenum_insert(type, "TRUE", &t);
+        return type;
+    }
+};
 
 } // namespace vapor
