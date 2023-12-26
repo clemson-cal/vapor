@@ -1,3 +1,5 @@
+#define VAPOR_STD_STRING
+#define VAPOR_STD_VECTOR
 #include "hdf5_repr.hpp"
 #include "hdf5_native.hpp"
 #include "hdf5_string.hpp"

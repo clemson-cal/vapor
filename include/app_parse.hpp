@@ -1,5 +1,8 @@
 #pragma once
 #include <stdexcept>
+#include "app_print.hpp"
+#include "core_vec.hpp"
+#include "visit_struct.hpp"
 
 namespace vapor {
 
@@ -131,6 +134,120 @@ static void scan_key_val(const char *str, char sep, F parser)
         else {
             ++str;
         }
+    }
+}
+
+
+
+
+void scan(const char* str, unsigned int size, bool& val)
+{
+    if (size == 4 && strncmp(str, "true", 4) == 0) {
+        val = true;
+    }
+    else if (size == 5 && strncmp(str, "false", 5) == 0) {
+        val = false;
+    }
+    else {
+        throw std::runtime_error(message("expected true|false, got %.*s", size, str));
+    }
+}
+void scan(const char* str, unsigned int, unsigned int& val)
+{
+    sscanf(str, "%u", &val);
+}
+void scan(const char* str, unsigned int, int& val)
+{
+    sscanf(str, "%d", &val);
+}
+void scan(const char* str, unsigned int, float& val)
+{
+    sscanf(str, "%f", &val);
+}
+void scan(const char* str, unsigned int, double& val)
+{
+    sscanf(str, "%lf", &val);
+}
+
+
+
+
+template<typename D, unsigned int S>
+void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
+{
+    enum class lexer_state {
+        ready,
+        expect_sep,
+        expect_end,
+    };
+
+    auto state = lexer_state::ready;
+    unsigned int m = 0;
+
+    for (unsigned int n = 0; n < size; ++n)
+    {
+        switch (state)
+        {
+        case lexer_state::ready:
+            scan(&str[n], size - n, val[m]);
+            m += 1;
+            if (m == S)
+                state = lexer_state::expect_end;
+            else
+                state = lexer_state::expect_sep;
+            break;
+
+        case lexer_state::expect_sep:
+            if (str[n] == ',' || str[n] == ' ')
+                state = lexer_state::ready;
+            break;
+
+        case lexer_state::expect_end:
+            if (str[n] == ',')
+                throw std::runtime_error(message("vec size must be %d", S));
+            break;
+        }
+    }
+    if (m < S) {
+        throw std::runtime_error(message("vec size must be %d", S));
+    }
+}
+
+
+
+
+template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
+auto set_from_key_vals(T& target, const char *str)
+{
+    auto found = false;
+
+    vapor::scan_key_val(str, '\n', [&target, &found] (auto l, auto nl, auto r, auto nr)
+    {
+        visit_struct::for_each(target, [l, nl, r, nr, &found] (auto key, auto& val)
+        {
+
+            if (strncmp(l, key, nl) == 0)
+            {
+                scan(r, nr, val);
+                found = true;
+            }                    
+        });
+        if (! found)
+        {
+            throw std::runtime_error(message("no data member '%.*s'", int(nl), l));
+        }
+    });
+}
+
+
+
+
+template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
+auto set_from_key_vals(T& target, int argc, const char **argv)
+{
+    for (int n = 1; n < argc; ++n)
+    {
+        set_from_key_vals(target, argv[n]);
     }
 }
 
