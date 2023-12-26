@@ -106,7 +106,7 @@ int main()
         return u;
     };
 
-    auto cons_to_prim = [=] (dvec_t<num_cons> cons, double p)
+    auto cons_to_prim = [=] (dvec_t<num_cons> cons, double p=0.0)
     {
         auto newton_iter_max = 500;
         auto error_tolerance = 1e-12 * (cons[index_density] + cons[index_energy]);
@@ -114,8 +114,7 @@ int main()
         auto m               = cons[index_density];
         auto tau             = cons[index_energy];
         auto ss              = momentum_squared(cons);
-        auto iteration = 0;
-        auto f = 0.0;
+        auto n = 0;
         auto w0 = 0.0;
 
         while (true)
@@ -124,25 +123,25 @@ int main()
             auto b2 = min2(ss / et / et, 1.0 - 1e-10);
             auto w2 = 1.0 / (1.0 - b2);
             auto w  = sqrt(w2);
-            auto e  = (tau + m * (1.0 - w) + p * (1.0 - w2)) / (m * w);
             auto d  = m / w;
-            auto h  = 1.0 + e + p / d;
-            auto a2 = gm * p / (d * h);
+            auto de = (tau + m * (1.0 - w) + p * (1.0 - w2)) / w2;
+            auto dh = d + de + p;
+            auto a2 = gm * p / dh;
             auto g  = b2 * a2 - 1.0;
+            auto f  = de * (gm - 1.0) - p;
 
-            f  = d * e * (gm - 1.0) - p;
             p -= f / g;
+            n += 1;
 
-            if (fabs(f) < error_tolerance || iteration == newton_iter_max) {
+            if (n == newton_iter_max)
+            {
+                printf("c2p failed; D=%f tau=%f\n", cons[index_density], cons[index_energy]);
+                exit(1);
+            }
+            if (fabs(f) < error_tolerance) {
                 w0 = w;
                 break;
             }
-            iteration += 1;
-        }
-        if (iteration == newton_iter_max)
-        {
-            printf("c2p failed; D=%f tau=%f\n", cons[index_density], cons[index_energy]);
-            exit(1);
         }
 
         auto prim = dvec_t<num_prim>{};
@@ -243,6 +242,7 @@ int main()
     auto dt = dx * 0.3;
     auto p = xc.map(initial_primitive).cache(exec);
     auto u = p.map(prim_to_cons).cache(exec);
+    auto p2 = u.map(cons_to_prim).cache(exec);
     auto interior_faces = index_space(uvec(1), uvec(N - 1));
     auto interior_cells = index_space(uvec(1), uvec(N - 2));
     auto t = 0.0;
@@ -288,7 +288,7 @@ int main()
         printf("[%04d] t=%.3lf Mzps=%.3lf\n", n, t, Mzps);
     }
 
-    // auto p = u.map(cons_to_prim);
+    // p = u.map(cons_to_prim).cache(exec);
     // for (int i = 0; i < N; ++i)
     // {
     //     printf("%+.4f %+.4f %+.4f %+.4f\n", xc[i], p[i][0], p[i][1], p[i][2]);

@@ -31,10 +31,6 @@ static inline void print(const char *s)
 {
     printf("%s", s);
 }
-static inline void print(size_t n)
-{
-    printf("%lu", n);
-}
 static inline void print(int a)
 {
     printf("%d", a);
@@ -42,6 +38,14 @@ static inline void print(int a)
 static inline void print(uint a)
 {
     printf("%u", a);
+}
+static inline void print(unsigned long n)
+{
+    printf("%lu", n);
+}
+static inline void print(float a)
+{
+    printf("%f", a);
 }
 static inline void print(double a)
 {
