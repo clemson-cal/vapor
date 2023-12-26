@@ -24,7 +24,7 @@ auto message(const char* format, Args... args)
 
 
 /**
- * Print functions
+ * Print functions for native types
  * 
  */
 static inline void print(const char *s)
@@ -51,6 +51,50 @@ static inline void print(bool b)
 {
     printf("%s", b ? "true" : "false");
 }
+
+
+
+
+/**
+ * Print function for std::string (opt-in)
+ * 
+ */
+#ifdef VAPOR_STD_STRING
+#include <string>
+static inline void print(const std::string& s)
+{
+    print(s.data());
+}
+#endif
+
+
+
+
+/**
+ * Print function for std::vector<T> (opt-in)
+ * 
+ */
+#ifdef VAPOR_STD_VECTOR
+#include <vector>
+template<typename T> void print(const std::vector<T>& v)
+{
+    print("std::vector(");
+    for (size_t n = 0; n < v.size(); ++n)
+    {
+        print(v[n]);
+        if (n != v.size() - 1) print(" ");
+    }
+    print(")");
+}
+#endif
+
+
+
+
+/**
+ * Print functions for vapor types
+ * 
+ */
 template<typename T, uint S> void print(vapor::vec_t<T, S> v)
 {
     for (size_t n = 0; n < S; ++n)
@@ -69,6 +113,14 @@ template<uint D, typename T> void print(const vapor::array_t<D, T>& v)
     }
     print(")");
 }
+
+
+
+
+/**
+ * Print functions for visitable type
+ * 
+ */
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
 void print(const T& target)
 {
@@ -80,27 +132,5 @@ void print(const T& target)
         vapor::print("\n");
     });
 }
-
-#ifdef VAPOR_STD_STRING
-#include <string>
-static inline void print(const std::string& s)
-{
-    print(s.data());
-}
-#endif
-
-#ifdef VAPOR_STD_VECTOR
-#include <vector>
-template<typename T> void print(const std::vector<T>& v)
-{
-    print("std::vector(");
-    for (size_t n = 0; n < v.size(); ++n)
-    {
-        print(v[n]);
-        if (n != v.size() - 1) print(" ");
-    }
-    print(")");
-}
-#endif
 
 } // namespace vapor

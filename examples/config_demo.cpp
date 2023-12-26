@@ -32,4 +32,5 @@ int main(int argc, const char **argv)
     {
         printf("%s\n", e.what());
     }
+    return 0;
 }

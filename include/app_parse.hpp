@@ -225,7 +225,6 @@ auto set_from_key_vals(T& target, const char *str)
     {
         visit_struct::for_each(target, [l, nl, r, nr, &found] (auto key, auto& val)
         {
-
             if (strncmp(l, key, nl) == 0)
             {
                 scan(r, nr, val);

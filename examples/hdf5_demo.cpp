@@ -41,16 +41,9 @@ int main(int argc, const char **argv)
 
     vapor::hdf5_write_file("hdf5_demo.h5", conf1);
     vapor::hdf5_read_file("hdf5_demo.h5", conf2);
-
-    auto print_pair = [] (auto n, const auto& v)
-    {
-        vapor::print(n);
-        vapor::print(": ");
-        vapor::print(v);
-        vapor::print("\n");
-    };
-    visit_struct::for_each(conf1, print_pair); vapor::print("\n");
-    visit_struct::for_each(conf2, print_pair);
+    vapor::print(conf1);
+    vapor::print("\n");
+    vapor::print(conf2);
 
     return 0;
 }
