@@ -1,5 +1,5 @@
-CXXFLAGS = -Wall -Ofast
-CUDAFLAGS = -std=c++17 --extended-lambda
+CXXFLAGS = -Wall -std=c++17 -Ofast
+NVCFLAGS = -Wall -std=c++17 --extended-lambda
 NVCC = nvcc
 
 default: \
@@ -9,25 +9,27 @@ default: \
  examples/hdf5_demo \
  examples/config_demo
 
-gpu: examples/demo_gpu examples/euler1d_gpu
-
 examples/array_demo: examples/array_demo.cpp include/*.hpp
-	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include
-
-examples/array_demo_gpu: examples/array_demo.cpp include/*.hpp
-	$(NVCC) $(CUDAFLAGS) -x cu $< -o $@ -I include
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include
 
 examples/euler1d: examples/euler1d.cpp include/*.hpp
-	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include
-
-examples/euler1d_gpu: examples/euler1d.cpp include/*.hpp
-	$(NVCC) $(CUDAFLAGS) -x cu $< -o $@ -I include
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include
 
 examples/srhd1d: examples/srhd1d.cpp include/*.hpp
-	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include
 
 examples/hdf5_demo: examples/hdf5_demo.cpp include/*.hpp
-	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include -lhdf5
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include -lhdf5
 
 examples/config_demo: examples/config_demo.cpp include/*.hpp
-	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include
+
+gpu: \
+ examples/demo_gpu \
+ examples/euler1d_gpu
+
+examples/euler1d_gpu: examples/euler1d.cpp include/*.hpp
+	$(NVCC) $(CUDFLAGS) -x cu $< -o $@ -I include
+
+examples/array_demo_gpu: examples/array_demo.cpp include/*.hpp
+	$(NVCC) $(CUDFLAGS) -x cu $< -o $@ -I include
