@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <stdexcept>
 #include "app_print.hpp"
 #include "core_vec.hpp"

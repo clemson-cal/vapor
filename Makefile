@@ -30,4 +30,4 @@ examples/hdf5_demo: examples/hdf5_demo.cpp include/*.hpp
 	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include -lhdf5
 
 examples/config_demo: examples/config_demo.cpp include/*.hpp
-	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include -lhdf5
+	$(CXX) $(CXXFLAGS) -std=c++17 -o $@ $< -I include

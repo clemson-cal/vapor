@@ -9,7 +9,15 @@ using namespace vapor;
 #define max2(a, b) ((a) > (b) ? (a) : (b))
 #define min3(a, b, c) min2(a, min2(b, c))
 #define max3(a, b, c) max2(a, max2(b, c))
+
+#ifdef __NVCC__
 #define CACHE_FLUX true
+#else
+#define CACHE_FLUX false
+#endif
+
+
+
 
 int main()
 {
@@ -80,7 +88,7 @@ int main()
     auto exec = default_executor_t();
 
     auto t_final = 0.1;
-    auto N = 20000;
+    auto N = 2000000;
     auto dx = 1.0 / N;
     auto iv = range(N + 1);
     auto ic = range(N);

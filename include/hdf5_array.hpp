@@ -67,7 +67,7 @@ template<uint D, typename U> struct hdf5_repr<vapor::shared_array_t<D, U>>
         H5Sget_simple_extent_dims(space, hdims, nullptr);
         auto shape = vapor::uvec_t<D>{};
 
-        for (int n = 0; n < D; ++n)
+        for (uint n = 0; n < D; ++n)
         {
             shape[n] = hdims[n];
         }
@@ -82,7 +82,7 @@ template<uint D, typename U> struct hdf5_repr<vapor::shared_array_t<D, U>>
     {
         hsize_t dims[D];
 
-        for (int n = 0; n < D; ++n)
+        for (uint n = 0; n < D; ++n)
         {
             dims[n] = val._shape[n];
         }
