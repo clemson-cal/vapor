@@ -212,6 +212,54 @@ HD auto operator-(const vec_t<T, S>& x, const vec_t<T, S>& y)
 }
 
 template<typename T, uint S>
+HD auto operator*(const vec_t<T, S>& x, const vec_t<T, S>& y)
+{
+    auto result = vec_t<T, S>{};
+
+    for (uint m = 0; m < S; ++m)
+    {
+        result[m] = x[m] * y[m];
+    }
+    return result;
+}
+
+template<typename T, uint S>
+HD auto operator/(const vec_t<T, S>& x, const vec_t<T, S>& y)
+{
+    auto result = vec_t<T, S>{};
+
+    for (uint m = 0; m < S; ++m)
+    {
+        result[m] = x[m] / y[m];
+    }
+    return result;
+}
+
+template<typename T, uint S>
+HD auto operator+(const vec_t<T, S>& x, T b)
+{
+    auto result = vec_t<T, S>{};
+
+    for (uint m = 0; m < S; ++m)
+    {
+        result[m] = x[m] + b;
+    }
+    return result;
+}
+
+template<typename T, uint S>
+HD auto operator-(const vec_t<T, S>& x, T b)
+{
+    auto result = vec_t<T, S>{};
+
+    for (uint m = 0; m < S; ++m)
+    {
+        result[m] = x[m] - b;
+    }
+    return result;
+}
+
+template<typename T, uint S>
 HD auto operator*(const vec_t<T, S>& x, T b)
 {
     auto result = vec_t<T, S>{};
