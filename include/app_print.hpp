@@ -99,13 +99,21 @@ template<typename T> void print(const std::vector<T>& v)
  * Print functions for vapor types
  * 
  */
-template<typename T, uint S> void print(vapor::vec_t<T, S> v)
+template<typename T, uint S> void print(const vec_t<T, S>& v)
 {
     for (size_t n = 0; n < S; ++n)
     {
         print(v[n]);
         if (n != S - 1) print(" ");
     }
+}
+template<uint D> void print(const index_space_t<D>& space)
+{
+    print("start: ");
+    print(space.i0);
+    print(" ");
+    print("shape: ");
+    print(space.di);
 }
 template<uint D, typename T> void print(const vapor::array_t<D, T>& v)
 {

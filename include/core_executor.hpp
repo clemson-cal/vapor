@@ -184,10 +184,13 @@ struct gpu_executor_t : public allocation_pool_t
     void loop(index_space_t<1> space, F function) const
     {
         #ifdef __CUDACC__
-        auto ni = space.di[0];
-        auto bs = THREAD_BLOCK_SIZE_1D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x);
-        gpu_loop<<<nb, bs>>>(space, function);
+        space.decompose(1, [] (auto subspace)
+        {
+            auto ni = subspace.di[0];
+            auto bs = THREAD_BLOCK_SIZE_1D;
+            auto nb = dim3((ni + bs.x - 1) / bs.x);
+            gpu_loop<<<nb, bs>>>(subspace, function);
+        });
         #else
         throw;
         #endif
@@ -197,11 +200,14 @@ struct gpu_executor_t : public allocation_pool_t
     void loop(index_space_t<2> space, F function) const
     {
         #ifdef __CUDACC__
-        auto ni = space.di[0];
-        auto nj = space.di[1];
-        auto bs = THREAD_BLOCK_SIZE_2D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
-        gpu_loop<<<nb, bs>>>(space, function);
+        space.decompose(1, [] (auto subspace)
+        {
+            auto ni = subspace.di[0];
+            auto nj = subspace.di[1];
+            auto bs = THREAD_BLOCK_SIZE_2D;
+            auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
+            gpu_loop<<<nb, bs>>>(subspace, function);
+        });
         #else
         throw;
         #endif
@@ -211,12 +217,15 @@ struct gpu_executor_t : public allocation_pool_t
     void loop(index_space_t<3> space, F function) const
     {
         #ifdef __CUDACC__
-        auto ni = space.di[0];
-        auto nj = space.di[1];
-        auto nk = space.di[2];
-        auto bs = THREAD_BLOCK_SIZE_3D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
-        gpu_loop<<<nb, bs>>>(space, function);
+        space.decompose(1, [] (auto subspace)
+        {
+            auto ni = subspace.di[0];
+            auto nj = subspace.di[1];
+            auto nk = subspace.di[2];
+            auto bs = THREAD_BLOCK_SIZE_3D;
+            auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
+            gpu_loop<<<nb, bs>>>(subspace, function);
+        });
         #else
         throw;
         #endif

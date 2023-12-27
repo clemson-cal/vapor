@@ -4,6 +4,7 @@
 #include "core_memory.hpp"
 #include "core_index_space.hpp"
 #include "core_array.hpp"
+#include "app_print.hpp"
 
 using namespace vapor;
 
@@ -83,6 +84,17 @@ void construct_pointer_types()
     printf("%d=24\n", *ints[0]);
 }
 
+void decompose_index_space()
+{
+    printf("decompose an index space\n");
+
+    index_space(uvec(5, 5), uvec(10, 20)).decompose(4, [] (auto space)
+    {
+        print(space);
+        print("\n");
+    });
+}
+
 int main()
 {
     type_constructors();
@@ -90,5 +102,6 @@ int main()
     map_subset();
     generator_arrays();
     construct_pointer_types();
+    decompose_index_space();
     return 0;
 }
