@@ -1,6 +1,9 @@
 #pragma once
-#include "hdf5_repr.hpp"
+#include <memory>
 #include "core_array.hpp"
+#include "core_functional.hpp"
+#include "core_memory.hpp"
+#include "hdf5_repr.hpp"
 
 namespace vapor {
 
@@ -65,17 +68,17 @@ template<uint D, typename U> struct hdf5_repr<vapor::shared_array_t<D, U>>
         }
         hsize_t hdims[D];
         H5Sget_simple_extent_dims(space, hdims, nullptr);
-        auto shape = vapor::uvec_t<D>{};
+        auto shape = uvec_t<D>{};
 
         for (uint n = 0; n < D; ++n)
         {
             shape[n] = hdims[n];
         }
-        auto start = vapor::zeros_uvec<D>();
-        auto stride = vapor::strides_row_major(shape);
+        auto start = zeros_uvec<D>();
+        auto stride = strides_row_major(shape);
         auto memory = std::make_shared<vapor::managed_memory_t>();
         auto data = memory->allocate<U>(product(shape));
-        auto lookup = vapor::lookup(start, stride, data, memory);
+        auto lookup = lookup(start, stride, data, memory);
         val = array(lookup, index_space(start, shape), data);
     }
     static hid_t space(const T& val)
