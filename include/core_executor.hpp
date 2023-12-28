@@ -133,7 +133,13 @@ struct omp_executor_t : public allocation_pool_t
 
 
 
+
+
+
+
+
 #ifdef __CUDACC__
+
 template<typename F, uint D>
 __global__ static void gpu_loop(index_space_t<D> space, F function)
 {
@@ -164,16 +170,13 @@ __global__ static void gpu_loop(index_space_t<D> space, F function)
         function(uvec(i, j, k));
     }
 }
-#endif
 
 
 
 
-#ifdef __CUDACC__
 static const dim3 THREAD_BLOCK_SIZE_1D(64, 1, 1);
 static const dim3 THREAD_BLOCK_SIZE_2D(8, 8, 1);
 static const dim3 THREAD_BLOCK_SIZE_3D(4, 4, 4);
-#endif
 
 
 
@@ -183,29 +186,27 @@ struct gpu_executor_t : public allocation_pool_t
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
-	int num_devices;
-       	cudaGetDeviceCount(&num_devices);
-	auto device = 0;
-        #ifdef __CUDACC__
+        int device = 0;
+        int num_devices;
+        cudaGetDeviceCount(&num_devices);
         space.decompose(num_devices, [&device, function] (auto subspace)
         {
-	    cudaSetDevice(device);
+            cudaSetDevice(device);
             auto ni = subspace.di[0];
             auto bs = THREAD_BLOCK_SIZE_1D;
             auto nb = dim3((ni + bs.x - 1) / bs.x);
             gpu_loop<<<nb, bs>>>(subspace, function);
-	    device += 1;
+            device += 1;
         });
-        #else
-        throw;
-        #endif
     }
 
     template<typename F>
     void loop(index_space_t<2> space, F function) const
     {
-        #ifdef __CUDACC__
-        space.decompose(1, [function] (auto subspace)
+        int device = 0;
+        int num_devices;
+        cudaGetDeviceCount(&num_devices);
+        space.decompose(num_devices, [&device, function] (auto subspace)
         {
             auto ni = subspace.di[0];
             auto nj = subspace.di[1];
@@ -213,16 +214,15 @@ struct gpu_executor_t : public allocation_pool_t
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
             gpu_loop<<<nb, bs>>>(subspace, function);
         });
-        #else
-        throw;
-        #endif
     }
 
     template<typename F>
     void loop(index_space_t<3> space, F function) const
     {
-        #ifdef __CUDACC__
-        space.decompose(1, [function] (auto subspace)
+        int device = 0;
+        int num_devices;
+        cudaGetDeviceCount(&num_devices);
+        space.decompose(num_devices, [&device, function] (auto subspace)
         {
             auto ni = subspace.di[0];
             auto nj = subspace.di[1];
@@ -231,15 +231,11 @@ struct gpu_executor_t : public allocation_pool_t
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
             gpu_loop<<<nb, bs>>>(subspace, function);
         });
-        #else
-        throw;
-        #endif
     }
 
     template<typename T, typename R>
     T reduce(const T* data, size_t size, R reducer, T start) const
     {
-        #ifdef __CUDACC__
         T result;
         T *result_buf = nullptr;
         void *scratch = nullptr;
@@ -252,11 +248,11 @@ struct gpu_executor_t : public allocation_pool_t
         cudaFree(result_buf);
         cudaFree(scratch);
         return result;
-        #else
-        throw;
-        #endif
     }
 };
+#endif // __CUDACC__
+
+
 
 
 #ifdef __CUDACC__

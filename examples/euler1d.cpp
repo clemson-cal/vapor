@@ -13,7 +13,7 @@ using namespace vapor;
 #ifdef __NVCC__
 #define CACHE_FLUX false
 #else
-#define CACHE_FLUX false
+#define CACHE_FLUX true
 #endif
 
 
@@ -88,7 +88,7 @@ int main()
     auto exec = default_executor_t();
 
     auto t_final = 0.1;
-    auto N = 2000000;
+    auto N = 20000;
     auto dx = 1.0 / N;
     auto iv = range(N + 1);
     auto ic = range(N);
