@@ -15,7 +15,7 @@ namespace vapor {
 template<unsigned int S=256, typename... Args>
 auto message(const char* format, Args... args)
 {
-    auto message = vapor::zeros_vec<char, S>();
+    auto message = zeros_vec<char, S>();
     snprintf(message, S, format, args...);
     return message;
 }
@@ -109,7 +109,7 @@ template<typename T, uint S> void print(const vec_t<T, S>& v)
         if (n != S - 1) print(" ");
     }
 }
-template<uint S> void print(vapor::vec_t<char, S> v)
+template<uint S> void print(vec_t<char, S> v)
 {
     printf("%s", v.data);
 }
@@ -121,7 +121,7 @@ template<uint D> void print(const index_space_t<D>& space)
     print("shape: ");
     print(space.di);
 }
-template<uint D, typename T> void print(const vapor::array_t<D, T>& v)
+template<uint D, typename T> void print(const array_t<D, T>& v)
 {
     print("array(");
     for (size_t n = 0; n < v.size(); ++n)
@@ -144,10 +144,10 @@ void print(const T& target)
 {
     visit_struct::for_each(target, [] (const char *key, const auto& val)
     {
-        vapor::print(key);
-        vapor::print(": ");
-        vapor::print(val);
-        vapor::print("\n");
+        print(key);
+        print(" = ");
+        print(val);
+        print("\n");
     });
 }
 

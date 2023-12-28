@@ -1,81 +1,58 @@
-#include "app_print.hpp"
 #include "app_parse.hpp"
+#include "app_print.hpp"
 #include "core_array.hpp"
-#include "visit_struct.hpp"
-#include "hdf5_repr.hpp"
-#include "hdf5_native.hpp"
 #include "hdf5_array.hpp"
+#include "hdf5_native.hpp"
+#include "hdf5_repr.hpp"
+#include "hdf5_vector.hpp"
+#include "visit_struct.hpp"
 
 
 
 
-template<typename Config, typename State>
-class SimulationBase
+
+/**
+ * Represents a task to be performed at a regular interval
+ */
+struct task_state_t
 {
-public:
+    int number = 0;
+    double last_time = -1.0;
+    double interval = 0.0;
 
-    virtual void update(State& state) const = 0;
-    virtual bool should_continue(const State& state) const = 0;
-    virtual vapor::vec_t<char, 256> status_message(const State& state) const = 0;
-
-    Config& configuration()
+    bool should_be_performed(double t, bool force=false)
     {
-        return config;
+        if (last_time == -1.0) {
+            last_time = t;
+            return true;
+        }
+        else if (interval > 0.0 && t > last_time + interval) {
+            number += 1;
+            last_time += interval;
+            return true;
+        }
+        else if (force) {
+            number += 1;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
-
-protected:
-    Config config;
 };
 
+VISITABLE_STRUCT(task_state_t, number, last_time, interval);
 
 
 
-struct Config
+
+struct task_states_t
 {
-    double tfinal = 1.0;
-    int num_zones = 100;
+    task_state_t checkpoint;
+    task_state_t timeseries;
+    task_state_t diagnostic;
 };
-VISITABLE_STRUCT(Config, tfinal, num_zones);
-
-
-
-
-struct State
-{
-    double time;
-    int iteration;
-    vapor::shared_array_t<1, double> u;
-};
-VISITABLE_STRUCT(State, time, iteration, u);
-
-
-
-
-class Simulation : public SimulationBase<Config, State>
-{
-public:
-    auto initial_state() const
-    {
-        return State{
-            0.0, 0, vapor::zeros<double>(vapor::uvec(100)).cache()
-        };
-    }
-    void update(State& state) const override
-    {
-        state.time += 0.1;
-        state.iteration += 1;
-    }
-    bool should_continue(const State& state) const override
-    {
-        return state.time < config.tfinal;
-    }
-    vapor::vec_t<char, 256> status_message(const State& state) const override
-    {
-        return vapor::message("[%04d] t=%lf", state.iteration, state.time);
-    }
-private:
-    vapor::cpu_executor_t executor;
-};
+VISITABLE_STRUCT(task_states_t, checkpoint, timeseries, diagnostic);
 
 
 
@@ -83,20 +60,109 @@ private:
 template<class Simulation>
 int run(int argc, const char **argv, Simulation sim)
 {
-    vapor::set_from_key_vals(sim.configuration(), argc, argv);
-    vapor::print(sim.configuration());
+    auto timeseries_data = std::vector<double>();
+    auto tasks = task_states_t();
+    auto checkpoint = [&] (const auto& state)
+    {
+        if (tasks.checkpoint.should_be_performed(state.time))
+        {
+            auto fname = vapor::message("chkpt.%04d.h5", tasks.checkpoint.number);
+            auto h5f = H5Fcreate("chkpt.0000.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+            visit_struct::for_each(state, [h5f] (const char *name, const auto& val)
+            {
+                vapor::hdf5_write(h5f, name, val);
+            });
+            vapor::hdf5_write(h5f, "config", sim.config);
+            vapor::hdf5_write(h5f, "timeseries", timeseries_data);
+            vapor::hdf5_write(h5f, "tasks", tasks);
+            vapor::print(vapor::message("write checkpoint %s\n", fname.data));
+            H5Fclose(h5f);
+        }
+    };
+
+    auto timeseries = [&] (const auto& state)
+    {
+        if (tasks.timeseries.should_be_performed(state.time))
+        {
+            timeseries_data.push_back(state.time);
+        }
+    };
+
+    auto diagnostic = [&] (const auto& state)
+    {
+    };
+
+    tasks.checkpoint.interval = 0.5;
+
+    vapor::set_from_key_vals(sim.config, argc, argv);
+    vapor::print(sim.config);
     vapor::print("\n");
 
     auto state = sim.initial_state();
 
     while (sim.should_continue(state))
     {
+        timeseries(state);
+        checkpoint(state);
+        diagnostic(state);
         sim.update(state);
         printf("%s\n", sim.status_message(state).data);
     }
-    vapor::hdf5_write_file("chkpt.0000.h5", state);
+    timeseries(state);
+    checkpoint(state);
+    diagnostic(state);
+
     return 0;
 }
+
+
+
+
+struct Simulation
+{
+    struct Config
+    {
+        double tfinal = 1.0;
+        int num_zones = 100;
+    };
+
+    struct State
+    {
+        double time;
+        int iteration;
+        vapor::shared_array_t<1, double> u;
+    };
+
+    auto initial_state() const
+    {
+        return State{
+            0.0, 0, vapor::zeros<double>(vapor::uvec(100)).cache()
+        };
+    }
+    void update(State& state) const
+    {
+        state.time += 0.0085216;
+        state.iteration += 1;
+    }
+    bool should_continue(const State& state) const
+    {
+        return state.time < config.tfinal;
+    }
+    vapor::vec_t<char, 256> status_message(const State& state) const
+    {
+        return vapor::message("[%04d] t=%lf", state.iteration, state.time);
+    }
+    // auto post_process(const State& state) const
+    // {
+    //     auto p = state.u.map(cons_to_prim).cache(executor);
+    // }
+ 
+    vapor::cpu_executor_t executor;
+    Config config;
+};
+
+VISITABLE_STRUCT(Simulation::Config, tfinal, num_zones);
+VISITABLE_STRUCT(Simulation::State, time, iteration, u);
 
 
 
@@ -109,4 +175,5 @@ int main(int argc, const char **argv)
     catch (const std::exception& e) {
         printf("[error]: %s\n", e.what());
     }
+    return 0;
 }
