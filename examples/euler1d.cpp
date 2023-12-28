@@ -11,7 +11,7 @@ using namespace vapor;
 #define max3(a, b, c) max2(a, max2(b, c))
 
 #ifdef __NVCC__
-#define CACHE_FLUX true
+#define CACHE_FLUX false
 #else
 #define CACHE_FLUX false
 #endif

@@ -1,5 +1,5 @@
-CXXFLAGS = -Wall -std=c++17 -Ofast
-NVCFLAGS = -Wall -std=c++17 --extended-lambda
+CXXFLAGS = -std=c++17 -Ofast -Wall
+NVCFLAGS = -std=c++17 --extended-lambda
 NVCC = nvcc
 
 default: \
@@ -29,7 +29,7 @@ gpu: \
  examples/euler1d_gpu
 
 examples/euler1d_gpu: examples/euler1d.cpp include/*.hpp
-	$(NVCC) $(CUDFLAGS) -x cu $< -o $@ -I include
+	$(NVCC) $(NVCFLAGS) -x cu $< -o $@ -I include
 
 examples/array_demo_gpu: examples/array_demo.cpp include/*.hpp
-	$(NVCC) $(CUDFLAGS) -x cu $< -o $@ -I include
+	$(NVCC) $(NVCFLAGS) -x cu $< -o $@ -I include

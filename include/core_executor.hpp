@@ -183,13 +183,18 @@ struct gpu_executor_t : public allocation_pool_t
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
+	int num_devices;
+       	cudaGetDeviceCount(&num_devices);
+	auto device = 0;
         #ifdef __CUDACC__
-        space.decompose(1, [] (auto subspace)
+        space.decompose(num_devices, [&device, function] (auto subspace)
         {
+	    cudaSetDevice(device);
             auto ni = subspace.di[0];
             auto bs = THREAD_BLOCK_SIZE_1D;
             auto nb = dim3((ni + bs.x - 1) / bs.x);
             gpu_loop<<<nb, bs>>>(subspace, function);
+	    device += 1;
         });
         #else
         throw;
@@ -200,7 +205,7 @@ struct gpu_executor_t : public allocation_pool_t
     void loop(index_space_t<2> space, F function) const
     {
         #ifdef __CUDACC__
-        space.decompose(1, [] (auto subspace)
+        space.decompose(1, [function] (auto subspace)
         {
             auto ni = subspace.di[0];
             auto nj = subspace.di[1];
@@ -217,7 +222,7 @@ struct gpu_executor_t : public allocation_pool_t
     void loop(index_space_t<3> space, F function) const
     {
         #ifdef __CUDACC__
-        space.decompose(1, [] (auto subspace)
+        space.decompose(1, [function] (auto subspace)
         {
             auto ni = subspace.di[0];
             auto nj = subspace.di[1];
