@@ -8,7 +8,7 @@ namespace vapor {
 
 
 /**
- * HDF5 representation of std::vector<T>
+ * HDF5 representation of std::vector<U>
  * 
  */
 template<typename U> struct hdf5_repr<std::vector<U>>
