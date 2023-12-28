@@ -52,8 +52,8 @@ template<> struct hdf5_repr<bool>
         auto t = true;
         auto f = false;
         auto type = H5Tcreate(H5T_ENUM, sizeof(bool));
-        H5Tenum_insert(type, "FALSE", &f);
         H5Tenum_insert(type, "TRUE", &t);
+        H5Tenum_insert(type, "FALSE", &f);
         return type;
     }
 };
