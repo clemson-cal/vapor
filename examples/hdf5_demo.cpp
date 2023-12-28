@@ -18,7 +18,7 @@ struct config_t
     bool c;
     std::string d;
     vapor::dvec_t<3> e;
-    vapor::shared_array_t<1, double> f;
+    vapor::shared_array_t<1, float> f;
     std::vector<int> g;
 };
 
@@ -35,8 +35,9 @@ int main(int argc, const char **argv)
         true,
         "hey",
         {2.3, 3.1, 1.0},
-        vapor::range(3).map([] (auto i) { return double(i); }).cache(),
-        {0, 1, 2, 3, 4}};
+        vapor::range(6).map([] (auto i) { return float(i); }).cache(),
+        {0, 1, 2, 3, 4}
+    };
     auto conf2 = config_t();
 
     vapor::hdf5_write_file("hdf5_demo.h5", conf1);

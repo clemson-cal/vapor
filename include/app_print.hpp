@@ -12,7 +12,7 @@ namespace vapor {
 /**
  * Convenience for using snprintf to write into a stack-alloc'd vec of char.
  */
-template<unsigned int S=1024, typename... Args>
+template<unsigned int S=256, typename... Args>
 auto message(const char* format, Args... args)
 {
     auto message = vapor::zeros_vec<char, S>();
@@ -97,7 +97,9 @@ template<typename T> void print(const std::vector<T>& v)
 
 /**
  * Print functions for vapor types
- * 
+ *
+ * Note that vec_t<char, S> has a special meaning to enable use of that type
+ * as a statically allocated string.
  */
 template<typename T, uint S> void print(const vec_t<T, S>& v)
 {
@@ -106,6 +108,10 @@ template<typename T, uint S> void print(const vec_t<T, S>& v)
         print(v[n]);
         if (n != S - 1) print(" ");
     }
+}
+template<uint S> void print(vapor::vec_t<char, S> v)
+{
+    printf("%s", v.data);
 }
 template<uint D> void print(const index_space_t<D>& space)
 {

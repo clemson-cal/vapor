@@ -7,7 +7,8 @@ default: \
  examples/euler1d \
  examples/srhd1d \
  examples/hdf5_demo \
- examples/config_demo
+ examples/config_demo \
+ examples/sim_demo
 
 examples/array_demo: examples/array_demo.cpp include/*.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< -I include
@@ -23,6 +24,9 @@ examples/hdf5_demo: examples/hdf5_demo.cpp include/*.hpp
 
 examples/config_demo: examples/config_demo.cpp include/*.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< -I include
+
+examples/sim_demo: examples/sim_demo.cpp include/*.hpp
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include -lhdf5
 
 gpu: \
  examples/demo_gpu \
