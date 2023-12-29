@@ -29,33 +29,33 @@ auto format(const char* format, Args... args)
  * Print functions for native types
  * 
  */
-static inline void print(const char *s)
+static inline void print(const char *s, FILE* file=stdout)
 {
-    printf("%s", s);
+    fprintf(file, "%s", s);
 }
-static inline void print(int a)
+static inline void print(int a, FILE* file=stdout)
 {
-    printf("%d", a);
+    fprintf(file, "%d", a);
 }
-static inline void print(uint a)
+static inline void print(uint a, FILE* file=stdout)
 {
-    printf("%u", a);
+    fprintf(file, "%u", a);
 }
-static inline void print(unsigned long n)
+static inline void print(unsigned long n, FILE* file=stdout)
 {
-    printf("%lu", n);
+    fprintf(file, "%lu", n);
 }
-static inline void print(float a)
+static inline void print(float a, FILE* file=stdout)
 {
-    printf("%f", a);
+    fprintf(file, "%f", a);
 }
-static inline void print(double a)
+static inline void print(double a, FILE* file=stdout)
 {
-    printf("%lf", a);
+    fprintf(file, "%lf", a);
 }
-static inline void print(bool b)
+static inline void print(bool b, FILE* file=stdout)
 {
-    printf("%s", b ? "true" : "false");
+    fprintf(file, "%s", b ? "true" : "false");
 }
 
 
@@ -67,9 +67,9 @@ static inline void print(bool b)
  */
 #ifdef VAPOR_STD_STRING
 #include <string>
-static inline void print(const std::string& s)
+static inline void print(const std::string& s, FILE* file=stdout)
 {
-    print(s.data());
+    print(s.data(), file);
 }
 #endif
 
@@ -82,15 +82,15 @@ static inline void print(const std::string& s)
  */
 #ifdef VAPOR_STD_VECTOR
 #include <vector>
-template<typename T> void print(const std::vector<T>& v)
+template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
 {
-    print("std::vector(");
+    print("std::vector(", file);
     for (size_t n = 0; n < v.size(); ++n)
     {
-        print(v[n]);
-        if (n != v.size() - 1) print(" ");
+        print(v[n], file);
+        if (n != v.size() - 1) print(" ", file);
     }
-    print(")");
+    print(")", file);
 }
 #endif
 
@@ -103,35 +103,35 @@ template<typename T> void print(const std::vector<T>& v)
  * Note that vec_t<char, S> has a special meaning to enable use of that type
  * as a statically allocated string.
  */
-template<typename T, uint S> void print(const vec_t<T, S>& v)
+template<typename T, uint S> void print(const vec_t<T, S>& v, FILE* file=stdout)
 {
     for (size_t n = 0; n < S; ++n)
     {
-        print(v[n]);
-        if (n != S - 1) print(" ");
+        print(v[n], file);
+        if (n != S - 1) print(" ", file);
     }
 }
-template<uint S> void print(vec_t<char, S> v)
+template<uint S> void print(vec_t<char, S> v, FILE* file=stdout)
 {
-    printf("%s", v.data);
+    fprintf(file, "%s", v.data);
 }
-template<uint D> void print(const index_space_t<D>& space)
+template<uint D> void print(const index_space_t<D>& space, FILE* file=stdout)
 {
-    print("start: ");
-    print(space.i0);
-    print(" ");
-    print("shape: ");
-    print(space.di);
+    print("start: ", file);
+    print(space.i0, file);
+    print(" ", file);
+    print("shape: ", file);
+    print(space.di, file);
 }
-template<uint D, typename T> void print(const array_t<D, T>& v)
+template<uint D, typename T> void print(const array_t<D, T>& v, FILE* file=stdout)
 {
-    print("array(");
+    print("array(", file);
     for (size_t n = 0; n < v.size(); ++n)
     {
-        print(v[n]);
-        if (n != v.size() - 1) print(" ");
+        print(v[n], file);
+        if (n != v.size() - 1) print(" ", file);
     }
-    print(")");
+    print(")", file);
 }
 
 
@@ -142,14 +142,14 @@ template<uint D, typename T> void print(const array_t<D, T>& v)
  * 
  */
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
-void print(const T& target)
+void print(const T& target, FILE* file=stdout)
 {
-    visit_struct::for_each(target, [] (const char *key, const auto& val)
+    visit_struct::for_each(target, [file] (const char *key, const auto& val)
     {
-        print(key);
-        print(" = ");
-        print(val);
-        print("\n");
+        print(key, file);
+        print(" = ", file);
+        print(val, file);
+        print("\n", file);
     });
 }
 
