@@ -150,7 +150,7 @@ void scan(const char* str, unsigned int size, bool& val)
         val = false;
     }
     else {
-        throw std::runtime_error(message("expected true|false, got %.*s", size, str));
+        throw std::runtime_error(format("expected true|false, got %.*s", size, str));
     }
 }
 void scan(const char* str, unsigned int, unsigned int& val)
@@ -205,12 +205,12 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
 
         case lexer_state::expect_end:
             if (str[n] == ',')
-                throw std::runtime_error(message("vec size must be %d", S));
+                throw std::runtime_error(format("vec size must be %d", S));
             break;
         }
     }
     if (m < S) {
-        throw std::runtime_error(message("vec size must be %d", S));
+        throw std::runtime_error(format("vec size must be %d", S));
     }
 }
 
@@ -236,7 +236,7 @@ auto set_from_key_vals(T& target, const char *str)
         });
         if (! found)
         {
-            throw std::runtime_error(message("no data member '%.*s'", int(nl), l));
+            throw std::runtime_error(format("no data member '%.*s'", int(nl), l));
         }
     });
 }

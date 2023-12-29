@@ -66,8 +66,8 @@ int run(int argc, const char **argv, Simulation sim)
     {
         if (tasks.checkpoint.should_be_performed(state.time))
         {
-            auto fname = vapor::message("chkpt.%04d.h5", tasks.checkpoint.number);
-            auto h5f = H5Fcreate("chkpt.0000.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+            auto fname = vapor::format("chkpt.%04d.h5", tasks.checkpoint.number);
+            auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
             visit_struct::for_each(state, [h5f] (const char *name, const auto& val)
             {
                 vapor::hdf5_write(h5f, name, val);
@@ -75,7 +75,7 @@ int run(int argc, const char **argv, Simulation sim)
             vapor::hdf5_write(h5f, "config", sim.config);
             vapor::hdf5_write(h5f, "timeseries", timeseries_data);
             vapor::hdf5_write(h5f, "tasks", tasks);
-            vapor::print(vapor::message("write checkpoint %s\n", fname.data));
+            vapor::print(vapor::format("write checkpoint %s\n", fname.data));
             H5Fclose(h5f);
         }
     };
@@ -92,7 +92,7 @@ int run(int argc, const char **argv, Simulation sim)
     {
     };
 
-    tasks.checkpoint.interval = 0.5;
+    tasks.checkpoint.interval = 0.5; // for example
 
     vapor::set_from_key_vals(sim.config, argc, argv);
     vapor::print(sim.config);
@@ -103,14 +103,15 @@ int run(int argc, const char **argv, Simulation sim)
     while (sim.should_continue(state))
     {
         timeseries(state);
-        checkpoint(state);
         diagnostic(state);
+        checkpoint(state);
         sim.update(state);
-        printf("%s\n", sim.status_message(state).data);
+        vapor::print(sim.status_message(state));
+        vapor::print("\n");
     }
     timeseries(state);
-    checkpoint(state);
     diagnostic(state);
+    checkpoint(state);
 
     return 0;
 }
@@ -133,7 +134,7 @@ struct Simulation
         vapor::shared_array_t<1, double> u;
     };
 
-    auto initial_state() const
+    State initial_state() const
     {
         return State{
             0.0, 0, vapor::zeros<double>(vapor::uvec(100)).cache()
@@ -150,7 +151,7 @@ struct Simulation
     }
     vapor::vec_t<char, 256> status_message(const State& state) const
     {
-        return vapor::message("[%04d] t=%lf", state.iteration, state.time);
+        return vapor::format("[%04d] t=%lf", state.iteration, state.time);
     }
     // auto post_process(const State& state) const
     // {

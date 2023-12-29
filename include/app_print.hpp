@@ -11,9 +11,11 @@ namespace vapor {
 
 /**
  * Convenience for using snprintf to write into a stack-alloc'd vec of char.
+ *
+ * This function name is not as good as 'message', 
  */
 template<unsigned int S=256, typename... Args>
-auto message(const char* format, Args... args)
+auto format(const char* format, Args... args)
 {
     auto message = zeros_vec<char, S>();
     snprintf(message, S, format, args...);
