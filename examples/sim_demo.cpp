@@ -1,3 +1,5 @@
+#include <string>
+#include <vector>
 #include "app_parse.hpp"
 #include "app_print.hpp"
 #include "core_array.hpp"
@@ -10,9 +12,35 @@
 
 
 
+/**
+ * Read the full contents of a file to a string.
+ *
+ * An empty string is returned if the load fails for any reason.
+ * 
+ */
+static inline std::string readfile(const char *filename)
+{
+    FILE* infile = fopen(filename, "r");
+    auto str = std::string();
+
+    while (infile) {
+        auto c = fgetc(infile);
+        if (c == EOF) {
+            break;
+        } else {
+            str.push_back(c);
+        }
+    }
+    fclose(infile);
+    return str;
+}
+
+
+
 
 /**
  * Represents a task to be performed at a regular interval
+ * 
  */
 struct task_state_t
 {
@@ -80,6 +108,7 @@ int run(int argc, const char **argv, Simulation sim)
         }
     };
 
+
     auto timeseries = [&] (const auto& state)
     {
         if (tasks.timeseries.should_be_performed(state.time))
@@ -94,7 +123,7 @@ int run(int argc, const char **argv, Simulation sim)
 
     tasks.checkpoint.interval = 0.5; // for example
 
-    vapor::set_from_cfg_file(sim.config, "session.cfg");
+    vapor::set_from_key_vals(sim.config, readfile("session.cfg").data());
     vapor::set_from_key_vals(sim.config, argc, argv);
     vapor::print(sim.config);
     vapor::print("\n");
