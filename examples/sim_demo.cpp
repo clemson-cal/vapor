@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <unistd.h> // usleep, for demo simulation class
+// #include <sys/stat.h> // for directory creation
 #include "app_parse.hpp"
 #include "app_print.hpp"
 #include "core_array.hpp"
@@ -10,6 +11,40 @@
 #include "hdf5_repr.hpp"
 #include "hdf5_vector.hpp"
 #include "visit_struct.hpp"
+
+
+
+
+// TODO
+// 
+// [ ] multi-threaded execution
+// [ ] use of executor base class (see if affects performance)
+// [ ] run directory feature
+// [ ] diagnostic and time series outputs
+// [ ] crash / safety mode feature
+// [x] simulation base class
+
+
+
+
+// static void makedir(const char *dir)
+// {
+//     char tmp[256];
+//     snprintf(tmp, sizeof(tmp), "%s", dir);
+//     size_t len = strlen(tmp);
+
+//     if (tmp[len - 1] == '/') {
+//         tmp[len - 1] = 0;
+//     }
+//     for (char* p = tmp + 1; *p; p++) {
+//         if (*p == '/') {
+//             *p = 0;
+//             mkdir(tmp, S_IRWXU);
+//             *p = '/';
+//         }
+//     }
+//     mkdir(tmp, S_IRWXU);
+// }
 
 
 
@@ -114,8 +149,88 @@ VISITABLE_STRUCT(task_states_t, checkpoint, timeseries, diagnostic);
 
 
 
-template<class Simulation>
-int run(int argc, const char **argv, Simulation sim)
+/**
+ * Simulation base class
+ *
+ * Provides or requires 
+ */
+template<class C, class S>
+class Simulation
+{
+public:
+    using Config = C;
+    using State = S;
+
+    /**
+     * Return a time for use by the simulation driver
+     *
+     * The returned value is used by the driver to check whether it is time to
+     * perform simulation tasks.
+     */
+    virtual double get_time(const State& state) const = 0;
+
+    /**
+     * Return an iteration number for use by the driver
+     *
+     * The iteration number should be incremented once each time the update
+     * function is called
+     */
+    virtual vapor::uint get_iteration(const State& state) const = 0;
+
+    /**
+     * Generate an initial state for the simulation
+     *
+     * Must be overriden by derived classes
+     */
+    virtual State initial_state() const = 0;
+
+    /**
+     * Update the simulation state by one iteration
+     *
+     * Must be overridden by derived classes
+     */
+    virtual void update(State& state) const = 0;
+
+    /**
+     * Test whether the simulation has reached a desired stopping point
+     *
+     * Must be overridden by derived classes
+     */
+    virtual bool should_continue(const State& state) const = 0;
+
+    /**
+     * Return a status message to be printed by the driver
+     *
+     * Will likely be overridden by derived classes
+     */
+    virtual vapor::vec_t<char, 256> status_message(const State& state, double secs_per_call) const
+    {
+        return vapor::format("[%04d] t=%lf %lf sec/iter", get_iteration(state), get_time(state), secs_per_call);
+    }
+
+    /**
+     * Returns a non-const reference to the configuration instance
+     *
+     * Should not be overriden by derived classes
+     */
+    virtual Config& get_config() { return config; }
+
+    /**
+     * Returns a const reference to the configuration instance
+     *
+     * Should not be overriden by derived classes
+     */
+    virtual const Config& get_config() const { return config; }
+
+protected:
+    Config config;
+};
+
+
+
+
+template<class Config, class State>
+int run(int argc, const char **argv, Simulation<Config, State>& sim)
 {
     auto timeseries_data = std::vector<double>();
     auto tasks = task_states_t();
@@ -151,7 +266,7 @@ int run(int argc, const char **argv, Simulation sim)
     };
 
     tasks.checkpoint.interval = 0.5; // for example
-    auto state = typename Simulation::State();
+    auto state = State();
 
     if (argc > 1 && strstr(argv[1], ".h5"))
     {
@@ -198,65 +313,50 @@ int run(int argc, const char **argv, Simulation sim)
 
 
 
-class Simulation
+struct Config
+{
+    double tfinal = 1.0;
+    int num_zones = 100;
+};
+VISITABLE_STRUCT(Config, tfinal, num_zones);
+
+struct State
+{
+    double time;
+    int iteration;
+    vapor::shared_array_t<1, double> u;
+};
+VISITABLE_STRUCT(State, time, iteration, u);
+
+class DemoSimulation : public Simulation<Config, State>
 {
 public:
-    struct Config
-    {
-        double tfinal = 1.0;
-        int num_zones = 100;
-    };
 
-    struct State
-    {
-        double time;
-        int iteration;
-        vapor::shared_array_t<1, double> u;
-    };
-
-    double get_time(const State& state) const
+    double get_time(const State& state) const override
     {
         return state.time;
     }
-    Config& get_config()
+    virtual vapor::uint get_iteration(const State& state) const override
     {
-        return config;
+        return state.iteration;
     }
-    const Config& get_config() const
-    {
-        return config;
-    }
-    State initial_state() const
+    State initial_state() const override
     {
         return State{
-            0.0, 0, vapor::zeros<double>(vapor::uvec(100)).cache()
+            0.0, 0, vapor::zeros<double>(vapor::uvec(config.num_zones)).cache()
         };
     }
-    void update(State& state) const
+    void update(State& state) const override
     {
         state.time += 0.0085216;
         state.iteration += 1;
         usleep(10000);
     }
-    bool should_continue(const State& state) const
+    bool should_continue(const State& state) const override
     {
         return state.time < config.tfinal;
     }
-    vapor::vec_t<char, 256> status_message(const State& state, double secs_per_call) const
-    {
-        return vapor::format("[%04d] t=%lf %lf s/iter", state.iteration, state.time, secs_per_call);
-    }
-    // auto post_process(const State& state) const
-    // {
-    //     auto p = state.u.map(cons_to_prim).cache(executor);
-    // }
- 
- private:
-    vapor::cpu_executor_t executor;
-    Config config;
 };
-VISITABLE_STRUCT(Simulation::Config, tfinal, num_zones);
-VISITABLE_STRUCT(Simulation::State, time, iteration, u);
 
 
 
@@ -264,7 +364,8 @@ VISITABLE_STRUCT(Simulation::State, time, iteration, u);
 int main(int argc, const char **argv)
 {
     try {
-        return run(argc, argv, Simulation());
+        auto sim = DemoSimulation();
+        return run(argc, argv, sim);
     }
     catch (const std::exception& e) {
         printf("[error]: %s\n", e.what());
