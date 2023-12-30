@@ -7,3 +7,4 @@ examples/hdf5_demo
 examples/config_demo
 examples/sim_demo
 *.h5
+*.cfg

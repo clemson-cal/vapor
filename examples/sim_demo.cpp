@@ -94,7 +94,7 @@ int run(int argc, const char **argv, Simulation sim)
 
     tasks.checkpoint.interval = 0.5; // for example
 
-    // vapor::set_from_cfg_file(sim.config, "session.cfg"); // write this function?
+    vapor::set_from_cfg_file(sim.config, "session.cfg");
     vapor::set_from_key_vals(sim.config, argc, argv);
     vapor::print(sim.config);
     vapor::print("\n");

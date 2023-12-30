@@ -253,4 +253,45 @@ auto set_from_key_vals(T& target, int argc, const char **argv)
     }
 }
 
+
+
+
+template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
+void set_from_cfg_file(T& target, const char* filename, bool ignore_missing=false)
+{
+    FILE* infile = fopen(filename, "r");
+
+    if (infile == nullptr) {
+        if (ignore_missing) {
+            return;
+        } else {
+            throw std::runtime_error(format("no such file %s", filename));
+        }
+    }
+    fseek(infile, 0, SEEK_END);
+    auto size = ftell(infile);
+    auto pos = size_t(0);
+    auto str = new char[size];
+    fseek(infile, 0, SEEK_SET);
+
+    while (infile) {
+        auto c = fgetc(infile);
+        if (c == EOF) {
+            break;
+        } else {
+            str[pos++] = c;
+        }
+    }
+    fclose(infile);
+
+    try {
+        set_from_key_vals(target, str);
+        delete [] str;
+    }
+    catch (std::exception& e) {
+        delete [] str;
+        throw e;
+    }
+}
+
 } // namespace vapor
