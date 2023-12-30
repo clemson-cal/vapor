@@ -74,6 +74,10 @@ VISITABLE_STRUCT(task_state_t, number, last_time, interval);
 
 
 
+/**
+ * A data structure holding all of the task states managed by a driver
+ * 
+ */
 struct task_states_t
 {
     task_state_t checkpoint;
@@ -96,7 +100,7 @@ int run(int argc, const char **argv, Simulation sim)
         {
             auto fname = vapor::format("chkpt.%04d.h5", tasks.checkpoint.number);
             auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-            visit_struct::for_each(state, [h5f] (const char *name, const auto& val)
+            visit_struct::for_each(state, [h5f] (auto name, const auto& val)
             {
                 vapor::hdf5_write(h5f, name, val);
             });
@@ -197,7 +201,6 @@ struct Simulation
     vapor::cpu_executor_t executor;
     Config config;
 };
-
 VISITABLE_STRUCT(Simulation::Config, tfinal, num_zones);
 VISITABLE_STRUCT(Simulation::State, time, iteration, u);
 
