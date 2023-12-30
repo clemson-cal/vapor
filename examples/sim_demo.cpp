@@ -1,5 +1,7 @@
+#include <chrono>
 #include <string>
 #include <vector>
+#include <unistd.h> // usleep, for demo simulation class
 #include "app_parse.hpp"
 #include "app_print.hpp"
 #include "core_array.hpp"
@@ -8,6 +10,29 @@
 #include "hdf5_repr.hpp"
 #include "hdf5_vector.hpp"
 #include "visit_struct.hpp"
+
+
+
+
+/**
+ * Execute and time function call
+ *
+ * The function is called the given number of times. Returns the number of
+ * seconds per call as a double.
+ */
+template<class F>
+double time_call(F f, int num_calls)
+{
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+    for (int n = 0; n < num_calls; ++n)
+    {
+        f();
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto delta = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    return delta.count() / num_calls;
+}
 
 
 
@@ -96,7 +121,7 @@ int run(int argc, const char **argv, Simulation sim)
     auto tasks = task_states_t();
     auto checkpoint = [&] (const auto& state)
     {
-        if (tasks.checkpoint.should_be_performed(state.time))
+        if (tasks.checkpoint.should_be_performed(sim.get_time(state)))
         {
             auto fname = vapor::format("chkpt.%04d.h5", tasks.checkpoint.number);
             auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -104,49 +129,63 @@ int run(int argc, const char **argv, Simulation sim)
             {
                 vapor::hdf5_write(h5f, name, val);
             });
-            vapor::hdf5_write(h5f, "config", sim.config);
+            vapor::hdf5_write(h5f, "config", sim.get_config());
             vapor::hdf5_write(h5f, "timeseries", timeseries_data);
             vapor::hdf5_write(h5f, "tasks", tasks);
-            vapor::print(vapor::format("write checkpoint %s\n", fname.data));
+            printf("write checkpoint %s\n", fname.data);
             H5Fclose(h5f);
         }
     };
 
-
     auto timeseries = [&] (const auto& state)
     {
-        if (tasks.timeseries.should_be_performed(state.time))
+        if (tasks.timeseries.should_be_performed(sim.get_time(state)))
         {
-            timeseries_data.push_back(state.time);
+            timeseries_data.push_back(sim.get_time(state));
         }
     };
 
     auto diagnostic = [&] (const auto& state)
     {
+        // todo
     };
 
     tasks.checkpoint.interval = 0.5; // for example
+    auto state = typename Simulation::State();
 
-    vapor::set_from_key_vals(sim.config, readfile("session.cfg").data());
-    vapor::set_from_key_vals(sim.config, argc, argv);
-    vapor::print(sim.config);
-    vapor::print("\n");
-
+    if (argc > 1 && strstr(argv[1], ".h5"))
     {
-        FILE *session_cfg = fopen("session.cfg", "w");
-        vapor::print(sim.config, session_cfg);
-        fclose(session_cfg);
+        printf("read checkpoint %s\n", argv[1]);
+        auto h5f = H5Fopen(argv[1], H5P_DEFAULT, H5P_DEFAULT);
+        visit_struct::for_each(state, [h5f] (auto name, auto& val)
+        {
+            vapor::hdf5_read(h5f, name, val);
+        });
+        vapor::hdf5_read(h5f, "config", sim.get_config());
+        vapor::hdf5_read(h5f, "timeseries", timeseries_data);
+        vapor::hdf5_read(h5f, "tasks", tasks);
+        vapor::set_from_key_vals(sim.get_config(), argc - 1, argv + 1);
+        H5Fclose(h5f);
     }
-
-    auto state = sim.initial_state();
+    else
+    {
+        vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
+        vapor::set_from_key_vals(sim.get_config(), argc, argv);
+        vapor::print_to_file(sim.get_config(), "session.cfg");
+        state = sim.initial_state();
+    }
+    vapor::print(sim.get_config());
+    vapor::print("\n");
 
     while (sim.should_continue(state))
     {
         timeseries(state);
         diagnostic(state);
         checkpoint(state);
-        sim.update(state);
-        vapor::print(sim.status_message(state));
+
+        auto secs = time_call([&sim, &state] { sim.update(state); }, 10);
+
+        vapor::print(sim.status_message(state, secs));
         vapor::print("\n");
     }
     timeseries(state);
@@ -159,8 +198,9 @@ int run(int argc, const char **argv, Simulation sim)
 
 
 
-struct Simulation
+class Simulation
 {
+public:
     struct Config
     {
         double tfinal = 1.0;
@@ -174,6 +214,18 @@ struct Simulation
         vapor::shared_array_t<1, double> u;
     };
 
+    double get_time(const State& state) const
+    {
+        return state.time;
+    }
+    Config& get_config()
+    {
+        return config;
+    }
+    const Config& get_config() const
+    {
+        return config;
+    }
     State initial_state() const
     {
         return State{
@@ -184,20 +236,22 @@ struct Simulation
     {
         state.time += 0.0085216;
         state.iteration += 1;
+        usleep(10000);
     }
     bool should_continue(const State& state) const
     {
         return state.time < config.tfinal;
     }
-    vapor::vec_t<char, 256> status_message(const State& state) const
+    vapor::vec_t<char, 256> status_message(const State& state, double secs_per_call) const
     {
-        return vapor::format("[%04d] t=%lf", state.iteration, state.time);
+        return vapor::format("[%04d] t=%lf %lf s/iter", state.iteration, state.time, secs_per_call);
     }
     // auto post_process(const State& state) const
     // {
     //     auto p = state.u.map(cons_to_prim).cache(executor);
     // }
  
+ private:
     vapor::cpu_executor_t executor;
     Config config;
 };

@@ -153,4 +153,16 @@ void print(const T& target, FILE* file=stdout)
     });
 }
 
+template<typename T>
+void print_to_file(const T& target, const char* filename)
+{
+    auto outfile = fopen(filename, "w");
+
+    if (outfile == nullptr) {
+        throw std::runtime_error(format("file %s could not be opened for writing", filename));
+    }
+    print(target, outfile);
+    fclose(outfile);
+}
+
 } // namespace vapor
