@@ -49,9 +49,9 @@ template<typename U, uint S> struct hdf5_repr<vapor::vec_t<U, S>>
  * HDF5 representation of vapor::shared_array_t<D, U>
  * 
  */
-template<uint D, typename U> struct hdf5_repr<vapor::shared_array_t<D, U>>
+template<uint D, typename U> struct hdf5_repr<memory_backed_array_t<D, U, std::shared_ptr>>
 {
-    using T = vapor::shared_array_t<D, U>;
+    using T = memory_backed_array_t<D, U, std::shared_ptr>;
     static const U* data(const T& val)
     {
         return val._data;

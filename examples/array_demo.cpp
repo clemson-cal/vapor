@@ -55,6 +55,18 @@ void map_subset()
     printf("range(5)[2:4].shape[0]=%d=2\n", a[index_space(uvec(2), uvec(2))].shape()[0]);
 }
 
+void array_reductions()
+{
+    auto exec = cpu_executor_t();
+    auto alloc = shared_ptr_allocator_t();
+    auto a = range(10).cache(exec, alloc);
+    printf("the maximum value of range(10) is %d\n", max(a, exec));
+
+    auto b = array([] (auto) { return vec(1.0, 1.0); }, uvec(10)).cache(exec, alloc);
+    auto s = sum(b, exec);
+    printf("the sum of 10 elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", s[0], s[1]);
+}
+
 void generator_arrays()
 {
     auto d = zeros<int>(uvec(4, 8, 12));
@@ -101,6 +113,7 @@ int main()
     type_constructors();
     make_cached_1d_array();
     map_subset();
+    array_reductions();
     generator_arrays();
     construct_pointer_types();
     decompose_index_space();

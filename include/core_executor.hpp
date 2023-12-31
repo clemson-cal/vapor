@@ -2,7 +2,6 @@
 #ifdef __CUDACC__
 #include <cub/cub.cuh>
 #endif
-#include <limits>
 #include "core_index_space.hpp"
 
 namespace vapor {
@@ -243,8 +242,10 @@ struct gpu_executor_t
 
 
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__)
 using default_executor_t = gpu_executor_t;
+#elif defined(_OPENMP)
+using default_executor_t = omp_executor_t;
 #else
 using default_executor_t = cpu_executor_t;
 #endif

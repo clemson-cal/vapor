@@ -18,7 +18,7 @@ struct config_t
     bool c;
     std::string d;
     vapor::dvec_t<3> e;
-    vapor::shared_array_t<1, float> f;
+    vapor::memory_backed_array_t<1, float, std::shared_ptr> f;
     std::vector<int> g;
 };
 VISITABLE_STRUCT(config_t, a, b, c, d, e, f, g);

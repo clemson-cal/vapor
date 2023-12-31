@@ -17,81 +17,81 @@ using namespace vapor;
 #endif
 
 
-#include <mutex>
-#include <thread>
+// #include <mutex>
+// #include <thread>
 
 
-class worker_t
-{
-public:
-    worker_t() : t([this] {
-        while (true) {
-            auto lock = std::lock_guard<std::mutex>(m);
-            if (f != nullptr) {
-                f();
-                f = nullptr;
-            }
-            if (stop) {
-                return;
-            }
-        }
-    }) {
-    }
-    ~worker_t() {
-        stop = true;
-        t.join();
-    }
-    void submit(std::function<void(void)> new_func) {
-        auto lock = std::lock_guard<std::mutex>(m);
-        f = new_func;
-    }
-    void wait() {
-        while (true) {
-            auto lock = std::lock_guard<std::mutex>(m);
-            if (f == nullptr) {
-                return;
-            }
-        }
-    }
-private:
-    std::mutex m;
-    std::thread t;
-    std::function<void(void)> f;
-    std::atomic<bool> stop = false;
-};
+// class worker_t
+// {
+// public:
+//     worker_t() : t([this] {
+//         while (true) {
+//             auto lock = std::lock_guard<std::mutex>(m);
+//             if (f != nullptr) {
+//                 f();
+//                 f = nullptr;
+//             }
+//             if (stop) {
+//                 return;
+//             }
+//         }
+//     }) {
+//     }
+//     ~worker_t() {
+//         stop = true;
+//         t.join();
+//     }
+//     void submit(std::function<void(void)> new_func) {
+//         auto lock = std::lock_guard<std::mutex>(m);
+//         f = new_func;
+//     }
+//     void wait() {
+//         while (true) {
+//             auto lock = std::lock_guard<std::mutex>(m);
+//             if (f == nullptr) {
+//                 return;
+//             }
+//         }
+//     }
+// private:
+//     std::mutex m;
+//     std::thread t;
+//     std::function<void(void)> f;
+//     std::atomic<bool> stop = false;
+// };
 
 
 
 
-class thread_pool_executor_t
-{
-public:
-    thread_pool_executor_t()
-    {
-        for (int i = 0; i < 2; ++i)
-        {
-            workers.push_back(std::make_shared<worker_t>());
-        }
-    }
-    template<uint D, typename F>
-    void loop(index_space_t<D> space, F f) const
-    {
-        auto n = 0;
-        space.decompose(workers.size(), [&n, f, this] (auto subspace)
-        {
-            auto g = [subspace, f, this] { base_executor.loop(subspace, f); };
-            workers[n]->submit(g);
-            ++n;
-        });
-        for (auto& w : workers)
-        {
-            w->wait();
-        }
-    }
-private:
-    cpu_executor_t base_executor;
-    std::vector<std::shared_ptr<worker_t>> workers;
-};
+// class thread_pool_executor_t
+// {
+// public:
+//     thread_pool_executor_t()
+//     {
+//         for (int i = 0; i < 2; ++i)
+//         {
+//             workers.push_back(std::make_shared<worker_t>());
+//         }
+//     }
+//     template<uint D, typename F>
+//     void loop(index_space_t<D> space, F f) const
+//     {
+//         auto n = 0;
+//         space.decompose(workers.size(), [&n, f, this] (auto subspace)
+//         {
+//             auto g = [subspace, f, this] { base_executor.loop(subspace, f); };
+//             workers[n]->submit(g);
+//             ++n;
+//         });
+//         for (auto& w : workers)
+//         {
+//             w->wait();
+//         }
+//     }
+// private:
+//     cpu_executor_t base_executor;
+//     std::vector<std::shared_ptr<worker_t>> workers;
+// };
 
 
 

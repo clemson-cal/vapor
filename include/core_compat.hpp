@@ -10,4 +10,4 @@ namespace vapor {
 	using uint = unsigned int;
 }
 
-#define vapor_ARRAY_BOUNDS_CHECK 0
+#define VAPOR_ARRAY_BOUNDS_CHECK 0

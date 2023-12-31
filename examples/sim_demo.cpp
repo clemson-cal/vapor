@@ -24,7 +24,7 @@
 // [ ] diagnostic and time series outputs
 // [ ] crash / safety mode feature
 // [x] simulation base class
-// [ ] array reductions
+// [x] array reductions
 
 
 
@@ -350,7 +350,7 @@ struct State
 {
     double time;
     int iteration;
-    vapor::shared_array_t<1, double> u;
+    vapor::memory_backed_array_t<1, double, std::shared_ptr> u;
 };
 VISITABLE_STRUCT(State, time, iteration, u);
 

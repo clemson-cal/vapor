@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdlib>
 #include <cassert>
-#include <memory>
+#include <limits>
 #include "core_compat.hpp"
 #include "core_executor.hpp" // remove this when cache is changed to require an executor
 #include "core_functional.hpp"
@@ -17,8 +17,8 @@ namespace vapor {
 template<uint D, class F> struct array_t;
 template<uint D, class F> struct array_selection_t;
 template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
-template<uint D, typename T> using shared_array_t = array_t<D, lookup_t<D, T, std::shared_ptr<managed_memory_t>>>;
-template<uint D, typename T> using refcnt_array_t = array_t<D, lookup_t<D, T, ref_counted_ptr_t<managed_memory_t>>>;
+template<uint D, typename T, template<typename> typename P>
+using memory_backed_array_t = array_t<D, lookup_t<D, T, P<managed_memory_t>>>;
 
 
 
@@ -76,7 +76,7 @@ struct array_t
 
     HD auto operator[](uvec_t<D> index) const
     {
-        #if vapor_ARRAY_BOUNDS_CHECK
+        #if VAPOR_ARRAY_BOUNDS_CHECK
         assert(space().contains(index));
         #endif
         return f(index);
@@ -151,10 +151,9 @@ struct array_selection_t
 {
     using value_type = std::invoke_result_t<F, uvec_t<D>>;
 
-    auto set(value_type v) { return this->map(constant(v)); }
-
     template<class G>
     auto map(G g) { return select(in(sel, a.space()), a.map(g), a); }
+    auto set(value_type v) { return this->map(constant(v)); }
 
     template<class G> auto operator+(array_t<D, G> b) const { return select(in(sel, a.space()), a + b, a); }
     template<class G> auto operator-(array_t<D, G> b) const { return select(in(sel, a.space()), a - b, a); }
@@ -283,6 +282,54 @@ template<uint D>
 auto in(index_space_t<D> sel, index_space_t<D> space)
 {
     return array(index_space_contains(sel), space);
+}
+
+/**
+ * Compute the minimum value of all array elements
+ *
+ * Reductions require arrays to be memory-backed and contiguous
+ */
+template<uint D, typename T, template<typename> typename P, class E>
+T min(const memory_backed_array_t<D, T, P>& a, E& executor)
+{
+    return executor.reduce(
+        a.data(),
+        a.size(),
+        [] HD (const T& a, const T& b) { return a < b ? a : b; },
+        std::numeric_limits<T>::max()
+    );
+}
+
+/**
+ * Compute the maximum value of all array elements
+ *
+ * Reductions require arrays to be memory-backed and contiguous
+ */
+template<uint D, typename T, template<typename> typename P, class E>
+T max(const memory_backed_array_t<D, T, P>& a, E& executor)
+{
+    return executor.reduce(
+        a.data(),
+        a.size(),
+        [] HD (const T& a, const T& b) { return a > b ? a : b; },
+        std::numeric_limits<T>::min()
+    );
+}
+
+/**
+ * Compute the sum over all array elements
+ *
+ * Reductions require arrays to be memory-backed and contiguous
+ */
+template<uint D, typename T, template<typename> typename P, class E>
+T sum(const memory_backed_array_t<D, T, P>& a, E& executor)
+{
+    return executor.reduce(
+        a.data(),
+        a.size(),
+        [] HD (const T& a, const T& b) { return a + b; },
+        T()
+    );
 }
 
 } // namespace vapor
