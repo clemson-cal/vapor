@@ -24,6 +24,7 @@
 // [ ] diagnostic and time series outputs
 // [ ] crash / safety mode feature
 // [x] simulation base class
+// [ ] array reductions
 
 
 
@@ -57,12 +58,10 @@
  * seconds per call as a double.
  */
 template<class F>
-double time_call(F f, int num_calls)
+double time_call(int num_calls, F f)
 {
     auto t1 = std::chrono::high_resolution_clock::now();
-
-    for (int n = 0; n < num_calls; ++n)
-    {
+    for (int n = 0; n < num_calls; ++n) {
         f();
     }
     auto t2 = std::chrono::high_resolution_clock::now();
@@ -129,7 +128,6 @@ struct task_state_t
         }
     }
 };
-
 VISITABLE_STRUCT(task_state_t, number, last_time, interval);
 
 
@@ -200,28 +198,49 @@ public:
     virtual bool should_continue(const State& state) const = 0;
 
     /**
-     * Returns a non-const reference to the configuration instance
+     * Return the number of updates between status messages
      *
-     * Should not be overriden by derived classes
+     * The performance measurement is averaged over a batch, so tends to be
+     * more accurate when there are more updates per batch.
+     *
+     * Will likely be overridden by derived classes 
      */
-    virtual Config& get_config() { return config; }
+    virtual vapor::uint updates_per_batch() { return 10; }
 
     /**
-     * Returns a const reference to the configuration instance
+     * Return the time between task recurrences
      *
-     * Should not be overriden by derived classes
+     * Will likely be overridden by derived classes
      */
-    virtual const Config& get_config() const { return config; }
+    virtual double checkpoint_interval() const { return 0.0; }
+    virtual double timeseries_interval() const { return 0.0; }
+    virtual double diagnostic_interval() const { return 0.0; }
 
     /**
      * Return a status message to be printed by the driver
      *
      * Will likely be overridden by derived classes
      */
-    virtual vapor::vec_t<char, 256> status_message(const State& state, double secs_per_call) const
+    virtual vapor::vec_t<char, 256> status_message(const State& state, double secs_per_update) const
     {
-        return vapor::format("[%04d] t=%lf %lf sec/iter", get_iteration(state), get_time(state), secs_per_call);
+        return vapor::format("[%04d] t=%lf %lf sec/update",
+            get_iteration(state),
+            get_time(state), secs_per_update);
     }
+
+    /**
+     * Returns a non-const reference to the configuration instance
+     *
+     * Should not be overriden by derived classes
+     */
+    Config& get_config() { return config; }
+
+    /**
+     * Returns a const reference to the configuration instance
+     *
+     * Should not be overriden by derived classes
+     */
+    const Config& get_config() const { return config; }
 
 protected:
     Config config;
@@ -241,15 +260,12 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         {
             auto fname = vapor::format("chkpt.%04d.h5", tasks.checkpoint.number);
             auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-            visit_struct::for_each(state, [h5f] (auto name, const auto& val)
-            {
-                vapor::hdf5_write(h5f, name, val);
-            });
+            vapor::hdf5_write(h5f, "state", state);
             vapor::hdf5_write(h5f, "config", sim.get_config());
             vapor::hdf5_write(h5f, "timeseries", timeseries_data);
             vapor::hdf5_write(h5f, "tasks", tasks);
-            printf("write checkpoint %s\n", fname.data);
             H5Fclose(h5f);
+            printf("write checkpoint %s\n", fname.data);
         }
     };
 
@@ -257,31 +273,36 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
     {
         if (tasks.timeseries.should_be_performed(sim.get_time(state)))
         {
+            // for example
             timeseries_data.push_back(sim.get_time(state));
+            printf("record timeseries entry\n");
         }
     };
 
     auto diagnostic = [&] (const auto& state)
     {
-        // todo
+        if (tasks.diagnostic.should_be_performed(sim.get_time(state)))
+        {
+            printf("write diagnostic file\n");
+        }
     };
 
-    tasks.checkpoint.interval = 0.5; // for example
+    tasks.checkpoint.interval = sim.checkpoint_interval();
+    tasks.timeseries.interval = sim.timeseries_interval();
+    tasks.diagnostic.interval = sim.diagnostic_interval();
+
     auto state = State();
 
     if (argc > 1 && strstr(argv[1], ".h5"))
     {
-        printf("read checkpoint %s\n", argv[1]);
         auto h5f = H5Fopen(argv[1], H5P_DEFAULT, H5P_DEFAULT);
-        visit_struct::for_each(state, [h5f] (auto name, auto& val)
-        {
-            vapor::hdf5_read(h5f, name, val);
-        });
+        vapor::hdf5_read(h5f, "state", state);
         vapor::hdf5_read(h5f, "config", sim.get_config());
         vapor::hdf5_read(h5f, "timeseries", timeseries_data);
         vapor::hdf5_read(h5f, "tasks", tasks);
         vapor::set_from_key_vals(sim.get_config(), argc - 1, argv + 1);
         H5Fclose(h5f);
+        printf("read checkpoint %s\n", argv[1]);
     }
     else
     {
@@ -299,7 +320,10 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         diagnostic(state);
         checkpoint(state);
 
-        auto secs = time_call([&sim, &state] { sim.update(state); }, 10);
+        auto secs = time_call(sim.updates_per_batch(), [&sim, &state]
+        {
+            sim.update(state);
+        });
 
         vapor::print(sim.status_message(state, secs));
         vapor::print("\n");
@@ -316,10 +340,11 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
 
 struct Config
 {
-    double tfinal = 1.0;
     int num_zones = 100;
+    double tfinal = 1.0;
+    double cpi = 0.0;
 };
-VISITABLE_STRUCT(Config, tfinal, num_zones);
+VISITABLE_STRUCT(Config, num_zones, tfinal, cpi);
 
 struct State
 {
