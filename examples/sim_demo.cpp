@@ -1,8 +1,7 @@
 #include <chrono>
+#include <map>
 #include <string>
 #include <vector>
-#include <unistd.h> // usleep, for demo simulation class
-// #include <sys/stat.h> // for directory creation
 #include "app_parse.hpp"
 #include "app_print.hpp"
 #include "core_array.hpp"
@@ -27,7 +26,7 @@
 // [x] array reductions
 
 
-
+// #include <sys/stat.h> // for directory creation
 
 // static void makedir(const char *dir)
 // {
@@ -52,7 +51,7 @@
 
 
 /**
- * Execute and time function call
+ * Execute and time a function call
  *
  * The function is called the given number of times. Returns the number of
  * seconds per call as a double.
@@ -60,12 +59,13 @@
 template<class F>
 double time_call(int num_calls, F f)
 {
-    auto t1 = std::chrono::high_resolution_clock::now();
+    using namespace std::chrono;
+    auto t1 = high_resolution_clock::now();
     for (int n = 0; n < num_calls; ++n) {
         f();
     }
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto delta = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    auto t2 = high_resolution_clock::now();
+    auto delta = duration_cast<duration<double>>(t2 - t1);
     return delta.count() / num_calls;
 }
 
@@ -208,12 +208,24 @@ public:
     virtual vapor::uint updates_per_batch() { return 10; }
 
     /**
-     * Return the time between task recurrences
+     * Return the time between checkpoint task recurrences
      *
      * Will likely be overridden by derived classes
      */
     virtual double checkpoint_interval() const { return 0.0; }
+
+    /**
+     * Return the time between timeseries task recurrences
+     *
+     * Will likely be overridden by derived classes
+     */
     virtual double timeseries_interval() const { return 0.0; }
+
+    /**
+     * Return the time between diagnostic task recurrences
+     *
+     * Will likely be overridden by derived classes
+     */
     virtual double diagnostic_interval() const { return 0.0; }
 
     /**
@@ -252,7 +264,7 @@ protected:
 template<class Config, class State>
 int run(int argc, const char **argv, Simulation<Config, State>& sim)
 {
-    auto timeseries_data = std::vector<double>();
+    auto timeseries_data = std::map<std::string, std::vector<double>>();
     auto tasks = task_states_t();
     auto checkpoint = [&] (const auto& state)
     {
@@ -262,7 +274,10 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
             auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
             vapor::hdf5_write(h5f, "state", state);
             vapor::hdf5_write(h5f, "config", sim.get_config());
-            vapor::hdf5_write(h5f, "timeseries", timeseries_data);
+
+            // for (const auto& [key, val] : timeseries_data) {
+            //     vapor::hdf5_write(h5f, key.data(), val);
+            // }
             vapor::hdf5_write(h5f, "tasks", tasks);
             H5Fclose(h5f);
             printf("write checkpoint %s\n", fname.data);
@@ -274,7 +289,7 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         if (tasks.timeseries.should_be_performed(sim.get_time(state)))
         {
             // for example
-            timeseries_data.push_back(sim.get_time(state));
+            timeseries_data["time"].push_back(sim.get_time(state));
             printf("record timeseries entry\n");
         }
     };
@@ -287,10 +302,6 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         }
     };
 
-    tasks.checkpoint.interval = sim.checkpoint_interval();
-    tasks.timeseries.interval = sim.timeseries_interval();
-    tasks.diagnostic.interval = sim.diagnostic_interval();
-
     auto state = State();
 
     if (argc > 1 && strstr(argv[1], ".h5"))
@@ -298,7 +309,7 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         auto h5f = H5Fopen(argv[1], H5P_DEFAULT, H5P_DEFAULT);
         vapor::hdf5_read(h5f, "state", state);
         vapor::hdf5_read(h5f, "config", sim.get_config());
-        vapor::hdf5_read(h5f, "timeseries", timeseries_data);
+        // vapor::hdf5_read(h5f, "timeseries", timeseries_data);
         vapor::hdf5_read(h5f, "tasks", tasks);
         vapor::set_from_key_vals(sim.get_config(), argc - 1, argv + 1);
         H5Fclose(h5f);
@@ -311,6 +322,10 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         vapor::print_to_file(sim.get_config(), "session.cfg");
         state = sim.initial_state();
     }
+    tasks.checkpoint.interval = sim.checkpoint_interval();
+    tasks.timeseries.interval = sim.timeseries_interval();
+    tasks.diagnostic.interval = sim.diagnostic_interval();
+
     vapor::print(sim.get_config());
     vapor::print("\n");
 
@@ -337,6 +352,8 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
 
 
 
+
+#include <unistd.h> // usleep, for demo simulation class
 
 struct Config
 {
@@ -380,6 +397,10 @@ public:
     bool should_continue(const State& state) const override
     {
         return state.time < config.tfinal;
+    }
+    double checkpoint_interval() const override
+    { 
+        return config.cpi;
     }
 private:
     vapor::cpu_executor_t executor;
