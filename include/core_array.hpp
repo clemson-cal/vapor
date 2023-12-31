@@ -3,7 +3,7 @@
 #include <cassert>
 #include <memory>
 #include "core_compat.hpp"
-#include "core_executor.hpp"
+#include "core_executor.hpp" // remove this when cache is changed to require an executor
 #include "core_functional.hpp"
 #include "core_index_space.hpp"
 #include "core_memory.hpp"
@@ -16,18 +16,32 @@ namespace vapor {
 
 template<uint D, class F> struct array_t;
 template<uint D, class F> struct array_selection_t;
-template<uint D, typename T> using shared_array_t = array_t<D, lookup_t<D, T, std::shared_ptr<managed_memory_t>>>;
-template<uint D, typename T> using refcnt_array_t = array_t<D, lookup_t<D, T, ref_counted_ptr_t<T>>>;
 template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
-template<uint D,
-    class F,
-    class T = typename array_t<D, F>::value_type>
-shared_array_t<D, T> cache(array_t<D, F> a);
-template<uint D,
-    class F,
-    class E,
-    class T = typename array_t<D, F>::value_type>
-refcnt_array_t<D, T> cache(array_t<D, F> a, E& executor);
+template<uint D, typename T> using shared_array_t = array_t<D, lookup_t<D, T, std::shared_ptr<managed_memory_t>>>;
+template<uint D, typename T> using refcnt_array_t = array_t<D, lookup_t<D, T, ref_counted_ptr_t<managed_memory_t>>>;
+
+
+
+
+/**
+ * Execute an array using the given executor and allocator
+ *
+ */
+template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
+auto cache(array_t<D, F> a, E& executor, A& allocator)
+{
+    auto memory = allocator.allocate(a.size() * sizeof(T));
+    auto data = (T*) memory->data();
+    auto start = a.start();
+    auto stride = strides_row_major(a.shape());
+    auto table = lookup(start, stride, data, memory);
+
+    executor.loop(a.space(), [start, stride, data, a] HD (uvec_t<D> i)
+    {
+        data[dot(stride, i - start)] = a[i];
+    });
+    return array(table, a.space(), data);
+}
 
 
 
@@ -99,20 +113,16 @@ struct array_t
     {
         return array_selection_t<D, F>{sel, *this};
     }
-    auto cache() const
+    template<typename E, typename A>
+    auto cache(E& executor, A& allocator) const
     {
-        return vapor::cache(*this);
+        return vapor::cache(*this, executor, allocator);
     }
-    template<typename Executor>
-    auto cache(Executor& executor) const
-    {
-        return vapor::cache(*this, executor);
-    }
-    template<bool C, typename Executor>
-    auto cache_if(Executor& executor) const
+    template<bool C, typename E, typename A>
+    auto cache_if(E& executor, A& allocator) const
     {
         if constexpr (C)
-            return cache(executor);
+            return cache(executor, allocator);
         else 
             return *this;
     }
@@ -273,53 +283,6 @@ template<uint D>
 auto in(index_space_t<D> sel, index_space_t<D> space)
 {
     return array(index_space_contains(sel), space);
-}
-
-/**
- * Create an array, backed by a long-lived memory buffer
- *
- * This array exists independently of an executor, however it captures an
- * std::shared_ptr and can thus only be mapped over with host functions.
- * Attempting to map over it with a device function will generate a compiler
- * warning.
- */
-template<uint D, class F, class T>
-shared_array_t<D, T> cache(array_t<D, F> a)
-{
-    auto memory = std::make_shared<managed_memory_t>();
-    auto data = memory->allocate<T>(a.size());
-    auto start = a.start();
-    auto stride = strides_row_major(a.shape());
-    auto table = lookup(start, stride, data, memory);
-    auto executor = default_executor_t();
-
-    executor.loop(a.space(), [start, stride, data, a] HD (uvec_t<D> i)
-    {
-        data[dot(stride, i - start)] = a[i];
-    });
-    return array(table, a.space(), data);
-}
-
-/**
- * Create an array, backed by memory buffer bound to an executor
- *
- * It is an error to allow the returned array to outlive the executor. This
- * array can be safely mapped over using host or device functions.
- */
-template<uint D, class F, class E, class T>
-refcnt_array_t<D, T> cache(array_t<D, F> a, E& executor)
-{
-    auto memory = executor.template allocate<T>(a.size());
-    auto data = memory.get();
-    auto start = a.start();
-    auto stride = strides_row_major(a.shape());
-    auto table = lookup(start, stride, data, memory);
-
-    executor.loop(a.space(), [start, stride, data, a] HD (uvec_t<D> i)
-    {
-        data[dot(stride, i - start)] = a[i];
-    });
-    return array(table, a.space(), data);
 }
 
 } // namespace vapor

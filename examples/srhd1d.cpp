@@ -232,6 +232,7 @@ int main()
             return vec(0.1, 0.0, 0.125);
     };
     auto exec = default_executor_t();
+    auto alloc = pool_allocator_t();
 
     auto t_final = 0.2;
     auto N = 100000;
@@ -240,9 +241,9 @@ int main()
     auto ic = range(N);
     auto xc = (ic + 0.5) * dx;
     auto dt = dx * 0.3;
-    auto p = xc.map(initial_primitive).cache(exec);
-    auto u = p.map(prim_to_cons).cache(exec);
-    auto p2 = u.map(cons_to_prim).cache(exec);
+    auto p = xc.map(initial_primitive).cache(exec, alloc);
+    auto u = p.map(prim_to_cons).cache(exec, alloc);
+    auto p2 = u.map(cons_to_prim).cache(exec, alloc);
     auto interior_faces = index_space(uvec(1), uvec(N - 1));
     auto interior_cells = index_space(uvec(1), uvec(N - 2));
     auto t = 0.0;
@@ -258,7 +259,7 @@ int main()
             p = ic.map([cons_to_prim, p, u] (auto i)
             {
                 return cons_to_prim(u[i], p[i][index_pressure]);
-            }).cache(exec);
+            }).cache(exec, alloc);
 
             auto fhat = iv[interior_faces].map([p, u, riemann_hlle] HD (uint i)
             {
@@ -267,7 +268,7 @@ int main()
                 auto pl = p[i - 1];
                 auto pr = p[i];
                 return riemann_hlle(pl, pr, ul, ur);
-            }).cache_if<cache_flux>(exec);
+            }).cache_if<cache_flux>(exec, alloc);
 
             auto du = ic[interior_cells].map([fhat, dt, dx] HD (uint i)
             {
@@ -276,7 +277,7 @@ int main()
                 return (fp - fm) * (-dt / dx);
             });
 
-            u = (u.at(interior_cells) + du).cache(exec);
+            u = (u.at(interior_cells) + du).cache(exec, alloc);
 
             t += dt;
             n += 1;
@@ -288,7 +289,7 @@ int main()
         printf("[%04d] t=%.3lf Mzps=%.3lf\n", n, t, Mzps);
     }
 
-    // p = u.map(cons_to_prim).cache(exec);
+    // p = u.map(cons_to_prim).cache(exec, alloc);
     // for (int i = 0; i < N; ++i)
     // {
     //     printf("%+.4f %+.4f %+.4f %+.4f\n", xc[i], p[i][0], p[i][1], p[i][2]);

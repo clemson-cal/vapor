@@ -17,8 +17,9 @@
 
 // TODO
 // 
-// [ ] multi-threaded execution
-// [ ] use of executor base class (see if affects performance)
+// [/] multi-threaded execution
+// [x] restore separate executor-allocator paradigm for array cache's
+// [-] use of executor base class (not possible due to template members)
 // [ ] run directory feature
 // [ ] diagnostic and time series outputs
 // [ ] crash / safety mode feature
@@ -199,16 +200,6 @@ public:
     virtual bool should_continue(const State& state) const = 0;
 
     /**
-     * Return a status message to be printed by the driver
-     *
-     * Will likely be overridden by derived classes
-     */
-    virtual vapor::vec_t<char, 256> status_message(const State& state, double secs_per_call) const
-    {
-        return vapor::format("[%04d] t=%lf %lf sec/iter", get_iteration(state), get_time(state), secs_per_call);
-    }
-
-    /**
      * Returns a non-const reference to the configuration instance
      *
      * Should not be overriden by derived classes
@@ -221,6 +212,16 @@ public:
      * Should not be overriden by derived classes
      */
     virtual const Config& get_config() const { return config; }
+
+    /**
+     * Return a status message to be printed by the driver
+     *
+     * Will likely be overridden by derived classes
+     */
+    virtual vapor::vec_t<char, 256> status_message(const State& state, double secs_per_call) const
+    {
+        return vapor::format("[%04d] t=%lf %lf sec/iter", get_iteration(state), get_time(state), secs_per_call);
+    }
 
 protected:
     Config config;
@@ -331,7 +332,6 @@ VISITABLE_STRUCT(State, time, iteration, u);
 class DemoSimulation : public Simulation<Config, State>
 {
 public:
-
     double get_time(const State& state) const override
     {
         return state.time;
@@ -343,7 +343,7 @@ public:
     State initial_state() const override
     {
         return State{
-            0.0, 0, vapor::zeros<double>(vapor::uvec(config.num_zones)).cache()
+            0.0, 0, vapor::zeros<double>(vapor::uvec(config.num_zones)).cache(executor, allocator)
         };
     }
     void update(State& state) const override
@@ -356,6 +356,9 @@ public:
     {
         return state.time < config.tfinal;
     }
+private:
+    vapor::cpu_executor_t executor;
+    vapor::shared_ptr_allocator_t allocator;
 };
 
 

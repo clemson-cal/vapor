@@ -76,8 +76,8 @@ template<uint D, typename U> struct hdf5_repr<vapor::shared_array_t<D, U>>
         }
         auto start = zeros_uvec<D>();
         auto stride = strides_row_major(shape);
-        auto memory = std::make_shared<vapor::managed_memory_t>();
-        auto data = memory->allocate<U>(product(shape));
+        auto memory = std::make_shared<vapor::managed_memory_t>(product(shape) * sizeof(U));
+        auto data = (U*) memory->data();
         auto table = lookup(start, stride, data, memory);
         val = array(table, index_space(start, shape), data);
     }

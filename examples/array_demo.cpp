@@ -23,11 +23,12 @@ void make_cached_1d_array()
     printf("create and cache a 1d array...\n");
     auto exec1 = default_executor_t();
     auto exec2 = std::move(exec1);
+    auto alloc = pool_allocator_t();
 
     int N = 10;
     auto a = array([] HD (uvec_t<1> i) { return 2 * i[0]; }, N);
     auto b = a * 2;
-    auto c = b.cache(exec2);
+    auto c = b.cache(exec2, alloc);
 
     for (int i = 0; i < N; ++i)
     {

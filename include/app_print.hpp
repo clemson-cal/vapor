@@ -1,4 +1,10 @@
 #pragma once
+#ifdef VAPOR_STD_VECTOR
+#include <vector>
+#endif
+#ifdef VAPOR_STD_STRING
+#include <string>
+#endif
 #include <cstdio>
 #include "core_array.hpp"
 #include "core_vec.hpp"
@@ -66,7 +72,6 @@ static inline void print(bool b, FILE* file=stdout)
  * 
  */
 #ifdef VAPOR_STD_STRING
-#include <string>
 static inline void print(const std::string& s, FILE* file=stdout)
 {
     print(s.data(), file);
@@ -81,7 +86,6 @@ static inline void print(const std::string& s, FILE* file=stdout)
  * 
  */
 #ifdef VAPOR_STD_VECTOR
-#include <vector>
 template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
 {
     print("std::vector(", file);

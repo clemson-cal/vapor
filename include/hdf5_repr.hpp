@@ -28,7 +28,6 @@ template<typename T> struct hdf5_repr;
 
 
 
-
 /**
  * Write an HDF5 representable object to an HDF5 location
  *

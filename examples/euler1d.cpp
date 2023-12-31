@@ -19,6 +19,37 @@ using namespace vapor;
 
 
 
+// #include <vector>
+// #include <thread>
+
+
+// class thread_pool_executor_t : public allocation_pool_t
+// {
+// public:
+//     template<uint D, typename F>
+//     void loop(index_space_t<D> space, F f) const
+//     {
+//         auto num_threads = 8;
+//         auto threads = std::vector<std::thread>();
+
+//         space.decompose(num_threads, [&threads, &f, this] (auto subspace) {
+//             auto g = [subspace, &f, this] { base_executor.loop(subspace, f); };
+//             auto t = std::thread(g);
+//             threads.push_back(std::move(t));
+//         });
+
+//         for (auto &t : threads)
+//         {
+//             t.join();
+//         }
+//     }
+// private:
+//     cpu_executor_t base_executor;
+// };
+
+
+
+
 int main()
 {
     auto cons_to_prim = [] HD (dvec_t<3> u)
@@ -85,7 +116,9 @@ int main()
         else
             return vec(0.1, 0.0, 0.125);
     };
-    auto exec = default_executor_t();
+    auto exec = cpu_executor_t();
+    auto pool = pool_allocator_t();
+    // auto pool = shared_ptr_allocator_t();
 
     auto t_final = 0.1;
     auto N = 20000;
@@ -94,7 +127,7 @@ int main()
     auto ic = range(N);
     auto xc = (ic + 0.5) * dx;
     auto dt = dx * 0.3;
-    auto u = xc.map(initial_primitive).map(prim_to_cons).cache(exec);
+    auto u = xc.map(initial_primitive).map(prim_to_cons).cache(exec, pool);
 
     auto interior_faces = index_space(uvec(1), uvec(N - 1));
     auto interior_cells = index_space(uvec(1), uvec(N - 2));
@@ -113,7 +146,7 @@ int main()
                 auto ul = u[i - 1];
                 auto ur = u[i];
                 return riemann_hlle(ul, ur);
-            }).cache_if<CACHE_FLUX>(exec);
+            }).cache(exec, pool);
 
             auto du = ic[interior_cells].map([fhat, dt, dx] HD (uint i)
             {
@@ -122,7 +155,7 @@ int main()
                 return (fp - fm) * (-dt / dx);
             });
 
-            u = (u.at(interior_cells) + du).cache(exec);
+            u = (u.at(interior_cells) + du).cache(exec, pool);
 
             t += dt;
             n += 1;

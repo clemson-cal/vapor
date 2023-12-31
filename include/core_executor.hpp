@@ -4,15 +4,13 @@
 #endif
 #include <limits>
 #include "core_index_space.hpp"
-#include "core_memory.hpp"
 
 namespace vapor {
 
 
 
 
-
-struct cpu_executor_t : public allocation_pool_t
+struct cpu_executor_t
 {
     template<typename F>
     void loop(index_space_t<1> space, F function) const
@@ -69,25 +67,23 @@ struct cpu_executor_t : public allocation_pool_t
 
 
 
-struct omp_executor_t : public allocation_pool_t
+#ifdef _OPENMP
+struct omp_executor_t
 {
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
-        #ifdef _OPENMP
         uint i0 = space.i0[0];
         uint i1 = space.i0[0] + space.di[0];
 
         #pragma omp parallel for
         for (uint i = i0; i < i1; ++i)
             function(uvec(i));
-        #endif
     }
 
     template<typename F>
     void loop(index_space_t<2> space, F function) const
     {
-        #ifdef _OPENMP
         uint i0 = space.i0[0];
         uint i1 = space.i0[0] + space.di[0];
         uint j0 = space.i0[1];
@@ -97,13 +93,11 @@ struct omp_executor_t : public allocation_pool_t
         for (uint i = i0; i < i1; ++i)
             for (uint j = j0; j < j1; ++j)
                 function(uvec(i, j));
-        #endif
     }
 
     template<typename F>
     void loop(index_space_t<3> space, F function) const
     {
-        #ifdef _OPENMP
         uint i0 = space.i0[0];
         uint i1 = space.i0[0] + space.di[0];
         uint j0 = space.i0[1];
@@ -116,7 +110,6 @@ struct omp_executor_t : public allocation_pool_t
             for (uint j = j0; j < j1; ++j)
                 for (uint k = k0; k < k1; ++k)
                     function(uvec(i, j, k));
-        #endif
     }
 
     template<typename T, typename R>
@@ -129,17 +122,12 @@ struct omp_executor_t : public allocation_pool_t
         return result;
     }
 };
-
-
-
-
-
+#endif // _OPENMP
 
 
 
 
 #ifdef __CUDACC__
-
 template<typename F, uint D>
 __global__ static void gpu_loop(index_space_t<D> space, F function)
 {
@@ -181,7 +169,7 @@ static const dim3 THREAD_BLOCK_SIZE_3D(4, 4, 4);
 
 
 
-struct gpu_executor_t : public allocation_pool_t
+struct gpu_executor_t
 {
     template<typename F>
     void loop(index_space_t<1> space, F function) const

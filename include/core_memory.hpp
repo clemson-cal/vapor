@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <type_traits>
+#include <memory>
 #include "core_compat.hpp"
 
 namespace vapor {
@@ -41,7 +42,6 @@ namespace vapor {
 class managed_memory_t
 {
 public:
-    managed_memory_t() {}
     managed_memory_t(const managed_memory_t& other) = delete;
     managed_memory_t(managed_memory_t&& other)
     {
@@ -51,14 +51,19 @@ public:
         other._data = nullptr;
         other._bytes = 0;
     }
+    managed_memory_t()
+    {
+    }
+    managed_memory_t(size_t bytes)
+    {
+        allocate(bytes);
+    }
     ~managed_memory_t()
     {
         release();
     }
-    template<typename T>
-    T *allocate(size_t count)
+    void allocate(size_t bytes)
     {
-        auto bytes = count * sizeof(T);
         if (bytes > _bytes) {
             release();
             _bytes = bytes;
@@ -68,7 +73,6 @@ public:
             _data = malloc(_bytes);
             #endif
         }
-        return (T*) _data;
     }
     void *data()
     {
@@ -104,7 +108,8 @@ public:
     managed_memory_ptr_t(managed_memory_ptr_t&& other) = default;
     managed_memory_ptr_t(T val)
     {
-        _data = mem.allocate<T>(1);
+        mem.allocate(sizeof(T));
+        _data = (T*) mem.data();
         _data[0] = val;
     }
     const T* get() const
@@ -145,7 +150,7 @@ template<class T>
 class ref_counted_ptr_t
 {
 public:
-    ref_counted_ptr_t(T *data, int *use_count) : _data(data), _use_count(use_count)
+    ref_counted_ptr_t(T *ptr, int *use_count) : _ptr(ptr), _use_count(use_count)
     {
         assert(*use_count == 0);
         retain();
@@ -153,14 +158,14 @@ public:
     HD ref_counted_ptr_t(const ref_counted_ptr_t& other)
     {
         _use_count = other._use_count;
-        _data = other._data;
+        _ptr = other._ptr;
         retain();
     }
     HD ref_counted_ptr_t& operator=(const ref_counted_ptr_t& other)
     {
         release();
         _use_count = other._use_count;
-        _data = other._data;
+        _ptr = other._ptr;
         retain();
         return *this;
     }
@@ -170,13 +175,20 @@ public:
     }
     HD T* get()
     {
-        return _data;
+        return _ptr;
     }
     HD const T* get() const
     {
-        return _data;
+        return _ptr;
     }
-
+    T* operator->()
+    {
+        return _ptr;
+    }
+    const T* operator->() const
+    {
+        return _ptr;
+    }
 private:
     HD void retain()
     {
@@ -190,7 +202,7 @@ private:
         *_use_count -= 1;
         #endif
     }
-    T *_data = nullptr;
+    T *_ptr = nullptr;
     int *_use_count = nullptr;
 };
 
@@ -201,12 +213,12 @@ private:
  * A pool of reference-counted, managed memory allocations
  *
  */
-class allocation_pool_t
+class pool_allocator_t
 {
 public:
-    allocation_pool_t& operator=(const allocation_pool_t& other) = delete;
-    allocation_pool_t(const allocation_pool_t& other) = delete;
-    allocation_pool_t(allocation_pool_t&& other)
+    pool_allocator_t& operator=(const pool_allocator_t& other) = delete;
+    pool_allocator_t(const pool_allocator_t& other) = delete;
+    pool_allocator_t(pool_allocator_t&& other)
     {
         delete [] allocations;
         delete [] use_counts;
@@ -217,7 +229,7 @@ public:
         other.allocations = nullptr;
         other.use_counts = nullptr;
     }
-    allocation_pool_t(uint num_allocations=1024) : num_allocations(num_allocations)
+    pool_allocator_t(uint num_allocations=1024) : num_allocations(num_allocations)
     {
         allocations = new managed_memory_t[num_allocations];
         use_counts = new int[num_allocations];
@@ -227,20 +239,19 @@ public:
             use_counts[n] = 0;
         }
     }
-    template<typename T>
-    ref_counted_ptr_t<T> allocate(size_t count)
+    ref_counted_ptr_t<managed_memory_t> allocate(size_t bytes) const
     {
         for (size_t n = 0; n < num_allocations; ++n)
         {
             if (use_counts[n] == 0)
             {
-                auto data = allocations[n].allocate<T>(count);
-                return ref_counted_ptr_t<T>(data, &use_counts[n]);
+                allocations[n].allocate(bytes);
+                return ref_counted_ptr_t<managed_memory_t>(&allocations[n], &use_counts[n]);
             }
         }
         assert(false); // the pool is out of allocations
     }
-    ~allocation_pool_t()
+    ~pool_allocator_t()
     {
         for (size_t n = 0; n < num_allocations; ++n)
         {
@@ -253,6 +264,27 @@ private:
     size_t num_allocations = 0;
     managed_memory_t* allocations = nullptr;
     int* use_counts = nullptr;
+};
+
+
+
+
+/**
+ * Allocator returning a std::shared_ptr to a block of managed memory
+ *
+ * The allocations returned are thread-safe, and can safely outlive this
+ * allocator, however they cannot be used in device code, and should not be
+ * used in performance-critical code, as repeated calls to system malloc/free
+ * will be incurred than with the pool allocator.
+ *
+ */
+class shared_ptr_allocator_t
+{
+public:
+    std::shared_ptr<managed_memory_t> allocate(size_t count) const
+    {
+        return std::make_shared<managed_memory_t>(count);
+    }
 };
 
 } // namespace vapor
