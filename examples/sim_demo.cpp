@@ -25,18 +25,23 @@ SOFTWARE.
 
 
 
+#define VAPOR_STD_MAP
+#define VAPOR_STD_STRING
+#define VAPOR_STD_VECTOR
 #include <chrono>
 #include <map>
 #include <string>
 #include <vector>
-#include "vapor/parse.hpp"
-#include "vapor/print.hpp"
-#include "vapor/array.hpp"
+#include <variant>
 #include "hdf5/hdf5_array.hpp"
 #include "hdf5/hdf5_map.hpp"
 #include "hdf5/hdf5_native.hpp"
 #include "hdf5/hdf5_repr.hpp"
 #include "hdf5/hdf5_vector.hpp"
+#include "vapor/array.hpp"
+#include "vapor/executor.hpp"
+#include "vapor/parse.hpp"
+#include "vapor/print.hpp"
 #include "visit_struct/visit_struct.hpp"
 
 
@@ -110,6 +115,15 @@ static inline std::string readfile(const char *filename)
     fclose(infile);
     return str;
 }
+
+
+
+
+template<typename T>
+using anydim_array_t = std::variant<
+    vapor::memory_backed_array_t<1, T, std::shared_ptr>,
+    vapor::memory_backed_array_t<2, T, std::shared_ptr>,
+    vapor::memory_backed_array_t<3, T, std::shared_ptr>>;
 
 
 
@@ -256,6 +270,36 @@ public:
             get_time(state), secs_per_update);
     }
 
+    virtual std::vector<vapor::uint> get_timeseries_cols(vapor::uint column) const
+    {
+        return {};
+    }
+
+    virtual const char* get_timeseries_name(vapor::uint column) const
+    {
+        return nullptr;
+    }
+
+    virtual double get_timeseries_sample(vapor::uint column) const
+    {
+        return {};
+    }
+
+    virtual std::vector<vapor::uint> get_diagnostic_cols(vapor::uint column) const
+    {
+        return {};
+    }
+
+    virtual const char* get_diagnostic_name(vapor::uint column) const
+    {
+        return nullptr;
+    }
+
+    virtual anydim_array_t<double> get_diagnostic_field(vapor::uint column) const
+    {
+        return {};
+    }
+
     /**
      * Returns a non-const reference to the configuration instance
      *
@@ -312,6 +356,8 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
     {
         if (tasks.diagnostic.should_be_performed(sim.get_time(state)))
         {
+            // auto field = sim.get_diagnostic_field(0);
+            // std::visit([] (const auto& a) { vapor::hdf5_write_file("diagnostic.h5", a); }, field);
             printf("write diagnostic file\n");
         }
     };
@@ -374,8 +420,9 @@ struct Config
     int num_zones = 100;
     double tfinal = 1.0;
     double cpi = 0.0;
+    std::vector<int> ts;
 };
-VISITABLE_STRUCT(Config, num_zones, tfinal, cpi);
+VISITABLE_STRUCT(Config, num_zones, tfinal, cpi, ts);
 
 struct State
 {

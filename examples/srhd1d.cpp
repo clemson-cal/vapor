@@ -29,6 +29,7 @@ SOFTWARE.
 #include <cstdio>
 #include <cmath>
 #include "vapor/array.hpp"
+#include "vapor/executor.hpp"
 
 using namespace vapor;
 #define gamma (5.0 / 3.0)

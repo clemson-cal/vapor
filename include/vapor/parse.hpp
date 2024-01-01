@@ -26,6 +26,9 @@ SOFTWARE.
 
 
 #pragma once
+#ifdef VAPOR_STD_VECTOR
+#include <vector>
+#endif
 #include <cstring>
 #include <stdexcept>
 #include "print.hpp"
@@ -88,7 +91,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("ready -> comment\n");
             }
             else {
-                throw std::runtime_error("[ready] bad identifier");
+                throw std::runtime_error("[scan_key_val] bad identifier");
             }
             break;
 
@@ -104,7 +107,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 lhs_final = str;
             }
             else if (c == '\0') {
-                throw std::runtime_error("[lhs] line ended without '='");
+                throw std::runtime_error("[scan_key_val] line ended without '='");
             }
             break;
 
@@ -116,13 +119,15 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("expect_equals -> expect_rhs\n");
             }
             else {
-                throw std::runtime_error("[expect_equals] line ended without '='");
+                throw std::runtime_error("[scan_key_val] line ended without '='");
             }
             break;
 
         case lexer_state::expect_rhs:
             if (c == '#' || c == sep || c == '\0') {
-                throw std::runtime_error("[expect_rhs] expected a value");
+                // throw std::runtime_error("[scan_key_val] expected a value");
+                // forgive empty RHS, do not call parser
+                state = lexer_state::ready;
             }
             else if (! isspace(c)) {
                 state = lexer_state::rhs;
@@ -168,7 +173,7 @@ static void scan_key_val(const char *str, char sep, F parser)
 
 
 
-void scan(const char* str, unsigned int size, bool& val)
+void scan(const char* str, uint size, bool& val)
 {
     if (size == 4 && strncmp(str, "true", 4) == 0) {
         val = true;
@@ -180,19 +185,19 @@ void scan(const char* str, unsigned int size, bool& val)
         throw std::runtime_error(format("expected true|false, got %.*s", size, str));
     }
 }
-void scan(const char* str, unsigned int, unsigned int& val)
+void scan(const char* str, uint, uint& val)
 {
     sscanf(str, "%u", &val);
 }
-void scan(const char* str, unsigned int, int& val)
+void scan(const char* str, uint, int& val)
 {
     sscanf(str, "%d", &val);
 }
-void scan(const char* str, unsigned int, float& val)
+void scan(const char* str, uint, float& val)
 {
     sscanf(str, "%f", &val);
 }
-void scan(const char* str, unsigned int, double& val)
+void scan(const char* str, uint, double& val)
 {
     sscanf(str, "%lf", &val);
 }
@@ -200,8 +205,8 @@ void scan(const char* str, unsigned int, double& val)
 
 
 
-template<typename D, unsigned int S>
-void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
+template<typename D, uint S>
+void scan(const char* str, uint size, vec_t<D, S>& val)
 {
     enum class lexer_state {
         ready,
@@ -210,9 +215,9 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
     };
 
     auto state = lexer_state::ready;
-    unsigned int m = 0;
+    uint m = 0;
 
-    for (unsigned int n = 0; n < size; ++n)
+    for (uint n = 0; n < size; ++n)
     {
         switch (state)
         {
@@ -244,12 +249,45 @@ void scan(const char* str, unsigned int size, vapor::vec_t<D, S>& val)
 
 
 
+#ifdef VAPOR_STD_VECTOR
+template<typename T>
+void scan(const char* str, uint size, std::vector<T>& val)
+{
+    enum class lexer_state {
+        ready,
+        expect_sep_or_end,
+    };
+    auto state = lexer_state::ready;
+    val.clear();
+
+    for (uint n = 0; n < size; ++n)
+    {
+        switch (state)
+        {
+        case lexer_state::ready:
+            val.emplace_back();
+            scan(&str[n], size - n, val.back());
+            state = lexer_state::expect_sep_or_end;
+            break;
+
+        case lexer_state::expect_sep_or_end:
+            if (str[n] == ',' || str[n] == ' ')
+                state = lexer_state::ready;
+            break;
+        }
+    }
+}
+#endif // VAPOR_STD_VECTOR
+
+
+
+
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
 auto set_from_key_vals(T& target, const char *str)
 {
     auto found = false;
 
-    vapor::scan_key_val(str, '\n', [&target, &found] (auto l, auto nl, auto r, auto nr)
+    scan_key_val(str, '\n', [&target, &found] (auto l, auto nl, auto r, auto nr)
     {
         visit_struct::for_each(target, [l, nl, r, nr, &found] (auto key, auto& val)
         {

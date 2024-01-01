@@ -27,11 +27,12 @@ SOFTWARE.
 
 #include <cstdio>
 #include <vector>
-#include "vapor/vec.hpp"
-#include "vapor/memory.hpp"
-#include "vapor/index_space.hpp"
 #include "vapor/array.hpp"
+#include "vapor/executor.hpp"
+#include "vapor/index_space.hpp"
+#include "vapor/memory.hpp"
 #include "vapor/print.hpp"
+#include "vapor/vec.hpp"
 
 using namespace vapor;
 

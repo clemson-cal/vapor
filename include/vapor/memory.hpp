@@ -122,6 +122,46 @@ private:
 
 
 /**
+ * A minimal unique pointer to a single POD item in managed memory
+ *
+ */
+template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
+class managed_memory_ptr_t
+{
+public:
+    managed_memory_ptr_t(const managed_memory_ptr_t& other) = delete;
+    managed_memory_ptr_t(managed_memory_ptr_t&& other) = default;
+    managed_memory_ptr_t(T val)
+    {
+        mem.allocate(sizeof(T));
+        _data = (T*) mem.data();
+        _data[0] = val;
+    }
+    const T* get() const
+    {
+        return _data;
+    }
+    T* get()
+    {
+        return _data;
+    }
+    const T& operator*() const
+    {
+        return *_data;
+    }
+    T& operator*()
+    {
+        return *_data;
+    }
+private:
+    managed_memory_t mem;
+    T *_data;
+};
+
+
+
+
+/**
  * A non-deallocating, non-thread-safe, reference counted pointer type
  *
  * This container does not automatically release any resources, it merely

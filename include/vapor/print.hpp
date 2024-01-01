@@ -118,13 +118,11 @@ static inline void print(const std::string& s, FILE* file=stdout)
 #ifdef VAPOR_STD_VECTOR
 template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
 {
-    print("std::vector(", file);
     for (size_t n = 0; n < v.size(); ++n)
     {
         print(v[n], file);
         if (n != v.size() - 1) print(" ", file);
     }
-    print(")", file);
 }
 #endif
 
@@ -135,11 +133,11 @@ template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
  * Print function for std::map<T, U> (opt-in)
  * 
  */
-#ifdef VAPOR_STD_VECTOR
+#ifdef VAPOR_STD_MAP
 template<typename T, typename U> void print(const std::map<T, U>& d, FILE* file=stdout)
 {
     auto n = size_t(0);
-    print("std::map{", file);
+    print("{", file);
     for (const auto& [key, val] : d)
     {
         print(key, file);
