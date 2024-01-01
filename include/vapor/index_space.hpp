@@ -1,6 +1,6 @@
 #pragma once
-#include "core_compat.hpp"
-#include "core_vec.hpp"
+#include "compat.hpp"
+#include "vec.hpp"
 
 namespace vapor {
 

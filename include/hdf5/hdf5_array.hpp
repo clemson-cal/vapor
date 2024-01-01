@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
-#include "core_array.hpp"
-#include "core_functional.hpp"
-#include "core_memory.hpp"
+#include "vapor/array.hpp"
+#include "vapor/functional.hpp"
+#include "vapor/memory.hpp"
 #include "hdf5_repr.hpp"
 
 namespace vapor {

@@ -1,6 +1,6 @@
 #pragma once
-#include "hdf5.h"
-#include "visit_struct.hpp"
+#include <hdf5.h>
+#include "visit_struct/visit_struct.hpp"
 
 namespace vapor {
 

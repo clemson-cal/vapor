@@ -1,6 +1,6 @@
 #pragma once
 #include <type_traits>
-#include "core_compat.hpp"
+#include "compat.hpp"
 
 namespace vapor {
 

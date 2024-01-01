@@ -2,7 +2,7 @@
 #ifdef __CUDACC__
 #include <cub/cub.cuh>
 #endif
-#include "core_index_space.hpp"
+#include "index_space.hpp"
 
 namespace vapor {
 

@@ -9,9 +9,9 @@
 #include <map>
 #endif
 #include <cstdio>
-#include "core_array.hpp"
-#include "core_vec.hpp"
-#include "visit_struct.hpp"
+#include "array.hpp"
+#include "vec.hpp"
+#include "visit_struct/visit_struct.hpp"
 
 namespace vapor {
 

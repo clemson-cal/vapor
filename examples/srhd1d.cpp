@@ -1,7 +1,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cmath>
-#include "core_array.hpp"
+#include "vapor/array.hpp"
 
 using namespace vapor;
 #define gamma (5.0 / 3.0)

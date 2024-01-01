@@ -26,7 +26,7 @@
 #include <cassert>
 #include <type_traits>
 #include <memory>
-#include "core_compat.hpp"
+#include "compat.hpp"
 
 namespace vapor {
 

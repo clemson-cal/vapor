@@ -1,10 +1,10 @@
 #include <cstdio>
 #include <vector>
-#include "core_vec.hpp"
-#include "core_memory.hpp"
-#include "core_index_space.hpp"
-#include "core_array.hpp"
-#include "app_print.hpp"
+#include "vapor/vec.hpp"
+#include "vapor/memory.hpp"
+#include "vapor/index_space.hpp"
+#include "vapor/array.hpp"
+#include "vapor/print.hpp"
 
 using namespace vapor;
 

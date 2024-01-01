@@ -1,9 +1,9 @@
 #pragma once
 #include <cstring>
 #include <stdexcept>
-#include "app_print.hpp"
-#include "core_vec.hpp"
-#include "visit_struct.hpp"
+#include "print.hpp"
+#include "vec.hpp"
+#include "visit_struct/visit_struct.hpp"
 
 namespace vapor {
 

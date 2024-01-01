@@ -2,32 +2,17 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "app_parse.hpp"
-#include "app_print.hpp"
-#include "core_array.hpp"
-#include "hdf5_array.hpp"
-#include "hdf5_map.hpp"
-#include "hdf5_native.hpp"
-#include "hdf5_repr.hpp"
-#include "hdf5_vector.hpp"
-#include "visit_struct.hpp"
+#include "vapor/parse.hpp"
+#include "vapor/print.hpp"
+#include "vapor/array.hpp"
+#include "hdf5/hdf5_array.hpp"
+#include "hdf5/hdf5_map.hpp"
+#include "hdf5/hdf5_native.hpp"
+#include "hdf5/hdf5_repr.hpp"
+#include "hdf5/hdf5_vector.hpp"
+#include "visit_struct/visit_struct.hpp"
 
 
-
-
-// TODO
-// 
-// [/] multi-threaded execution
-// [x] restore separate executor-allocator paradigm for array cache's
-// [-] use of executor base class (not possible due to template members)
-// [ ] run directory feature
-// [ ] diagnostic and time series outputs
-// [ ] crash / safety mode feature
-// [x] simulation base class
-// [x] array reductions
-// [ ] parse std::vector in parse.hpp
-// [ ] rename header files to remove core, app; place in include/vapor
-// [x] iterate properly over HDF5 links
 
 
 // #include <sys/stat.h> // for directory creation

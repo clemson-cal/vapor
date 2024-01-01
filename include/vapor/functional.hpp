@@ -1,8 +1,8 @@
 #pragma once
-#include "core_compat.hpp"
-#include "core_index_space.hpp"
-#include "core_memory.hpp"
-#include "core_vec.hpp"
+#include "compat.hpp"
+#include "index_space.hpp"
+#include "memory.hpp"
+#include "vec.hpp"
 
 namespace vapor {
 
