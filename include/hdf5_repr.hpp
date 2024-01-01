@@ -29,6 +29,22 @@ template<typename T> struct hdf5_repr;
 
 
 /**
+ * If std::map or something like it needs to be written to HDF5, this struct
+ * can be specialized as
+ *
+ * template<typename U>
+ * struct is_key_value_container_t<map<string, U>> : public true_type {};
+ * 
+ * This will allow the container to be written conveniently by calling e.g.
+ * hdf5_write(h5_loc, "my_container", the_map).
+ */
+template <typename T>
+struct is_key_value_container_t : public std::false_type {};
+
+
+
+
+/**
  * Write an HDF5 representable object to an HDF5 location
  *
  * Rationale: visitable data structures are represented as HDF5 groups, with
@@ -45,10 +61,17 @@ void hdf5_write(hid_t location, const char *name, const T& val)
 {
     if constexpr (visit_struct::traits::is_visitable<T>::value) {
         auto group = H5Gcreate(location, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        visit_struct::for_each(val, [group] (const char *name, const auto& val)
+        visit_struct::for_each(val, [group] (const char *key, const auto& item)
         {
-            hdf5_write(group, name, val);
+            hdf5_write(group, key, item);
         });
+        H5Gclose(group);
+    }
+    else if constexpr (is_key_value_container_t<T>::value) {
+        auto group = H5Gcreate(location, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        for (const auto& [key, item] : val) {
+            hdf5_write(group, key.data(), item);
+        }
         H5Gclose(group);
     }
     else {
@@ -74,10 +97,19 @@ void hdf5_read(hid_t location, const char *name, T& val)
 {
     if constexpr (visit_struct::traits::is_visitable<T>::value) {
         auto group = H5Gopen(location, name, H5P_DEFAULT);
-        visit_struct::for_each(val, [group] (const char *name, auto& val)
+        visit_struct::for_each(val, [group] (const char *key, auto& item)
         {
-            hdf5_read(group, name, val);
+            hdf5_read(group, key, item);
         });
+        H5Gclose(group);
+    }
+    else if constexpr (is_key_value_container_t<T>::value) {
+        auto group = H5Gopen(location, name, H5P_DEFAULT);
+        // Warning: this assumes the container has been populated with keys
+        // and empty values.
+        for (auto& [key, item] : val) {
+            hdf5_read(group, key.data(), item);
+        }
         H5Gclose(group);
     }
     else {

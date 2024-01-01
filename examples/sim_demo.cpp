@@ -261,11 +261,20 @@ protected:
 
 
 
+template<typename U>
+struct vapor::is_key_value_container_t<std::map<std::string, U>> : public std::true_type
+{
+};
+
+
+
+
 template<class Config, class State>
 int run(int argc, const char **argv, Simulation<Config, State>& sim)
 {
-    auto timeseries_data = std::map<std::string, std::vector<double>>();
+    auto state = State();
     auto tasks = task_states_t();
+    auto timeseries_data = std::map<std::string, std::vector<double>>();
     auto checkpoint = [&] (const auto& state)
     {
         if (tasks.checkpoint.should_be_performed(sim.get_time(state)))
@@ -274,10 +283,7 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
             auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
             vapor::hdf5_write(h5f, "state", state);
             vapor::hdf5_write(h5f, "config", sim.get_config());
-
-            // for (const auto& [key, val] : timeseries_data) {
-            //     vapor::hdf5_write(h5f, key.data(), val);
-            // }
+            vapor::hdf5_write(h5f, "timeseries", timeseries_data);
             vapor::hdf5_write(h5f, "tasks", tasks);
             H5Fclose(h5f);
             printf("write checkpoint %s\n", fname.data);
@@ -302,14 +308,14 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
         }
     };
 
-    auto state = State();
+    timeseries_data["time"] = {}; // for example
 
     if (argc > 1 && strstr(argv[1], ".h5"))
     {
         auto h5f = H5Fopen(argv[1], H5P_DEFAULT, H5P_DEFAULT);
         vapor::hdf5_read(h5f, "state", state);
         vapor::hdf5_read(h5f, "config", sim.get_config());
-        // vapor::hdf5_read(h5f, "timeseries", timeseries_data);
+        vapor::hdf5_read(h5f, "timeseries", timeseries_data);
         vapor::hdf5_read(h5f, "tasks", tasks);
         vapor::set_from_key_vals(sim.get_config(), argc - 1, argv + 1);
         H5Fclose(h5f);
