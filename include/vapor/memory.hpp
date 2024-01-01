@@ -1,25 +1,50 @@
 /**
- * Memory use strategy
- *
- * This library relies heavily on CUDA's unified memory model. Blocks of
- * memory to be managed by the CUDA runtime have a move-only RAII container
- * called managed_memory_t. On non-CUDA platforms the allocation reduces to
- * malloc / free.
- *
- * Reference counted, managed memory allocations are used as the backing
- * buffers for cached arrays. An allocator pool maintains a list of
- * managed_memory_t instances and corresponding use counts, and vends out
- * unused allocations as e.g. ref_counted_ptr_t<double>. The ref-counted
- * container automatically increments and decrements the use counts. Vended
- * allocations serve as the backing buffers for cached arrays. An allocation
- * with a zero use count is available to be vended out again by the pool.
- * 
- * The pool must outlive any arrays that were cached using the pool's
- * allocations. It is an error to return a cached array from a function, if
- * the allocator pool was also created in the function. If a function needs to
- * return a cached array, it should also take the allocator pool as an
- * argument.
- */
+================================================================================
+Copyright 2023 - 2024, Jonathan Zrake
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+Rationale:
+
+This library relies heavily on CUDA's unified memory model. Blocks of memory
+to be managed by the CUDA runtime have a move-only RAII container called
+managed_memory_t. On non-CUDA platforms the allocation reduces to malloc /
+free.
+
+Reference counted, managed memory allocations are used as the backing buffers
+for cached arrays. An allocator pool maintains a list of managed_memory_t
+instances and corresponding use counts, and vends out unused allocations as
+e.g. ref_counted_ptr_t<double>. The ref-counted container automatically
+increments and decrements the use counts. Vended allocations serve as the
+backing buffers for cached arrays. An allocation with a zero use count is
+available to be vended out again by the pool.
+
+The pool must outlive any arrays that were cached using the pool's
+allocations. It is an error to return a cached array from a function, if the
+allocator pool was also created in the function. If a function needs to return
+a cached array, it should also take the allocator pool as an argument.
+================================================================================
+*/
+
+
+
 
 #pragma once
 #include <cstdlib>
@@ -91,46 +116,6 @@ private:
     }
     void *_data = nullptr;
     size_t _bytes = 0;
-};
-
-
-
-
-/**
- * A minimal unique pointer to a single POD item in managed memory
- *
- */
-template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
-class managed_memory_ptr_t
-{
-public:
-    managed_memory_ptr_t(const managed_memory_ptr_t& other) = delete;
-    managed_memory_ptr_t(managed_memory_ptr_t&& other) = default;
-    managed_memory_ptr_t(T val)
-    {
-        mem.allocate(sizeof(T));
-        _data = (T*) mem.data();
-        _data[0] = val;
-    }
-    const T* get() const
-    {
-        return _data;
-    }
-    T* get()
-    {
-        return _data;
-    }
-    const T& operator*() const
-    {
-        return *_data;
-    }
-    T& operator*()
-    {
-        return *_data;
-    }
-private:
-    managed_memory_t mem;
-    T *_data;
 };
 
 
