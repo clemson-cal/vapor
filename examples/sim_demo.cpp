@@ -6,6 +6,7 @@
 #include "app_print.hpp"
 #include "core_array.hpp"
 #include "hdf5_array.hpp"
+#include "hdf5_map.hpp"
 #include "hdf5_native.hpp"
 #include "hdf5_repr.hpp"
 #include "hdf5_vector.hpp"
@@ -24,6 +25,9 @@
 // [ ] crash / safety mode feature
 // [x] simulation base class
 // [x] array reductions
+// [ ] parse std::vector in parse.hpp
+// [ ] rename header files to remove core, app; place in include/vapor
+// [x] iterate properly over HDF5 links
 
 
 // #include <sys/stat.h> // for directory creation
@@ -203,14 +207,14 @@ public:
      * The performance measurement is averaged over a batch, so tends to be
      * more accurate when there are more updates per batch.
      *
-     * Will likely be overridden by derived classes 
+     * May be overridden by derived classes 
      */
     virtual vapor::uint updates_per_batch() { return 10; }
 
     /**
      * Return the time between checkpoint task recurrences
      *
-     * Will likely be overridden by derived classes
+     * May be overridden by derived classes
      */
     virtual double checkpoint_interval() const { return 0.0; }
 
@@ -231,7 +235,7 @@ public:
     /**
      * Return a status message to be printed by the driver
      *
-     * Will likely be overridden by derived classes
+     * May be overridden by derived classes
      */
     virtual vapor::vec_t<char, 256> status_message(const State& state, double secs_per_update) const
     {
@@ -256,14 +260,6 @@ public:
 
 protected:
     Config config;
-};
-
-
-
-
-template<typename U>
-struct vapor::is_key_value_container_t<std::map<std::string, U>> : public std::true_type
-{
 };
 
 
@@ -391,7 +387,9 @@ public:
     State initial_state() const override
     {
         return State{
-            0.0, 0, vapor::zeros<double>(vapor::uvec(config.num_zones)).cache(executor, allocator)
+            0.0,
+            0,
+            vapor::zeros<double>(vapor::uvec(config.num_zones)).cache(executor, allocator)
         };
     }
     void update(State& state) const override

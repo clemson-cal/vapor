@@ -59,8 +59,14 @@ struct is_key_value_container_t : public std::false_type {};
 template<typename T>
 void hdf5_write(hid_t location, const char *name, const T& val)
 {
+    auto require_group = [location] (const char *group_name) {
+        if (H5Lexists(location, group_name, H5P_DEFAULT))
+            return H5Gopen(location, group_name, H5P_DEFAULT);
+        else
+            return H5Gcreate(location, group_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    };
     if constexpr (visit_struct::traits::is_visitable<T>::value) {
-        auto group = H5Gcreate(location, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        auto group = require_group(name);
         visit_struct::for_each(val, [group] (const char *key, const auto& item)
         {
             hdf5_write(group, key, item);
@@ -68,7 +74,7 @@ void hdf5_write(hid_t location, const char *name, const T& val)
         H5Gclose(group);
     }
     else if constexpr (is_key_value_container_t<T>::value) {
-        auto group = H5Gcreate(location, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        auto group = require_group(name);
         for (const auto& [key, item] : val) {
             hdf5_write(group, key.data(), item);
         }
@@ -105,11 +111,13 @@ void hdf5_read(hid_t location, const char *name, T& val)
     }
     else if constexpr (is_key_value_container_t<T>::value) {
         auto group = H5Gopen(location, name, H5P_DEFAULT);
-        // Warning: this assumes the container has been populated with keys
-        // and empty values.
-        for (auto& [key, item] : val) {
-            hdf5_read(group, key.data(), item);
-        }
+        auto op = [] (hid_t group, const char *key, const H5L_info2_t *info, void *op_data) -> herr_t {
+            T& val = *((T*) op_data);
+            hdf5_read(group, key, val[key]);
+            return 0;
+        };
+        hsize_t idx = 0;
+        H5Literate(group, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, op, &val);
         H5Gclose(group);
     }
     else {
@@ -131,21 +139,18 @@ template<typename T>
 void hdf5_write_file(const char *filename, const T& val)
 {
     auto h5f = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    visit_struct::for_each(val, [h5f] (const char *name, const auto& val)
-    {
-        hdf5_write(h5f, name, val);
-    });
+    hdf5_write(h5f, "/", val);
     H5Fclose(h5f);
 }
+
+
+
 
 template<typename T>
 void hdf5_read_file(const char *filename, T& val)
 {
     auto h5f = H5Fopen(filename, H5P_DEFAULT, H5P_DEFAULT);
-    visit_struct::for_each(val, [h5f] (const char *name, auto& val)
-    {
-        hdf5_read(h5f, name, val);
-    });
+    hdf5_read(h5f, "/", val);
     H5Fclose(h5f);
 }
 

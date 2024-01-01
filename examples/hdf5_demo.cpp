@@ -1,8 +1,10 @@
 #define VAPOR_STD_STRING
 #define VAPOR_STD_VECTOR
+#define VAPOR_STD_MAP
 #include "app_print.hpp"
 #include "core_executor.hpp"
 #include "hdf5_array.hpp"
+#include "hdf5_map.hpp"
 #include "hdf5_native.hpp"
 #include "hdf5_repr.hpp"
 #include "hdf5_string.hpp"
@@ -46,6 +48,18 @@ int main(int argc, const char **argv)
     vapor::print(conf1);
     vapor::print("\n");
     vapor::print(conf2);
+
+    auto dict1 = std::map<std::string, double>();
+    auto dict2 = std::map<std::string, double>();
+    dict1["a"] = 1.0;
+    dict1["b"] = 2.0;
+    vapor::hdf5_write_file("hdf5_demo_map.h5", dict1);
+    vapor::hdf5_read_file("hdf5_demo_map.h5", dict2);
+
+    vapor::print(dict1);
+    vapor::print("\n");
+    vapor::print(dict2);
+    vapor::print("\n");
 
     return 0;
 }

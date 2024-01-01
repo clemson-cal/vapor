@@ -5,6 +5,9 @@
 #ifdef VAPOR_STD_STRING
 #include <string>
 #endif
+#ifdef VAPOR_STD_MAP
+#include <map>
+#endif
 #include <cstdio>
 #include "core_array.hpp"
 #include "core_vec.hpp"
@@ -95,6 +98,29 @@ template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
         if (n != v.size() - 1) print(" ", file);
     }
     print(")", file);
+}
+#endif
+
+
+
+
+/**
+ * Print function for std::map<T, U> (opt-in)
+ * 
+ */
+#ifdef VAPOR_STD_VECTOR
+template<typename T, typename U> void print(const std::map<T, U>& d, FILE* file=stdout)
+{
+    auto n = size_t(0);
+    print("std::map{", file);
+    for (const auto& [key, val] : d)
+    {
+        print(key, file);
+        print(":", file);
+        print(val, file);
+        if (n++ != d.size() - 1) print(" ", file);
+    }
+    print("}", file);
 }
 #endif
 
