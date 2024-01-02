@@ -32,7 +32,6 @@ SOFTWARE.
 #include <map>
 #include <string>
 #include <vector>
-#include <variant>
 #include "hdf5/hdf5_array.hpp"
 #include "hdf5/hdf5_map.hpp"
 #include "hdf5/hdf5_native.hpp"
@@ -119,15 +118,6 @@ static inline std::string readfile(const char *filename)
 
 
 
-template<typename T>
-using anydim_array_t = std::variant<
-    vapor::memory_backed_array_t<1, T, std::shared_ptr>,
-    vapor::memory_backed_array_t<2, T, std::shared_ptr>,
-    vapor::memory_backed_array_t<3, T, std::shared_ptr>>;
-
-
-
-
 /**
  * Represents a task to be performed at a regular interval
  * 
@@ -181,14 +171,14 @@ VISITABLE_STRUCT(task_states_t, checkpoint, timeseries, diagnostic);
 /**
  * Simulation base class
  *
- * Provides or requires 
  */
-template<class C, class S>
+template<class C, class S, class D>
 class Simulation
 {
 public:
     using Config = C;
     using State = S;
+    using DiagnosticData = D;
 
     /**
      * Return a time for use by the simulation driver
@@ -270,32 +260,64 @@ public:
             get_time(state), secs_per_update);
     }
 
-    virtual std::vector<vapor::uint> get_timeseries_cols(vapor::uint column) const
+    /**
+     * Return integers identifying the timeseries measurements to be made
+     *
+     * The integers returned must be valid keys to the get_timeseries_name and
+     * compute_timeseries_sample functions below. They could be hard-coded, or
+     * be collected from the user configuration.
+     * 
+     */
+    virtual std::vector<vapor::uint> get_timeseries_cols() const
     {
         return {};
     }
 
+    /**
+     * Return a short name for one of the provided timeseries measurements
+     *
+     */
     virtual const char* get_timeseries_name(vapor::uint column) const
     {
         return nullptr;
     }
 
-    virtual double get_timeseries_sample(vapor::uint column) const
+    /**
+     * Compute and return a number from the simulation state
+     *
+     */
+    virtual double compute_timeseries_sample(const State& state, vapor::uint column) const
     {
         return {};
     }
 
-    virtual std::vector<vapor::uint> get_diagnostic_cols(vapor::uint column) const
+    /**
+     * Return integers identifying the diagnostic fields to be computed
+     *
+     * The integers returned must be valid keys to the get_diagnostic_name and
+     * compute_diagnostic functions below. They could be hard-coded, or be
+     * collected from the user configuration.
+     * 
+     */
+    virtual std::vector<vapor::uint> get_diagnostic_cols() const
     {
         return {};
     }
 
+    /**
+     * Return a short name for one of the provided diagnostic measurements
+     *
+     */
     virtual const char* get_diagnostic_name(vapor::uint column) const
     {
         return nullptr;
     }
 
-    virtual anydim_array_t<double> get_diagnostic_field(vapor::uint column) const
+    /**
+     * Compute and return a diagnsotic field from the simulation state
+     *
+     */
+    virtual DiagnosticData compute_diagnostic(const State& state, vapor::uint column) const
     {
         return {};
     }
@@ -321,8 +343,8 @@ protected:
 
 
 
-template<class Config, class State>
-int run(int argc, const char **argv, Simulation<Config, State>& sim)
+template<class Config, class State, class DiagnosticData>
+int run(int argc, const char **argv, Simulation<Config, State, DiagnosticData>& sim)
 {
     auto state = State();
     auto tasks = task_states_t();
@@ -346,8 +368,12 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
     {
         if (tasks.timeseries.should_be_performed(sim.get_time(state)))
         {
-            // for example
-            timeseries_data["time"].push_back(sim.get_time(state));
+            for (auto col : sim.get_timeseries_cols())
+            {
+                auto name = sim.get_timeseries_name(col);
+                auto sample = sim.compute_timeseries_sample(state, col);
+                timeseries_data[name].push_back(sample);
+            }
             printf("record timeseries entry\n");
         }
     };
@@ -356,13 +382,19 @@ int run(int argc, const char **argv, Simulation<Config, State>& sim)
     {
         if (tasks.diagnostic.should_be_performed(sim.get_time(state)))
         {
-            // auto field = sim.get_diagnostic_field(0);
-            // std::visit([] (const auto& a) { vapor::hdf5_write_file("diagnostic.h5", a); }, field);
-            printf("write diagnostic file\n");
+            auto fname = vapor::format("diagnostic.%04d.h5", tasks.diagnostic.number);
+            auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+            for (auto col : sim.get_diagnostic_cols())
+            {
+                auto name = sim.get_diagnostic_name(col);
+                auto field = sim.compute_diagnostic(state, col);
+                vapor::hdf5_write(h5f, name, field);
+            }
+            H5Fclose(h5f);
+            printf("write diagnostic file %s\n", fname.data);
         }
     };
-
-    timeseries_data["time"] = {}; // for example
 
     if (argc > 1 && strstr(argv[1], ".h5"))
     {
@@ -432,7 +464,15 @@ struct State
 };
 VISITABLE_STRUCT(State, time, iteration, u);
 
-class DemoSimulation : public Simulation<Config, State>
+
+
+
+using DiagnosticData = vapor::memory_backed_array_t<1, double, std::shared_ptr>;
+
+
+
+
+class DemoSimulation : public Simulation<Config, State, DiagnosticData>
 {
 public:
     double get_time(const State& state) const override
