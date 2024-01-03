@@ -40,6 +40,7 @@ namespace vapor {
 
 
 
+template<uint D> class communicator_t;
 template<uint D, class F> struct array_t;
 template<uint D, class F> struct array_selection_t;
 template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
@@ -56,17 +57,38 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<managed_memory_t>>>;
 template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
 auto cache(array_t<D, F> a, E& executor, A& allocator)
 {
-    auto memory = allocator.allocate(a.size() * sizeof(T));
-    auto data = (T*) memory->data();
-    auto start = a.start();
-    auto stride = strides_row_major(a.shape());
-    auto table = lookup(start, stride, data, memory);
+    if (a._comm == nullptr) {
+        auto memory = allocator.allocate(a.size() * sizeof(T));
+        auto data = (T*) memory->data();
+        auto start = a.start();
+        auto stride = strides_row_major(a.shape());
+        auto table = lookup(start, stride, data, memory);
 
-    executor.loop(a.space(), [start, stride, data, a] HD (uvec_t<D> i)
-    {
-        data[dot(stride, i - start)] = a[i];
-    });
-    return array(table, a.space(), data);
+        executor.loop(a.space(), [start, stride, data, a] HD (uvec_t<D> i)
+        {
+            data[dot(stride, i - start)] = a[i];
+        });
+        return array(table, a.space(), data);
+    }
+    else {
+        auto memory = allocator.allocate(a._subspace.size() * sizeof(T));
+        auto data = (T*) memory->data();
+        auto start = a._subspace.start();
+        auto stride = strides_row_major(a._subspace.shape());
+        auto table = lookup(start, stride, data, memory);
+
+        executor.loop(a._subspace, [start, stride, data, a] HD (uvec_t<D> i)
+        {
+            #if VAPOR_ARRAY_BOUNDS_CHECK
+            assert(a._subspace.contains(i));
+            #endif
+            data[dot(stride, i - start)] = a[i];
+        });
+        auto result = array(table, a.space(), data);
+        result._subspace = a._subspace;
+        result._comm = a._comm;
+        return result;
+    }
 }
 
 
@@ -169,6 +191,18 @@ struct array_t
         else 
             return *this;
     }
+    auto global(const communicator_t<D>& comm) const
+    {
+        return array_t{
+            f,
+            _shape,
+            _start,
+            nullptr,
+            comm.subspace(space()),
+            {},
+            &comm,
+        };
+    }
 
     template<class G> auto map(G g) const { return array(compose<D>(f, g), space()); }
     template<class G> auto operator+(array_t<D, G> b) const { return array(add<D>(f, b.f), space()); }
@@ -183,7 +217,14 @@ struct array_t
     F f;
     uvec_t<D> _shape;
     uvec_t<D> _start = {0};
+
+    // pointer to a contiguous memory backing, if one exists
     value_type* _data = nullptr;
+
+    // reserved for global arrays
+    index_space_t<D> _subspace;
+    index_space_t<D> _halo;
+    const communicator_t<D> *_comm = nullptr;
 };
 
 

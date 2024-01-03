@@ -76,6 +76,61 @@ template<uint D>
 struct index_space_t
 {
     /**
+     * Return the shape of this index space
+     * 
+     */
+    uvec_t<D> start() const
+    {
+        return i0;
+    }
+
+    /**
+     * Return the shape of this index space
+     * 
+     */
+    uvec_t<D> shape() const
+    {
+        return di;
+    }
+
+    /**
+     * Return the number of elements in this index space
+     * 
+     */
+    uint size() const
+    {
+        return product(di);
+    }
+
+    /**
+     * Test whether the index space contains a given index
+     * 
+     */
+    HD bool contains(uvec_t<D> i) const
+    {
+        for (uint axis = 0; axis < D; ++axis)
+        {
+            if (i[axis] < i0[axis] || i[axis] >= i0[axis] + di[axis])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * An index space representing the n-th partition of this one on an axis
+     * 
+     */
+    index_space_t subspace(uint num_partitions, uint which_partition, uint axis=0) const
+    {
+        auto partition = partition_interval(num_partitions, di[axis], which_partition);
+        auto space = *this;
+        space.i0[axis] = partition[0] + i0[axis];
+        space.di[axis] = partition[1];
+        return space;
+    }
+    /**
      * Remove the given number of indexes from the lower and upper extent
      * 
      */
@@ -107,53 +162,6 @@ struct index_space_t
             dj[axis] += count * 2;
         }
         return {j0, dj};
-    }
-
-    /**
-     * Extend the upper extent so the space is like a space of vertices
-     * 
-     */
-    index_space_t vertices() const
-    {
-        return {i0, di + ones_uvec<D>()};
-    }
-
-    /**
-     * Return the shape of this index space
-     * 
-     */
-    uvec_t<D> shape() const
-    {
-        return di;
-    }
-
-    /**
-     * Test whether the index space contains a given index
-     * 
-     */
-    HD bool contains(uvec_t<D> i) const
-    {
-        for (uint axis = 0; axis < D; ++axis)
-        {
-            if (i[axis] < i0[axis] || i[axis] >= i0[axis] + di[axis])
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * An index space representing the n-th partition of this one on an axis
-     * 
-     */
-    index_space_t subspace(uint num_partitions, uint which_partition, uint axis=0) const
-    {
-        auto partition = partition_interval(num_partitions, di[axis], which_partition);
-        auto space = *this;
-        space.i0[axis] = partition[0] + i0[axis];
-        space.di[axis] = partition[1];
-        return space;
     }
 
     uvec_t<D> i0;

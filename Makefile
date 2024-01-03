@@ -44,4 +44,4 @@ mpi: \
  examples/global_array
  
 examples/global_array: examples/global_array.cpp $(VAPOR_INCLUDES)
-	$(MPICC) $(CXXFLAGS) -o $@ $< -I include -lc++
+	$(MPICC) $(CXXFLAGS) -o $@ $< -I include -lc++ -D VAPOR_ARRAY_BOUNDS_CHECK=1

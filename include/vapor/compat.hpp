@@ -37,4 +37,6 @@ namespace vapor {
 	using uint = unsigned int;
 }
 
+#ifndef VAPOR_ARRAY_BOUNDS_CHECK
 #define VAPOR_ARRAY_BOUNDS_CHECK 0
+#endif

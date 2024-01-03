@@ -29,8 +29,8 @@ SOFTWARE.
 #ifdef VAPOR_MPI
 #include <cassert>
 #include <mpi.h>
-#include "vec.hpp"
 #include "index_space.hpp"
+#include "vec.hpp"
 
 namespace vapor {
 
@@ -47,6 +47,22 @@ public:
     ~mpi_scoped_initializer()
     {
         MPI_Finalize();
+    }
+    int size() const
+    {
+        int s;
+        MPI_Comm_size(MPI_COMM_WORLD, &s);
+        return s;
+    }
+    int rank() const
+    {
+        int r;
+        MPI_Comm_rank(MPI_COMM_WORLD, &r);
+        return r;
+    }
+    void barrier() const
+    {
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 };
 
