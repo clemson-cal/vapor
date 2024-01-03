@@ -75,24 +75,33 @@ auto cache(array_t<D, F> a, E& executor, A& allocator)
 /**
  * A functional n-dimensional array
  *
- * An array is a shape (type uvec_t<D>) and a callable f := uvec_t<D> -> T.
- * The function can be an explict mapping of the index (e.g. the indices
- * function), it could retrieve values from a buffer (see cache member
- * function and lookup_t), or it could transform the outputs of another array
- * (see map).
- *
- * In-place array modifications are modeled using a paradigm from jax, if a is
- * an array, you can call a.at(space).map([] (auto i) { ... }) where space is
- * an instance of index_space_t.
- *
- * The implementation needs to change slightly, so that arrays have an index,
- * whose lower-left corner need not be the origin.
+ * An array is a D-dimensional index space, and a function f: uvec_t<D> -> T.
+ * Arrays are logically immutable, a[i] returns by value an element of type T;
+ * a[i] = x will not compile. Arrays are transformed mainly by mapping
+ * operatons. If g: T -> U then a.map(g) is an array with value type of U, and
+ * the same index space as a. Array elements are computed lazily, meaning that
+ * b = a.map(f).map(g).map(h) triggers the execution h(g(f(i)) each time b[i]
+ * appears.
  * 
- * The construct a.insert(b) chooses from b if the index lies within b's index
- * space, and choose from a otherwise.
+ * An array is 'cached' to a memory-backed array by calling a.cache(exec,
+ * alloc), where exec is an executor and alloc is an allocator. The executor
+ * can be a GPU executor on GPU-enabled platforms, or a multi-core executor
+ * where OpenMP is available. The memory backed array uses strided memory
+ * access to retrieve the value of a multi-dimensional index in the buffer.
  *
- * If b = a.at(space).map(...) then b retains space as its index space; b can
- * thus be readily inserted into a.
+ * Unlike arrays from other numeric libraries, including numpy, arrays in
+ * VAPOR can have a non-zero starting index. This changes the semantics of
+ * inserting the values of one array into another, often for the better, and
+ * is also favorable in dealing with global arrays and domain decomposition.
+ * For example, if a covers the 1d index space (0, 100) and b covers (1, 99),
+ * then the array resulting from a.insert(b) has the values of a at the
+ * endpoints, and the values of b on the interior.
+ *
+ * In-place array modifications are modeled using a paradigm inspired by Jax.
+ * If a is an array, the construct a = a.at(space).map(f) will map only the
+ * elements inside the index space through the function f, leaving the other
+ * values unchanged.
+ *
  * 
  */
 template<uint D, class F>
@@ -111,9 +120,12 @@ struct array_t
     {
         return operator[](uvec(i));
     }
-    HD auto operator[](index_space_t<D> space) const
+    HD auto operator[](index_space_t<D> subspace) const
     {
-        return array_t<D, F>{f, space.di, space.i0};
+        #if VAPOR_ARRAY_BOUNDS_CHECK
+        assert(space().contains(subspace));
+        #endif
+        return array_t<D, F>{f, subspace.di, subspace.i0};
     }
     auto start() const
     {
@@ -138,6 +150,11 @@ struct array_t
     auto at(index_space_t<D> sel) const
     {
         return array_selection_t<D, F>{sel, *this};
+    }
+    template<typename G>
+    auto insert(array_t<D, G> b)
+    {
+        return select(in(b.space(), space()), b, *this);
     }
     template<typename E, typename A>
     auto cache(E& executor, A& allocator) const
@@ -172,6 +189,20 @@ struct array_t
 
 
 
+/**
+ * An array selection is what is returned by a.at(subspace)
+ *
+ * The resulting object can be mapped over; the arrays
+ * 
+ * a.insert(a[subspace].map(f)) or a.insert(b)
+ * 
+ * and
+ * 
+ * a.at(subspace).map(f)
+ *
+ * are fully equivalent to one another.
+ * 
+ */
 template<uint D, class F>
 struct array_selection_t
 {
