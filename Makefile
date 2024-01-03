@@ -1,6 +1,7 @@
 CXXFLAGS = -std=c++17 -Ofast -Wall
 NVCFLAGS = -std=c++17 --extended-lambda
 NVCC = nvcc
+MPICC = mpicc
 VAPOR_INCLUDES = $(wildcard include/vapor/*.hpp)
 
 default: \
@@ -38,3 +39,9 @@ examples/euler1d_gpu: examples/euler1d.cpp $(VAPOR_INCLUDES)
 
 examples/array_demo_gpu: examples/array_demo.cpp $(VAPOR_INCLUDES)
 	$(NVCC) $(NVCFLAGS) -x cu $< -o $@ -I include
+
+mpi: \
+ examples/global_array
+ 
+examples/global_array: examples/global_array.cpp $(VAPOR_INCLUDES)
+	$(MPICC) $(CXXFLAGS) -o $@ $< -I include
