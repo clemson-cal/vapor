@@ -30,6 +30,7 @@ SOFTWARE.
 #include <cassert>
 #include <mpi.h>
 #include "vec.hpp"
+#include "index_space.hpp"
 
 namespace vapor {
 
@@ -88,6 +89,18 @@ public:
         MPI_Cart_get(_comm, D, s, t, c);
         return t;
     }
+    index_space_t<D> subspace(index_space_t<D> space) const
+    {
+        auto c = coords();
+        auto s = shape();
+
+        for (uint axis = 0; axis < D; ++axis)
+        {
+            space = space.subspace(s[axis], c[axis], axis);
+        }
+        return space;
+    }
+
 private:
     MPI_Comm _comm;
 };

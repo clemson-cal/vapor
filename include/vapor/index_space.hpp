@@ -75,22 +75,36 @@ inline static uvec_t<2> partition_interval(uint num_partitions, uint num_element
 template<uint D>
 struct index_space_t
 {
-    uvec_t<D> i0;
-    uvec_t<D> di;
-
     /**
      * Remove the given number of indexes from the lower and upper extent
      * 
      */
-    index_space_t contract(uint num_guard) const
+    index_space_t contract(uint count) const
     {
         auto j0 = i0;
         auto dj = di;
 
         for (uint axis = 0; axis < D; ++axis)
         {
-            j0[axis] += num_guard;
-            dj[axis] -= num_guard * 2;
+            j0[axis] += count;
+            dj[axis] -= count * 2;
+        }
+        return {j0, dj};
+    }
+
+    /**
+     * Add the given number of indexes to the lower and upper extent
+     * 
+     */
+    index_space_t expand(uint count) const
+    {
+        auto j0 = i0;
+        auto dj = di;
+
+        for (uint axis = 0; axis < D; ++axis)
+        {
+            j0[axis] -= count;
+            dj[axis] += count * 2;
         }
         return {j0, dj};
     }
@@ -121,7 +135,11 @@ struct index_space_t
         return true;
     }
 
-    auto subspace(uint num_partitions, uint which_partition, uint axis=0) const
+    /**
+     * An index space representing the n-th partition of this one on an axis
+     * 
+     */
+    index_space_t subspace(uint num_partitions, uint which_partition, uint axis=0) const
     {
         auto partition = partition_interval(num_partitions, di[axis], which_partition);
         auto space = *this;
@@ -129,6 +147,9 @@ struct index_space_t
         space.di[axis] = partition[1];
         return space;
     }
+
+    uvec_t<D> i0;
+    uvec_t<D> di;
 };
 
 

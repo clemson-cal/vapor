@@ -9,3 +9,4 @@ examples/sim_demo
 examples/srhd1d
 *.h5
 *.cfg
+*.dSYM
