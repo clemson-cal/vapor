@@ -2,8 +2,19 @@
 
 ## Description
 
-A lightweight application framework for high-performance numerical
-applications in C++ / CUDA.
+VAPOR is a lightweight application framework to ease the development of
+GPU-accelerated and massively parallel scientific simulation codes. Its
+objectives are to:
+
+- Provide lightweight, idiomatic C++ abstractions for high-performance array
+  transformations and PDE solvers
+- Adapt to hybrid parallel compute architectures (multi-core / multi-node /
+  multi-GPU) with near-zero change to the application code
+- Enable rapid development of small, targeted, simulation codes, by
+  abstracting the business logc of simulation drivers (user configurations,
+  checkpointing, real-time post-processing)
+- Be header-only and dependency-free; a C++17 compiler is sufficient (optional
+  dependencies include CUDA, MPI, and HDF5)
 
 ## Table of Contents (Optional)
 

@@ -118,11 +118,19 @@ struct index_space_t
         return {i0, di + ones_uvec<D>()};
     }
 
+    /**
+     * Return the shape of this index space
+     * 
+     */
     uvec_t<D> shape() const
     {
         return di;
     }
 
+    /**
+     * Test whether the index space contains a given index
+     * 
+     */
     HD bool contains(uvec_t<D> i) const
     {
         for (uint axis = 0; axis < D; ++axis)
@@ -155,12 +163,23 @@ struct index_space_t
 
 
 
+/**
+ * Construct an index space starting at the zero-vector, with the given shape
+ * 
+ */
 template<uint D>
 auto index_space(uvec_t<D> di)
 {
     return index_space_t<D>{zeros_uvec<D>(), di};
 }
 
+
+
+
+/**
+ * Construct an index space with the given start and shape
+ * 
+ */
 template<uint D>
 auto index_space(uvec_t<D> i0, uvec_t<D> di)
 {
