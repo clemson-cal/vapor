@@ -35,6 +35,38 @@ namespace vapor {
 
 
 /**
+ * Return an integer interval, representing the n-th partition of a larger range
+ *
+ * The interval is represented as (start, size). If the number of partitions
+ * does not divide the number of elements, then the remainder is distributed
+ * to the leading intervals.
+ * 
+ * Examples:
+ * 
+ * partition_interval(10, 101, 0) = (0, 11)
+ * partition_interval(10, 101, 1) = (11, 10)
+ * 
+ */
+inline static uvec_t<2> partition_interval(uint num_partitions, uint num_elements, uint which_partition)
+{
+#define min2(a, b) ((a) < (b) ? (a) : (b))
+#define max2(a, b) ((a) > (b) ? (a) : (b))
+    auto large_partition_size = num_elements / num_partitions + 1;
+    auto small_partition_size = num_elements / num_partitions;
+    auto num_large_partitions = num_elements % num_partitions;
+    auto n_large = min2(which_partition, num_large_partitions);
+    auto n_small = max2(which_partition - n_large, 0);
+    auto i0 = n_large * large_partition_size + n_small * small_partition_size;
+    auto di = which_partition < num_large_partitions ? large_partition_size : small_partition_size;
+    return vec(i0, di);
+#undef min2
+#undef max2
+}
+
+
+
+
+/**
  * An n-dimensional index space
  *
  *
@@ -89,51 +121,18 @@ struct index_space_t
         return true;
     }
 
-    template<class Yield>
-    void decompose(uint num_parts, Yield yield) const
+    auto subspace(uint num_partitions, uint which_partition, uint axis=0) const
     {
-        /**
-         * Equitably divide the given number of elements into `num_parts` partitions.
-         *
-         * The sum of the partitions is `elements`. The number of partitions must be
-         * less than or equal to the number of elements.
-         *
-         * yield: (uint) -> void
-         */
-        auto partition = [] (uint elements, uint num_parts, auto yield)
-        {
-            auto n = elements / num_parts;
-            auto r = elements % num_parts;
-
-            for (uint i = 0; i < num_parts; ++i)
-            {
-                yield(n + (i < r));
-            }
-        };
-
-        /**
-         * Divide an interval into non-overlapping contiguous sub-intervals.
-         *
-         * yield: (i0: uint, di: uint) -> void
-         */
-        auto subdivide = [partition] (uint a, uint da, uint num_parts, auto yield)
-        {
-            partition(da, num_parts, [yield, &a] (uint n)
-            {
-                yield(a, n);
-                a += n;
-            });
-        };
-
-        subdivide(i0[0], di[0], num_parts, [this, yield] (uint i0, uint di)
-        {
-            auto space = *this;
-            space.i0[0] = i0;
-            space.di[0] = di;
-            yield(space);
-        });
+        auto partition = partition_interval(num_partitions, di[axis], which_partition);
+        auto space = *this;
+        space.i0[axis] = partition[0] + i0[axis];
+        space.di[axis] = partition[1];
+        return space;
     }
 };
+
+
+
 
 template<uint D>
 auto index_space(uvec_t<D> di)

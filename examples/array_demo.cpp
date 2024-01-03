@@ -129,11 +129,13 @@ void decompose_index_space()
 {
     printf("decompose an index space\n");
 
-    index_space(uvec(5, 5), uvec(10, 20)).decompose(4, [] (auto space)
+    auto space = index_space(uvec(5, 5), uvec(10, 20));
+
+    for (int n = 0; n < 4; ++n)
     {
-        print(space);
+        print(space.subspace(4, n));
         print("\n");
-    });
+    }
 }
 
 int main()

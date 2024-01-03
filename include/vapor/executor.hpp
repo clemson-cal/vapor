@@ -200,51 +200,55 @@ struct gpu_executor_t
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
-        int device = 0;
         int num_devices;
         cudaGetDeviceCount(&num_devices);
-        space.decompose(num_devices, [&device, function] (auto subspace)
+
+        for (uint device = 0; device < num_devices; ++device)
         {
             cudaSetDevice(device);
+            auto subspace = space.subspace(num_devices, device);
             auto ni = subspace.di[0];
             auto bs = THREAD_BLOCK_SIZE_1D;
             auto nb = dim3((ni + bs.x - 1) / bs.x);
             gpu_loop<<<nb, bs>>>(subspace, function);
-            device += 1;
-        });
+        }
     }
 
     template<typename F>
     void loop(index_space_t<2> space, F function) const
     {
-        int device = 0;
         int num_devices;
         cudaGetDeviceCount(&num_devices);
-        space.decompose(num_devices, [&device, function] (auto subspace)
+
+        for (uint device = 0; device < num_devices; ++device)
         {
+            cudaSetDevice(device);
+            auto subspace = space.subspace(num_devices, device);
             auto ni = subspace.di[0];
             auto nj = subspace.di[1];
             auto bs = THREAD_BLOCK_SIZE_2D;
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
             gpu_loop<<<nb, bs>>>(subspace, function);
-        });
+        }
     }
 
     template<typename F>
     void loop(index_space_t<3> space, F function) const
     {
-        int device = 0;
         int num_devices;
         cudaGetDeviceCount(&num_devices);
-        space.decompose(num_devices, [&device, function] (auto subspace)
+
+        for (uint device = 0; device < num_devices; ++device)
         {
+            cudaSetDevice(device);
+            auto subspace = space.subspace(num_devices, device);
             auto ni = subspace.di[0];
             auto nj = subspace.di[1];
             auto nk = subspace.di[2];
             auto bs = THREAD_BLOCK_SIZE_3D;
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
             gpu_loop<<<nb, bs>>>(subspace, function);
-        });
+        }
     }
 
     template<typename T, typename R>
