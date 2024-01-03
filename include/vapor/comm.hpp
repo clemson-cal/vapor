@@ -37,6 +37,22 @@ namespace vapor {
 
 
 
+class mpi_scoped_initializer
+{
+public:
+    mpi_scoped_initializer()
+    {
+        MPI_Init(0, nullptr);
+    }
+    ~mpi_scoped_initializer()
+    {
+        MPI_Finalize();
+    }
+};
+
+
+
+
 template<uint D>
 class communicator_t
 {
@@ -48,6 +64,10 @@ public:
         MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
         MPI_Dims_create(num_nodes, D, shape);
         MPI_Cart_create(MPI_COMM_WORLD, D, shape, topology, reorder, &_comm);
+    }
+    ~communicator_t()
+    {
+        MPI_Comm_free(&_comm);
     }
     int size() const
     {

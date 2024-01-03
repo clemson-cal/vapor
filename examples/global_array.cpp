@@ -7,8 +7,7 @@
 
 int main()
 {
-    MPI_Init(0, nullptr);
-
+    auto mpi = vapor::mpi_scoped_initializer();
     auto comm = vapor::communicator_t<3>();
     auto space = vapor::index_space(vapor::uvec(30, 30, 30));
 
@@ -24,7 +23,5 @@ int main()
         }
         comm.barrier();
     }
-
-    MPI_Finalize();
     return 0;
 }
