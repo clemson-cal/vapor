@@ -326,6 +326,7 @@ public:
      * Returns a non-const reference to the configuration instance
      *
      * Should not be overriden by derived classes
+     * 
      */
     Config& get_config() { return config; }
 
@@ -333,6 +334,7 @@ public:
      * Returns a const reference to the configuration instance
      *
      * Should not be overriden by derived classes
+     * 
      */
     const Config& get_config() const { return config; }
 
