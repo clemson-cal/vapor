@@ -59,10 +59,55 @@ void create_global_array()
     }
 }
 
+void create_mpi_datatype()
+{
+    int size;
+    int rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (size != 2) {
+        print("create_mpi_datatype requires exactly 2 procs\n");
+        return;
+    }
+    if (rank == 0) {
+        print("create an MPI data type for vec_t and send an instance...\n");
+    }
+
+    auto vec_type = mpi_repr<vec_t<double, 5>>::type();
+
+    if (rank == 0)
+    {
+        auto a = zeros_vec<double, 5>();
+        for (int i = 0; i < 5; ++i)
+        {
+            a[i] = i;
+        }
+        MPI_Send(&a.data, 1, vec_type, 1, 0, MPI_COMM_WORLD);
+    }
+    else
+    {
+        auto status = MPI_Status();
+        auto a = zeros_vec<double, 5>();
+        MPI_Recv(&a.data, 1, vec_type, 0, 0, MPI_COMM_WORLD, &status);
+        print(a);
+        print("\n");
+    }
+    MPI_Type_free(&vec_type);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        print("create an MPI data type for a subarray...\n");
+    }
+    auto subarray = mpi_subarray_datatype<vec_t<int, 3>>(index_space(uvec(100, 100)), index_space(uvec(10, 10)));
+    MPI_Type_free(&subarray);
+}
+
 int main()
 {
     auto mpi = mpi_scoped_initializer();
     create_cartesian_communicator();
     create_global_array();
+    create_mpi_datatype();
     return 0;
 }

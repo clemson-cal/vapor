@@ -37,6 +37,71 @@ namespace vapor {
 
 
 
+/**
+ * A template struct to explain how a type is represented to MPI
+ *
+ */
+template<typename T> struct mpi_repr;
+
+
+
+
+template<> struct mpi_repr<signed char>        { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_SIGNED_CHAR, &t); return t; } };
+template<> struct mpi_repr<unsigned char>      { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_UNSIGNED_CHAR, &t); return t; } };
+template<> struct mpi_repr<short>              { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_SHORT, &t); return t; } };
+template<> struct mpi_repr<unsigned short>     { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_UNSIGNED_SHORT, &t); return t; } };
+template<> struct mpi_repr<int>                { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_INT, &t); return t; } };
+template<> struct mpi_repr<unsigned int>       { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_UNSIGNED, &t); return t; } };
+template<> struct mpi_repr<long>               { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_LONG, &t); return t; } };
+template<> struct mpi_repr<unsigned long>      { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_UNSIGNED_LONG, &t); return t; } };
+template<> struct mpi_repr<long long>          { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_LONG_LONG, &t); return t; } };
+template<> struct mpi_repr<unsigned long long> { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_UNSIGNED_LONG_LONG, &t); return t; } };
+template<> struct mpi_repr<char>               { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_CHAR, &t); return t; } };
+template<> struct mpi_repr<wchar_t>            { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_WCHAR, &t); return t; } };
+template<> struct mpi_repr<float>              { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_FLOAT, &t); return t; } };
+template<> struct mpi_repr<double>             { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_DOUBLE, &t); return t; } };
+template<> struct mpi_repr<long double>        { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_LONG_DOUBLE, &t); return t; } };
+template<> struct mpi_repr<bool>               { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_C_BOOL, &t); return t; } };
+
+template<typename U, uint S>
+struct mpi_repr<vec_t<U, S>>
+{
+    static MPI_Datatype type()
+    {
+        MPI_Datatype u = mpi_repr<U>::type();
+        MPI_Datatype s;
+        MPI_Type_contiguous(S, u, &s);
+        MPI_Type_commit(&s);
+        MPI_Type_free(&u);
+        return s;
+    }
+};
+
+template<typename U, uint D>
+MPI_Datatype mpi_subarray_datatype(index_space_t<D> parent, index_space_t<D> nested)
+{
+    MPI_Datatype u = mpi_repr<U>::type();
+    MPI_Datatype s;
+    ivec_t<D> sizes;
+    ivec_t<D> subsizes;
+    ivec_t<D> starts;
+    int order = MPI_ORDER_C;
+
+    for (int n = 0; n < D; ++n)
+    {
+        sizes[n] = parent.di[n];
+        subsizes[n] = nested.di[n];
+        starts[n] = nested.i0[n];
+    }
+    MPI_Type_create_subarray(D, sizes, subsizes, starts, order, u, &s);
+    MPI_Type_commit(&s);
+    MPI_Type_free(&u);
+    return s;
+}
+
+
+
+
 class mpi_scoped_initializer
 {
 public:

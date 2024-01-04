@@ -79,9 +79,6 @@ auto cache(array_t<D, F> a, E& executor, A& allocator)
 
         executor.loop(a._subspace, [start, stride, data, a] HD (uvec_t<D> i)
         {
-            #if VAPOR_ARRAY_BOUNDS_CHECK
-            assert(a._subspace.contains(i));
-            #endif
             data[dot(stride, i - start)] = a[i];
         });
         auto result = array(table, a.space(), data);
@@ -203,8 +200,21 @@ struct array_t
             &comm,
         };
     }
+    auto expand(uvec_t<D> halo) const
+    {
+        assert(_comm); // only global arrays can be expanded
+        return array_t{
+            f,
+            _shape,
+            _start,
+            _data,
+            _subspace.expand(halo, space()),
+            _halo + halo,
+            _comm,
+        };
+    }
 
-    template<class G> auto map(G g) const { return array(compose<D>(f, g), space()); }
+    template<class G> auto map(G g) const { return array(compose<D>(f, g), space()); } // TODO: pass the subspace, halo, and comm props
     template<class G> auto operator+(array_t<D, G> b) const { return array(add<D>(f, b.f), space()); }
     template<class G> auto operator-(array_t<D, G> b) const { return array(sub<D>(f, b.f), space()); }
     template<class G> auto operator*(array_t<D, G> b) const { return array(mul<D>(f, b.f), space()); }
@@ -221,9 +231,22 @@ struct array_t
     // pointer to a contiguous memory backing, if one exists
     value_type* _data = nullptr;
 
-    // reserved for global arrays
+    /**
+     * These data members are only used by global arrays
+     *
+     * The subspace property describes the portion of the global array which
+     * is assigned to the current process. When a global array is first
+     * created, the subspaces are non-overlapping and cover the global index
+     * space. If the array is expanded, the local subspaces will then overlap,
+     * and the halo region will be non-zero. However it is never correct to
+     * access the halo elements of an array. After the array is cached, the
+     * subspace remains expanded, and the halo region is set to zero,
+     * indicating it is then safe to access any of the array elements within
+     * the subspace of the local process.
+     * 
+     */
     index_space_t<D> _subspace;
-    index_space_t<D> _halo;
+    uvec_t<D> _halo;
     const communicator_t<D> *_comm = nullptr;
 };
 
