@@ -131,7 +131,12 @@ HD auto zeros_dvec()
 template<typename T, uint S>
 HD auto ones_vec()
 {
-    return vec_t<T, S>{0};
+    auto res = vec_t<T, S>{};
+    for (uint i = 0; i < S; ++i)
+    {
+        res[i] = 1;
+    }
+    return res;
 }
 template<uint S>
 HD auto ones_uvec()
