@@ -136,6 +136,15 @@ void decompose_index_space()
         print(space.subspace(4, n));
         print("\n");
     }
+    print("the index space front is ");
+    print(space.front());
+    print("\n");
+    print("the index space back is ");
+    print(space.back());
+    print("\n");
+    print("an index space contains itself? ");
+    print(space.contains(space));
+    print("\n");
 }
 
 int main()

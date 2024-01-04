@@ -119,6 +119,15 @@ struct index_space_t
     }
 
     /**
+     * Test whether another index space lies fully within this one
+     * 
+     */
+    HD bool contains(index_space_t<D> other) const
+    {
+        return contains(other.front()) && contains(other.back());
+    }
+
+    /**
      * An index space representing the n-th partition of this one on an axis
      * 
      */
@@ -162,6 +171,24 @@ struct index_space_t
             dj[axis] += count * 2;
         }
         return {j0, dj};
+    }
+
+    /**
+     * Return the first index that would be visited in a traversal
+     *
+     */
+    HD uvec_t<D> front() const
+    {
+        return i0;
+    }
+
+    /**
+     * Return the final index that would be visited in a traversal
+     *
+     */
+    HD uvec_t<D> back() const
+    {
+        return i0 + di - ones_vec<uint, D>();
     }
 
     uvec_t<D> i0;
