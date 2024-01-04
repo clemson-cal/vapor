@@ -30,34 +30,42 @@ void create_cartesian_communicator()
     }
 }
 
-void create_global_array()
-{
-    auto comm = communicator_t<1>();
+// The MPI global array feature is on hold for now. The header file comm.hpp
+// still contains relevant support routines, but the 'global' member function
+// in the array class has been removed, as well as the special case of global
+// array in the cache method.
+// 
+// That code was removed after commit 669b415
+// 
+// 
+// void create_global_array()
+// {
+//     auto comm = communicator_t<1>();
 
-    if (comm.rank() == 0) {
-        printf("create a 1d global array...\n");
-    }
-    auto exec = cpu_executor_t();
-    auto alloc = shared_ptr_allocator_t();
-    auto a = range(50).global(comm).cache(exec, alloc);
+//     if (comm.rank() == 0) {
+//         printf("create a 1d global array...\n");
+//     }
+//     auto exec = cpu_executor_t();
+//     auto alloc = shared_ptr_allocator_t();
+//     auto a = range(50).global(comm).cache(exec, alloc);
 
-    for (int rank = 0; rank < comm.size(); ++rank)
-    {
-        if (rank == comm.rank())
-        {
-            for (int i = a._subspace.i0[0]; i < a._subspace.i0[0] + a._subspace.di[0]; ++i)
-            {
-                print(a[i]);
-                print(" ");
-            }
-            print("| ");
-        }
-        comm.barrier();
-    }
-    if (comm.rank() == 0) {
-        print("\n");
-    }
-}
+//     for (int rank = 0; rank < comm.size(); ++rank)
+//     {
+//         if (rank == comm.rank())
+//         {
+//             for (int i = a._subspace.i0[0]; i < a._subspace.i0[0] + a._subspace.di[0]; ++i)
+//             {
+//                 print(a[i]);
+//                 print(" ");
+//             }
+//             print("| ");
+//         }
+//         comm.barrier();
+//     }
+//     if (comm.rank() == 0) {
+//         print("\n");
+//     }
+// }
 
 void create_mpi_datatype()
 {
@@ -107,7 +115,7 @@ int main()
 {
     auto mpi = mpi_scoped_initializer();
     create_cartesian_communicator();
-    create_global_array();
+    // create_global_array();
     create_mpi_datatype();
     return 0;
 }

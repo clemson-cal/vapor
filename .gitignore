@@ -3,10 +3,10 @@ examples/array_demo_gpu
 examples/config_demo
 examples/euler1d
 examples/euler1d_gpu
-examples/global_array
 examples/hdf5_demo
+examples/mpi_demo
 examples/sim_demo
 examples/srhd1d
-*.h5
 *.cfg
 *.dSYM
+*.h5
