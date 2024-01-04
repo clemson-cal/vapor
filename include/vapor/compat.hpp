@@ -40,3 +40,7 @@ namespace vapor {
 #ifndef VAPOR_ARRAY_BOUNDS_CHECK
 #define VAPOR_ARRAY_BOUNDS_CHECK 0
 #endif
+
+#ifndef VAPOR_VEC_BOUNDS_CHECK
+#define VAPOR_VEC_BOUNDS_CHECK 0
+#endif

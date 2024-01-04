@@ -14,7 +14,7 @@ default: \
  examples/srhd1d
 
 examples/array_demo: examples/array_demo.cpp $(VAPOR_INCLUDES)
-	$(CXX) $(CXXFLAGS) -o $@ $< -I include
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include -D VAPOR_ARRAY_BOUNDS_CHECK=1 -D VAPOR_VEC_BOUNDS_CHECK=1
 
 examples/config_demo: examples/config_demo.cpp $(VAPOR_INCLUDES)
 	$(CXX) $(CXXFLAGS) -o $@ $< -I include
