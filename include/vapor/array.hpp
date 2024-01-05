@@ -277,13 +277,13 @@ auto uniform(T val, index_space_t<D> space)
 template<typename T, uint D>
 auto zeros(uvec_t<D> shape)
 {
-    return uniform<T, D>(0, shape);
+    return uniform<T, D>(T(), shape);
 }
 
 template<typename T, uint D>
 auto zeros(index_space_t<D> space)
 {
-    return uniform<T, D>(0, space);
+    return uniform<T, D>(T(), space);
 }
 
 /**
@@ -292,13 +292,13 @@ auto zeros(index_space_t<D> space)
 template<typename T, uint D>
 auto ones(uvec_t<D> shape)
 {
-    return uniform<T, D>(1, shape);
+    return uniform<T, D>(T(1), shape);
 }
 
 template<typename T, uint D>
 auto ones(index_space_t<D> space)
 {
-    return uniform<T, D>(1, space);
+    return uniform<T, D>(T(1), space);
 }
 
 /**

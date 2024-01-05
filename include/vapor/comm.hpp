@@ -29,6 +29,7 @@ SOFTWARE.
 #ifdef VAPOR_MPI
 #include <cassert>
 #include <mpi.h>
+#include "array.hpp"
 #include "index_space.hpp"
 #include "vec.hpp"
 
@@ -138,7 +139,7 @@ template<uint D>
 class communicator_t
 {
 public:
-    communicator_t(ivec_t<D> shape=zeros_ivec<D>(), ivec_t<D> topology=zeros_ivec<D>())
+    communicator_t(ivec_t<D> shape=zeros_ivec<D>(), ivec_t<D> topology=ones_ivec<D>())
     {
         auto num_nodes = 0;
         auto reorder = 0;
@@ -200,6 +201,40 @@ public:
             space = space.subspace(s[axis], c[axis], axis);
         }
         return space;
+    }
+    template<class F, class E, class A>
+    auto expand(const array_t<D, F>& a, int count, E& executor, A& allocator)
+    {
+        using T = typename array_t<D, F>::value_type;
+        auto is_exp = a.space().expand(count);
+        auto is_ori = is_exp.with_start(zeros_uvec<D>());
+        auto result = zeros<T>(is_exp).insert(a).cache(executor, allocator);
+
+        for (int axis = 0; axis < D; ++axis)
+        {
+            int sendrank;
+            int recvrank;
+            int sendcount = 1;
+            int recvcount = 1;
+            MPI_Datatype sendtype_r = mpi_subarray_datatype<T>(is_ori, is_ori.upper(count, axis).shift(-count, axis));
+            MPI_Datatype recvtype_r = mpi_subarray_datatype<T>(is_ori, is_ori.lower(count, axis));
+            MPI_Datatype sendtype_l = mpi_subarray_datatype<T>(is_ori, is_ori.lower(count, axis).shift(+count, axis));
+            MPI_Datatype recvtype_l = mpi_subarray_datatype<T>(is_ori, is_ori.upper(count, axis));
+            MPI_Status status;
+            MPI_Cart_shift(_comm, axis, +1, &recvrank, &sendrank);
+            MPI_Sendrecv(result._data, sendcount, sendtype_r, sendrank, 0,
+                         result._data, recvcount, recvtype_r, recvrank, 0,
+                         _comm, &status);
+            MPI_Cart_shift(_comm, axis, -1, &recvrank, &sendrank);
+            MPI_Sendrecv(result._data, sendcount, sendtype_l, sendrank, 0,
+                         result._data, recvcount, recvtype_l, recvrank, 0,
+                         _comm, &status);
+            MPI_Type_free(&sendtype_l);
+            MPI_Type_free(&recvtype_l);
+            MPI_Type_free(&sendtype_r);
+            MPI_Type_free(&recvtype_r);
+        }
+        return result;
     }
 
 private:

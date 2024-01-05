@@ -76,7 +76,7 @@ template<uint D>
 struct index_space_t
 {
     /**
-     * Return the shape of this index space
+     * Return the start of this index space
      * 
      */
     uvec_t<D> start() const
@@ -91,6 +91,24 @@ struct index_space_t
     uvec_t<D> shape() const
     {
         return di;
+    }
+
+    /**
+     * Return the first index that would be visited in a traversal
+     *
+     */
+    HD uvec_t<D> front() const
+    {
+        return i0;
+    }
+
+    /**
+     * Return the final index that would be visited in a traversal
+     *
+     */
+    HD uvec_t<D> back() const
+    {
+        return i0 + di - ones_vec<uint, D>();
     }
 
     /**
@@ -173,22 +191,33 @@ struct index_space_t
         return {j0, dj};
     }
 
-    /**
-     * Return the first index that would be visited in a traversal
-     *
-     */
-    HD uvec_t<D> front() const
+    index_space_t<D> with_start(uvec_t<D> new_start) const
     {
-        return i0;
+        auto result = *this;
+        result.i0 = new_start;
+        return result;
     }
 
-    /**
-     * Return the final index that would be visited in a traversal
-     *
-     */
-    HD uvec_t<D> back() const
+    index_space_t<D> upper(uint amount, uint axis) const
     {
-        return i0 + di - ones_vec<uint, D>();
+        auto result = *this;
+        result.i0[axis] = i0[axis] + di[axis] - amount;
+        result.di[axis] = amount;
+        return result;
+    }
+
+    index_space_t<D> lower(uint amount, uint axis) const
+    {
+        auto result = *this;
+        result.di[axis] = amount;
+        return result;
+    }
+
+    index_space_t<D> shift(int amount, uint axis) const
+    {
+        auto result = *this;
+        result.i0[axis] += amount;
+        return result;
     }
 
     uvec_t<D> i0;

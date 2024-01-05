@@ -30,42 +30,35 @@ void create_cartesian_communicator()
     }
 }
 
-// The MPI global array feature is on hold for now. The header file comm.hpp
-// still contains relevant support routines, but the 'global' member function
-// in the array class has been removed, as well as the special case of global
-// array in the cache method.
-// 
-// That code was removed after commit 669b415
-// 
-// 
-// void create_global_array()
-// {
-//     auto comm = communicator_t<1>();
+void exchange_boundary_data()
+{
+    auto comm = communicator_t<1>();
+    auto exec = cpu_executor_t();
+    auto alloc = shared_ptr_allocator_t();
+    auto is_glb = index_space(uvec(1), uvec(19)); // global index space
+    auto is_loc = comm.subspace(is_glb);          // local index space
+    auto is_exp = is_loc.expand(1);               // local index space, expanded to include guard zones
+    auto ic_loc = indices(is_loc);
+    auto data_loc = ic_loc.cache(exec, alloc);
+    auto data_exp = comm.expand(data_loc, 1, exec, alloc);
 
-//     if (comm.rank() == 0) {
-//         printf("create a 1d global array...\n");
-//     }
-//     auto exec = cpu_executor_t();
-//     auto alloc = shared_ptr_allocator_t();
-//     auto a = range(50).global(comm).cache(exec, alloc);
-
-//     for (int rank = 0; rank < comm.size(); ++rank)
-//     {
-//         if (rank == comm.rank())
-//         {
-//             for (int i = a._subspace.i0[0]; i < a._subspace.i0[0] + a._subspace.di[0]; ++i)
-//             {
-//                 print(a[i]);
-//                 print(" ");
-//             }
-//             print("| ");
-//         }
-//         comm.barrier();
-//     }
-//     if (comm.rank() == 0) {
-//         print("\n");
-//     }
-// }
+    for (int rank = 0; rank < comm.size(); ++rank)
+    {
+        if (rank == comm.rank())
+        {
+            for (int i = is_exp.i0[0]; i < is_exp.i0[0] + is_exp.di[0]; ++i)
+            {
+                print(data_exp[i]);
+                print(" ");
+            }
+            print("| ");
+        }
+        comm.barrier();
+    }
+    if (comm.rank() == 0) {
+        print("\n");
+    }
+}
 
 void create_mpi_datatype()
 {
@@ -115,7 +108,7 @@ int main()
 {
     auto mpi = mpi_scoped_initializer();
     create_cartesian_communicator();
-    // create_global_array();
+    exchange_boundary_data();
     create_mpi_datatype();
     return 0;
 }
