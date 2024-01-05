@@ -215,7 +215,7 @@ public:
     {
         using T = typename array_t<D, F>::value_type;
         auto is_exp = a.space().expand(count);
-        auto is_ori = is_exp.with_start(zeros_uvec<D>());
+        auto is_ori = is_exp.with_start(zeros_ivec<D>());
         auto result = zeros<T>(is_exp).insert(a).cache(executor, allocator);
 
         for (int axis = 0; axis < D; ++axis)

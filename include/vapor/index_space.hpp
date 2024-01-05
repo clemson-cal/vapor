@@ -128,7 +128,7 @@ struct index_space_t
     {
         for (uint axis = 0; axis < D; ++axis)
         {
-            if (i[axis] < i0[axis] || i[axis] >= i0[axis] + di[axis])
+            if (i[axis] < i0[axis] || i[axis] >= i0[axis] + int(di[axis]))
             {
                 return false;
             }

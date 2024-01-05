@@ -35,7 +35,7 @@ void exchange_boundary_data()
     auto comm = communicator_t<1>();
     auto exec = cpu_executor_t();
     auto alloc = shared_ptr_allocator_t();
-    auto is_glb = index_space(uvec(1), uvec(19)); // global index space
+    auto is_glb = index_space(ivec(0), uvec(20)); // global index space
     auto is_loc = comm.subspace(is_glb);          // local index space
     auto is_exp = is_loc.expand(1);               // local index space, expanded to include guard zones
     auto ic_loc = indices(is_loc);
@@ -46,7 +46,7 @@ void exchange_boundary_data()
     {
         if (rank == comm.rank())
         {
-            for (int i = is_exp.i0[0]; i < is_exp.i0[0] + is_exp.di[0]; ++i)
+            for (int i = is_exp.i0[0]; i < is_exp.i0[0] + int(is_exp.di[0]); ++i)
             {
                 print(data_exp[i]);
                 print(" ");
