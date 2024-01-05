@@ -64,6 +64,16 @@ template<> struct mpi_repr<double>             { static MPI_Datatype type() { MP
 template<> struct mpi_repr<long double>        { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_LONG_DOUBLE, &t); return t; } };
 template<> struct mpi_repr<bool>               { static MPI_Datatype type() { MPI_Datatype t; MPI_Type_dup(MPI_C_BOOL, &t); return t; } };
 
+
+
+
+/**
+ * Return an MPI data type for a vec_t
+ *
+ * The data type returned by this function needs to be closed with
+ * MPI_Comm_free.
+ * 
+ */
 template<typename U, uint S>
 struct mpi_repr<vec_t<U, S>>
 {
@@ -78,9 +88,22 @@ struct mpi_repr<vec_t<U, S>>
     }
 };
 
+
+
+
+/**
+ * Return an MPI data type for a subset of an array
+ *
+ * The data type returned by this function corresponds to a sub-array with the
+ * nested index space, within the parent index space. The data type needs to
+ * be closed with MPI_Comm_free.
+ * 
+ */
 template<typename U, uint D>
 MPI_Datatype mpi_subarray_datatype(index_space_t<D> parent, index_space_t<D> nested)
 {
+    assert(parent.contains(nested));
+
     MPI_Datatype u = mpi_repr<U>::type();
     MPI_Datatype s;
     ivec_t<D> sizes;
@@ -103,6 +126,19 @@ MPI_Datatype mpi_subarray_datatype(index_space_t<D> parent, index_space_t<D> nes
 
 
 
+/**
+ * An RAII-type scoped MPI initializer
+ *
+ * int main()
+ * {
+ *     auto mpi = mpi_scoped_initialize_t(); // calls MPI_Init
+ *
+ *     print(mpi.rank()); // convenience function to get size and rank
+ *
+ *     return 0; // MPI_Finalize called in the destructor
+ * }
+ * 
+ */
 class mpi_scoped_initializer
 {
 public:
@@ -135,11 +171,18 @@ public:
 
 
 
+/**
+ * A wrapper for an MPI cartesian communicator, with convenience functions
+ *
+ * For example, instances can return a local index subspace on the current MPI
+ * process, within a global space, and can add halo zones to a
+ * multi-dimensional array by communicating with neighbor processes.
+ */
 template<uint D>
-class communicator_t
+class cartesian_communicator_t
 {
 public:
-    communicator_t(ivec_t<D> shape=zeros_ivec<D>(), ivec_t<D> topology=ones_ivec<D>())
+    cartesian_communicator_t(ivec_t<D> shape=zeros_ivec<D>(), ivec_t<D> topology=ones_ivec<D>())
     {
         auto num_nodes = 0;
         auto reorder = 0;
@@ -147,7 +190,7 @@ public:
         MPI_Dims_create(num_nodes, D, shape);
         MPI_Cart_create(MPI_COMM_WORLD, D, shape, topology, reorder, &_comm);
     }
-    ~communicator_t()
+    ~cartesian_communicator_t()
     {
         MPI_Comm_free(&_comm);
     }
@@ -191,6 +234,11 @@ public:
         MPI_Cart_get(_comm, D, s, t, c);
         return t;
     }
+
+    /**
+     * Return the local index space, within a global one, for this MPI process
+     *
+     */
     index_space_t<D> subspace(index_space_t<D> space) const
     {
         auto c = coords();
@@ -203,6 +251,14 @@ public:
         return space;
     }
 
+    /**
+     * Fill halo zones in a memory-backed array with data from neighbor ranks
+     *
+     * This function receives the number of zones (count) to be filled on each
+     * side of the array, and performs a send-recv operation to fill those
+     * zones. The of the input array is not changed.
+     * 
+     */
     template<typename T, template<typename> typename P>
     auto fill_halo(memory_backed_array_t<D, T, P>& a, uvec_t<D> count)
     {
@@ -231,8 +287,9 @@ public:
     /**
      * Return an array expanded with halo zones from neighbor MPI processes
      *
-     * This function recieves as an argument (count) the number of zones to be
-     * added to each side of the array, and performs a send-recv operation to
+     * This function receives the number of zones (count) to be added to each
+     * side of the array, and performs a send-recv operation to fill those
+     * zones. The shape of the resulting array is a.shape() + 2 * count.
      * 
      */
     template<class F, class E, class A>
