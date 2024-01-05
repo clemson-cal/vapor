@@ -202,8 +202,16 @@ public:
         }
         return space;
     }
+
+    /**
+     * Return an array expanded with guard zones from neighbor MPI processes
+     *
+     * This function recieves as an argument (count) the number of zones to be
+     * added to each side of the array, and performs a send-recv operation to
+     * 
+     */
     template<class F, class E, class A>
-    auto expand(const array_t<D, F>& a, int count, E& executor, A& allocator)
+    auto expand(const array_t<D, F>& a, uint count, E& executor, A& allocator)
     {
         using T = typename array_t<D, F>::value_type;
         auto is_exp = a.space().expand(count);

@@ -59,6 +59,16 @@ struct vec_t
     {
         return data;
     }
+    template<typename U> vec_t<U, S> cast() const
+    {
+        auto result = vec_t<U, S>();
+
+        for (uint i = 0; i < S; ++i)
+        {
+            result[i] = data[i];
+        }
+        return result;
+    }
     T data[S];
 };
 

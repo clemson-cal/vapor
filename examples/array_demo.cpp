@@ -54,7 +54,7 @@ void make_cached_1d_array()
     auto alloc = pool_allocator_t();
 
     int N = 10;
-    auto a = array([] HD (uvec_t<1> i) { return 2 * i[0]; }, N);
+    auto a = array([] HD (ivec_t<1> i) { return 2 * i[0]; }, N);
     auto b = a * 2;
     auto c = b.cache(exec2, alloc);
 
@@ -71,7 +71,7 @@ void map_subset()
     int N = 5;
     auto first_two = index_space(uvec(2));
     auto a = range(N);
-    auto b = a.at(first_two).map([] HD (uint i) { return 0; });
+    auto b = a.at(first_two).map([] HD (int i) { return 0; });
     auto c = a.at(first_two) * 0; // equivalent to b above
     auto d = a.at(first_two).set(0); // also equivalent
 
@@ -79,8 +79,8 @@ void map_subset()
     {
         printf("[%u]: %u=%u=%u=%u\n", i, b[i], i < 2 ? 0 : i, c[i], d[i]);
     }
-    printf("range(5)[2:4].start[0]=%d=2\n", a[index_space(uvec(2), uvec(2))].start()[0]);
-    printf("range(5)[2:4].shape[0]=%d=2\n", a[index_space(uvec(2), uvec(2))].shape()[0]);
+    printf("range(5)[2:4].start[0]=%d=2\n", a[index_space(ivec(2), uvec(2))].start()[0]);
+    printf("range(5)[2:4].shape[0]=%d=2\n", a[index_space(ivec(2), uvec(2))].shape()[0]);
 }
 
 void array_reductions()
@@ -102,11 +102,11 @@ void generator_arrays()
         d.shape()[0], d.shape()[1], d.shape()[2]);
 
     auto e = ones<int>(uvec(4, 8, 12));
-    printf("an array of ones anywhere is %d\n", e[uvec(0, 0, 0)]);
+    printf("an array of ones anywhere is %d\n", e[ivec(0, 0, 0)]);
 
     auto i = indices(uvec(4, 8, 12));
     printf("an array of indexes, at index (3 7 11) is (%d %d %d)\n",
-        i[uvec(3, 7, 11)][0], i[uvec(3, 7, 11)][1], i[uvec(3, 7, 11)][2]);
+        i[ivec(3, 7, 11)][0], i[ivec(3, 7, 11)][1], i[ivec(3, 7, 11)][2]);
 }
 
 void construct_pointer_types()
@@ -129,7 +129,7 @@ void decompose_index_space()
 {
     printf("decompose an index space\n");
 
-    auto space = index_space(uvec(5, 5), uvec(10, 20));
+    auto space = index_space(ivec(5, 5), uvec(10, 20));
 
     for (int n = 0; n < 4; ++n)
     {

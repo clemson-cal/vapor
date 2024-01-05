@@ -63,7 +63,7 @@ auto cache(array_t<D, F> a, E& executor, A& allocator)
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, memory);
 
-    executor.loop(a.space(), [start, stride, data, a] HD (uvec_t<D> i)
+    executor.loop(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
     {
         data[dot(stride, i - start)] = a[i];
     });
@@ -108,18 +108,18 @@ auto cache(array_t<D, F> a, E& executor, A& allocator)
 template<uint D, class F>
 struct array_t
 {
-    using value_type = std::invoke_result_t<F, uvec_t<D>>;
+    using value_type = std::invoke_result_t<F, ivec_t<D>>;
 
-    HD auto operator[](uvec_t<D> index) const
+    HD auto operator[](ivec_t<D> index) const
     {
         #if VAPOR_ARRAY_BOUNDS_CHECK
         assert(space().contains(index));
         #endif
         return f(index);
     }
-    HD auto operator[](uint i) const
+    HD auto operator[](int i) const
     {
-        return operator[](uvec(i));
+        return operator[](ivec(i));
     }
     HD auto operator[](index_space_t<D> subspace) const
     {
@@ -183,7 +183,7 @@ struct array_t
 
     F f;
     uvec_t<D> _shape;
-    uvec_t<D> _start = {0};
+    ivec_t<D> _start = {0};
     value_type* _data = nullptr;
 };
 
@@ -207,7 +207,7 @@ struct array_t
 template<uint D, class F>
 struct array_selection_t
 {
-    using value_type = std::invoke_result_t<F, uvec_t<D>>;
+    using value_type = std::invoke_result_t<F, ivec_t<D>>;
 
     template<class G>
     auto map(G g) { return select(in(sel, a.space()), a.map(g), a); }
@@ -233,16 +233,16 @@ struct array_selection_t
  * A 1d array from an index function and a size
  */
 template<class F>
-array_t<1, F> array(F f, uint size, uint start=0)
+array_t<1, F> array(F f, uint size, int start=0)
 {
-    return {f, uvec(size), uvec(start)};
+    return {f, uvec(size), ivec(start)};
 }
 
 /**
  * An nd array from a an index function and a shape
  */
 template<uint D, class F>
-array_t<D, F> array(F f, uvec_t<D> shape, uvec_t<D> start={0})
+array_t<D, F> array(F f, uvec_t<D> shape, ivec_t<D> start={0})
 {
     return {f, shape, start};
 }
@@ -250,7 +250,7 @@ array_t<D, F> array(F f, uvec_t<D> shape, uvec_t<D> start={0})
 /**
  * An nd array from a an index function and an index space
  */
-template<uint D, class F, typename T = std::invoke_result_t<F, uvec_t<D>>>
+template<uint D, class F, typename T = typename array_t<D, F>::value_type>
 array_t<D, F> array(F f, index_space_t<D> space, T* data=nullptr)
 {
     return {f, space.di, space.i0, data};
@@ -321,7 +321,7 @@ auto indices(index_space_t<D> space)
  */
 inline auto range(uint size)
 {
-    return indices(vec(size)).map(take_nth_t<uvec_t<1>>{0});
+    return indices(vec(size)).map(take_nth_t<ivec_t<1>>{0});
 }
 
 /**

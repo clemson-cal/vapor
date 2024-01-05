@@ -272,8 +272,8 @@ int main()
     auto p = xc.map(initial_primitive).cache(exec, alloc);
     auto u = p.map(prim_to_cons).cache(exec, alloc);
     auto p2 = u.map(cons_to_prim).cache(exec, alloc);
-    auto interior_faces = index_space(uvec(1), uvec(N - 1));
-    auto interior_cells = index_space(uvec(1), uvec(N - 2));
+    auto interior_faces = index_space(ivec(1), uvec(N - 1));
+    auto interior_cells = index_space(ivec(1), uvec(N - 2));
     auto t = 0.0;
     auto n = 0;
     auto fold = 50;
@@ -289,7 +289,7 @@ int main()
                 return cons_to_prim(u[i], p[i][index_pressure]);
             }).cache(exec, alloc);
 
-            auto fhat = iv[interior_faces].map([p, u, riemann_hlle] HD (uint i)
+            auto fhat = iv[interior_faces].map([p, u, riemann_hlle] HD (int i)
             {
                 auto ul = u[i - 1];
                 auto ur = u[i];
@@ -298,7 +298,7 @@ int main()
                 return riemann_hlle(pl, pr, ul, ur);
             }).cache_if<cache_flux>(exec, alloc);
 
-            auto du = ic[interior_cells].map([fhat, dt, dx] HD (uint i)
+            auto du = ic[interior_cells].map([fhat, dt, dx] HD (int i)
             {
                 auto fm = fhat[i];
                 auto fp = fhat[i + 1];

@@ -79,7 +79,7 @@ struct index_space_t
      * Return the start of this index space
      * 
      */
-    uvec_t<D> start() const
+    ivec_t<D> start() const
     {
         return i0;
     }
@@ -97,7 +97,7 @@ struct index_space_t
      * Return the first index that would be visited in a traversal
      *
      */
-    HD uvec_t<D> front() const
+    HD ivec_t<D> front() const
     {
         return i0;
     }
@@ -106,9 +106,9 @@ struct index_space_t
      * Return the final index that would be visited in a traversal
      *
      */
-    HD uvec_t<D> back() const
+    HD ivec_t<D> back() const
     {
-        return i0 + di - ones_vec<uint, D>();
+        return i0 + di.template cast<int>() - ones_vec<int, D>();
     }
 
     /**
@@ -124,7 +124,7 @@ struct index_space_t
      * Test whether the index space contains a given index
      * 
      */
-    HD bool contains(uvec_t<D> i) const
+    HD bool contains(ivec_t<D> i) const
     {
         for (uint axis = 0; axis < D; ++axis)
         {
@@ -191,7 +191,7 @@ struct index_space_t
         return {j0, dj};
     }
 
-    index_space_t<D> with_start(uvec_t<D> new_start) const
+    index_space_t<D> with_start(ivec_t<D> new_start) const
     {
         auto result = *this;
         result.i0 = new_start;
@@ -220,7 +220,7 @@ struct index_space_t
         return result;
     }
 
-    uvec_t<D> i0;
+    ivec_t<D> i0;
     uvec_t<D> di;
 };
 
@@ -234,7 +234,7 @@ struct index_space_t
 template<uint D>
 auto index_space(uvec_t<D> di)
 {
-    return index_space_t<D>{zeros_uvec<D>(), di};
+    return index_space_t<D>{zeros_ivec<D>(), di};
 }
 
 
@@ -245,7 +245,7 @@ auto index_space(uvec_t<D> di)
  * 
  */
 template<uint D>
-auto index_space(uvec_t<D> i0, uvec_t<D> di)
+auto index_space(ivec_t<D> i0, uvec_t<D> di)
 {
     return index_space_t<D>{i0, di};
 }

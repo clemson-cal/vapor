@@ -41,10 +41,10 @@ struct cpu_executor_t
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
-        uint i0 = space.i0[0];
-        uint i1 = space.i0[0] + space.di[0];
+        int i0 = space.i0[0];
+        int i1 = space.i0[0] + space.di[0];
 
-        for (uint i = i0; i < i1; ++i)
+        for (int i = i0; i < i1; ++i)
         {
             function(vec(i));
         }
@@ -53,29 +53,29 @@ struct cpu_executor_t
     template<typename F>
     void loop(index_space_t<2> space, F function) const
     {
-        uint i0 = space.i0[0];
-        uint i1 = space.i0[0] + space.di[0];
-        uint j0 = space.i0[1];
-        uint j1 = space.i0[1] + space.di[1];
+        int i0 = space.i0[0];
+        int i1 = space.i0[0] + space.di[0];
+        int j0 = space.i0[1];
+        int j1 = space.i0[1] + space.di[1];
 
-        for (uint i = i0; i < i1; ++i)
-            for (uint j = j0; j < j1; ++j)
+        for (int i = i0; i < i1; ++i)
+            for (int j = j0; j < j1; ++j)
                 function(vec(i, j));
     }
 
     template<typename F>
     void loop(index_space_t<3> space, F function) const
     {
-        uint i0 = space.i0[0];
-        uint i1 = space.i0[0] + space.di[0];
-        uint j0 = space.i0[1];
-        uint j1 = space.i0[1] + space.di[1];
-        uint k0 = space.i0[2];
-        uint k1 = space.i0[2] + space.di[2];
+        int i0 = space.i0[0];
+        int i1 = space.i0[0] + space.di[0];
+        int j0 = space.i0[1];
+        int j1 = space.i0[1] + space.di[1];
+        int k0 = space.i0[2];
+        int k1 = space.i0[2] + space.di[2];
 
-        for (uint i = i0; i < i1; ++i)
-            for (uint j = j0; j < j1; ++j)
-                for (uint k = k0; k < k1; ++k)
+        for (int i = i0; i < i1; ++i)
+            for (int j = j0; j < j1; ++j)
+                for (int k = k0; k < k1; ++k)
                     function(vec(i, j, k));
     }
 
@@ -99,43 +99,43 @@ struct omp_executor_t
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
-        uint i0 = space.i0[0];
-        uint i1 = space.i0[0] + space.di[0];
+        int i0 = space.i0[0];
+        int i1 = space.i0[0] + space.di[0];
 
         #pragma omp parallel for
-        for (uint i = i0; i < i1; ++i)
-            function(uvec(i));
+        for (int i = i0; i < i1; ++i)
+            function(vec(i));
     }
 
     template<typename F>
     void loop(index_space_t<2> space, F function) const
     {
-        uint i0 = space.i0[0];
-        uint i1 = space.i0[0] + space.di[0];
-        uint j0 = space.i0[1];
-        uint j1 = space.i0[1] + space.di[1];
+        int i0 = space.i0[0];
+        int i1 = space.i0[0] + space.di[0];
+        int j0 = space.i0[1];
+        int j1 = space.i0[1] + space.di[1];
 
         #pragma omp parallel for
-        for (uint i = i0; i < i1; ++i)
-            for (uint j = j0; j < j1; ++j)
-                function(uvec(i, j));
+        for (int i = i0; i < i1; ++i)
+            for (int j = j0; j < j1; ++j)
+                function(vec(i, j));
     }
 
     template<typename F>
     void loop(index_space_t<3> space, F function) const
     {
-        uint i0 = space.i0[0];
-        uint i1 = space.i0[0] + space.di[0];
-        uint j0 = space.i0[1];
-        uint j1 = space.i0[1] + space.di[1];
-        uint k0 = space.i0[2];
-        uint k1 = space.i0[2] + space.di[2];
+        int i0 = space.i0[0];
+        int i1 = space.i0[0] + space.di[0];
+        int j0 = space.i0[1];
+        int j1 = space.i0[1] + space.di[1];
+        int k0 = space.i0[2];
+        int k1 = space.i0[2] + space.di[2];
 
         #pragma omp parallel for
-        for (uint i = i0; i < i1; ++i)
-            for (uint j = j0; j < j1; ++j)
-                for (uint k = k0; k < k1; ++k)
-                    function(uvec(i, j, k));
+        for (int i = i0; i < i1; ++i)
+            for (int j = j0; j < j1; ++j)
+                for (int k = k0; k < k1; ++k)
+                    function(vec(i, j, k));
     }
 
     template<typename T, typename R>
@@ -159,29 +159,29 @@ __global__ static void gpu_loop(index_space_t<D> space, F function)
 {
     if constexpr (D == 1)
     {
-        uint i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
+        int i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
         if (i >= space.i0[0] + space.di[0]) return;
-        function(uvec(i));
+        function(vec(i));
     }
 
     if constexpr (D == 2)
     {
-        uint i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
-        uint j = space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y;
+        int i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
+        int j = space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y;
         if (i >= space.i0[0] + space.di[0]) return;
         if (j >= space.i0[1] + space.di[1]) return;
-        function(uvec(i, j));
+        function(vec(i, j));
     }
 
     if constexpr (D == 3)
     {
-        uint i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
-        uint j = space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y;
-        uint k = space.i0[2] + threadIdx.z + blockIdx.z * blockDim.z;
+        int i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
+        int j = space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y;
+        int k = space.i0[2] + threadIdx.z + blockIdx.z * blockDim.z;
         if (i >= space.i0[0] + space.di[0]) return;
         if (j >= space.i0[1] + space.di[1]) return;
         if (k >= space.i0[2] + space.di[2]) return;
-        function(uvec(i, j, k));
+        function(vec(i, j, k));
     }
 }
 

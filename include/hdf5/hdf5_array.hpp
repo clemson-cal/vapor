@@ -101,7 +101,7 @@ template<uint D, typename U> struct hdf5_repr<memory_backed_array_t<D, U, std::s
         {
             shape[n] = hdims[n];
         }
-        auto start = zeros_uvec<D>();
+        auto start = zeros_ivec<D>();
         auto stride = strides_row_major(shape);
         auto memory = std::make_shared<vapor::managed_memory_t>(product(shape) * sizeof(U));
         auto data = (U*) memory->data();

@@ -90,14 +90,14 @@ struct take_nth_t
 template<uint D, typename T, class R>
 struct lookup_t
 {
-    HD auto operator()(uvec_t<D> i) const { return data[dot(stride, i - start)]; }
-    uvec_t<D> start;
+    HD auto operator()(ivec_t<D> i) const { return data[dot(stride, i - start)]; }
+    ivec_t<D> start;
     uvec_t<D> stride;
     T* data;
     R resource;
 };
 template<uint D, typename T, class R>
-auto lookup(uvec_t<D> start, uvec_t<D> stride, T* data, R resource)
+auto lookup(ivec_t<D> start, uvec_t<D> stride, T* data, R resource)
 {
     return lookup_t<D, T, R>{start, stride, data, resource};
 }
@@ -111,7 +111,7 @@ auto lookup(uvec_t<D> start, uvec_t<D> stride, T* data, R resource)
 template<uint D, class F, class G>
 struct compose_t
 {
-    HD auto operator()(uvec_t<D> i) const { return g(f(i)); }
+    HD auto operator()(ivec_t<D> i) const { return g(f(i)); }
     F f;
     G g;
 };
@@ -130,7 +130,7 @@ auto compose(F f, G g)
 template<uint D, class E, class F, class G>
 struct cond_t
 {
-    HD auto operator()(uvec_t<D> i) const { return e(i) ? f(i) : g(i); }
+    HD auto operator()(ivec_t<D> i) const { return e(i) ? f(i) : g(i); }
     E e;
     F f;
     G g;
@@ -150,7 +150,7 @@ auto cond(E e, F f, G g)
 template<uint D>
 struct index_space_contains_t
 {
-    HD auto operator()(uvec_t<D> i) const { return _space.contains(i); }
+    HD auto operator()(ivec_t<D> i) const { return _space.contains(i); }
     index_space_t<D> _space;
 };
 template<uint D>
@@ -168,7 +168,7 @@ auto index_space_contains(index_space_t<D> sel)
 template<uint D, class F, class G>
 struct add_t
 {
-    HD auto operator()(uvec_t<D> i) const { return f(i) + g(i); }
+    HD auto operator()(ivec_t<D> i) const { return f(i) + g(i); }
     F f;
     G g;
 };
@@ -176,7 +176,7 @@ struct add_t
 template<uint D, class F, class G>
 struct sub_t
 {
-    HD auto operator()(uvec_t<D> i) const { return f(i) - g(i); }
+    HD auto operator()(ivec_t<D> i) const { return f(i) - g(i); }
     F f;
     G g;
 };
@@ -184,7 +184,7 @@ struct sub_t
 template<uint D, class F, class G>
 struct mul_t
 {
-    HD auto operator()(uvec_t<D> i) const { return f(i) * g(i); }
+    HD auto operator()(ivec_t<D> i) const { return f(i) * g(i); }
     F f;
     G g;
 };
@@ -192,7 +192,7 @@ struct mul_t
 template<uint D, class F, class G>
 struct div_t
 {
-    HD auto operator()(uvec_t<D> i) const { return f(i) / g(i); }
+    HD auto operator()(ivec_t<D> i) const { return f(i) / g(i); }
     F f;
     G g;
 };
