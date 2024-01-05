@@ -145,6 +145,9 @@ void decompose_index_space()
     print("an index space contains itself? ");
     print(space.contains(space));
     print("\n");
+    print("an index space contains the empty space? ");
+    print(space.contains(index_space(zeros_uvec<2>())));
+    print("\n");
 }
 
 int main()

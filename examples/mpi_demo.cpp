@@ -10,7 +10,7 @@ using namespace vapor;
 
 void create_cartesian_communicator()
 {
-    auto comm = communicator_t<3>();
+    auto comm = cartesian_communicator_t<3>();
     auto space = index_space(uvec(30, 30, 30));
 
     if (comm.rank() == 0) {
@@ -32,7 +32,7 @@ void create_cartesian_communicator()
 
 void exchange_boundary_data()
 {
-    auto comm = communicator_t<1>();
+    auto comm = cartesian_communicator_t<1>();
     auto exec = cpu_executor_t();
     auto alloc = shared_ptr_allocator_t();
     auto is_glb = index_space(uvec(20));     // global index space

@@ -97,7 +97,7 @@ struct index_space_t
      * Return the first index that would be visited in a traversal
      *
      */
-    HD ivec_t<D> front() const
+    ivec_t<D> front() const
     {
         return i0;
     }
@@ -106,9 +106,18 @@ struct index_space_t
      * Return the final index that would be visited in a traversal
      *
      */
-    HD ivec_t<D> back() const
+    ivec_t<D> back() const
     {
         return i0 + di.template cast<int>() - ones_vec<int, D>();
+    }
+
+    /**
+     * Return true if this index space has a zero-extent on any axis
+     *
+     */
+    bool empty() const
+    {
+        return size() == 0;
     }
 
     /**
@@ -142,7 +151,7 @@ struct index_space_t
      */
     HD bool contains(index_space_t<D> other) const
     {
-        return contains(other.front()) && contains(other.back());
+        return other.empty() || (contains(other.front()) && contains(other.back()));
     }
 
     /**
