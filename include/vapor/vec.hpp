@@ -180,6 +180,17 @@ HD auto range_uvec()
     }
     return res;
 }
+template<uint S, typename T>
+HD auto uniform_vec(T val)
+{
+    auto res = vec_t<T, S>{};
+
+    for (uint n = 0; n < S; ++n)
+    {
+        res[n] = val;
+    }
+    return res;
+}
 
 
 

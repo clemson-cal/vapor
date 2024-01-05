@@ -35,12 +35,12 @@ void exchange_boundary_data()
     auto comm = communicator_t<1>();
     auto exec = cpu_executor_t();
     auto alloc = shared_ptr_allocator_t();
-    auto is_glb = index_space(ivec(0), uvec(20)); // global index space
-    auto is_loc = comm.subspace(is_glb);          // local index space
-    auto is_exp = is_loc.expand(1);               // local index space, expanded to include guard zones
+    auto is_glb = index_space(uvec(20));     // global index space
+    auto is_loc = comm.subspace(is_glb);     // local index space
+    auto is_exp = is_loc.expand(1);          // local index space, expanded to include guard zones
     auto ic_loc = indices(is_loc);
     auto data_loc = ic_loc.cache(exec, alloc);
-    auto data_exp = comm.expand(data_loc, 1, exec, alloc);
+    auto data_exp = comm.expand(data_loc, uvec(1), exec, alloc);
 
     for (int rank = 0; rank < comm.size(); ++rank)
     {

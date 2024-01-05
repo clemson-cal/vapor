@@ -161,34 +161,44 @@ struct index_space_t
      * Remove the given number of indexes from the lower and upper extent
      * 
      */
-    index_space_t contract(uint count) const
+    index_space_t contract(uvec_t<D> count) const
     {
         auto j0 = i0;
         auto dj = di;
 
         for (uint axis = 0; axis < D; ++axis)
         {
-            j0[axis] += count;
-            dj[axis] -= count * 2;
+            j0[axis] += count[axis];
+            dj[axis] -= count[axis] * 2;
         }
         return {j0, dj};
+    }
+
+    index_space_t contract(uint count) const
+    {
+        return contract(uniform_vec<D>(count));
     }
 
     /**
      * Add the given number of indexes to the lower and upper extent
      * 
      */
-    index_space_t expand(uint count) const
+    index_space_t expand(uvec_t<D> count) const
     {
         auto j0 = i0;
         auto dj = di;
 
         for (uint axis = 0; axis < D; ++axis)
         {
-            j0[axis] -= count;
-            dj[axis] += count * 2;
+            j0[axis] -= count[axis];
+            dj[axis] += count[axis] * 2;
         }
         return {j0, dj};
+    }
+
+    index_space_t expand(uint count) const
+    {
+        return expand(uniform_vec<D>(count));
     }
 
     index_space_t<D> with_start(ivec_t<D> new_start) const

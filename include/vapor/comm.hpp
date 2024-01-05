@@ -203,45 +203,44 @@ public:
         return space;
     }
 
+    template<typename T, template<typename> typename P>
+    auto fill_halo(memory_backed_array_t<D, T, P>& a, uvec_t<D> count)
+    {
+        auto s = a.space().with_start(zeros_ivec<D>());
+
+        for (int axis = 0; axis < D; ++axis)
+        {
+            int sendrank;
+            int recvrank;
+            MPI_Datatype sendtype_r = mpi_subarray_datatype<T>(s, s.upper(count[axis], axis).shift(-count[axis], axis));
+            MPI_Datatype recvtype_r = mpi_subarray_datatype<T>(s, s.lower(count[axis], axis));
+            MPI_Datatype sendtype_l = mpi_subarray_datatype<T>(s, s.lower(count[axis], axis).shift(+count[axis], axis));
+            MPI_Datatype recvtype_l = mpi_subarray_datatype<T>(s, s.upper(count[axis], axis));
+            MPI_Status status;
+            MPI_Cart_shift(_comm, axis, +1, &recvrank, &sendrank);
+            MPI_Sendrecv(a._data, 1, sendtype_r, sendrank, 0, a._data, 1, recvtype_r, recvrank, 0, _comm, &status);
+            MPI_Cart_shift(_comm, axis, -1, &recvrank, &sendrank);
+            MPI_Sendrecv(a._data, 1, sendtype_l, sendrank, 0, a._data, 1, recvtype_l, recvrank, 0, _comm, &status);
+            MPI_Type_free(&sendtype_l);
+            MPI_Type_free(&recvtype_l);
+            MPI_Type_free(&sendtype_r);
+            MPI_Type_free(&recvtype_r);
+        }
+    }
+
     /**
-     * Return an array expanded with guard zones from neighbor MPI processes
+     * Return an array expanded with halo zones from neighbor MPI processes
      *
      * This function recieves as an argument (count) the number of zones to be
      * added to each side of the array, and performs a send-recv operation to
      * 
      */
     template<class F, class E, class A>
-    auto expand(const array_t<D, F>& a, uint count, E& executor, A& allocator)
+    auto expand(const array_t<D, F>& a, uvec_t<D> count, E& executor, A& allocator)
     {
         using T = typename array_t<D, F>::value_type;
-        auto is_exp = a.space().expand(count);
-        auto is_ori = is_exp.with_start(zeros_ivec<D>());
-        auto result = zeros<T>(is_exp).insert(a).cache(executor, allocator);
-
-        for (int axis = 0; axis < D; ++axis)
-        {
-            int sendrank;
-            int recvrank;
-            int sendcount = 1;
-            int recvcount = 1;
-            MPI_Datatype sendtype_r = mpi_subarray_datatype<T>(is_ori, is_ori.upper(count, axis).shift(-count, axis));
-            MPI_Datatype recvtype_r = mpi_subarray_datatype<T>(is_ori, is_ori.lower(count, axis));
-            MPI_Datatype sendtype_l = mpi_subarray_datatype<T>(is_ori, is_ori.lower(count, axis).shift(+count, axis));
-            MPI_Datatype recvtype_l = mpi_subarray_datatype<T>(is_ori, is_ori.upper(count, axis));
-            MPI_Status status;
-            MPI_Cart_shift(_comm, axis, +1, &recvrank, &sendrank);
-            MPI_Sendrecv(result._data, sendcount, sendtype_r, sendrank, 0,
-                         result._data, recvcount, recvtype_r, recvrank, 0,
-                         _comm, &status);
-            MPI_Cart_shift(_comm, axis, -1, &recvrank, &sendrank);
-            MPI_Sendrecv(result._data, sendcount, sendtype_l, sendrank, 0,
-                         result._data, recvcount, recvtype_l, recvrank, 0,
-                         _comm, &status);
-            MPI_Type_free(&sendtype_l);
-            MPI_Type_free(&recvtype_l);
-            MPI_Type_free(&sendtype_r);
-            MPI_Type_free(&recvtype_r);
-        }
+        auto result = zeros<T>(a.space().expand(count)).insert(a).cache(executor, allocator);
+        fill_halo(result, count);
         return result;
     }
 
