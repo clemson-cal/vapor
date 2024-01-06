@@ -30,6 +30,7 @@ SOFTWARE.
 #include <mpi.h>
 #include "array.hpp"
 #include "index_space.hpp"
+#include "runtime.hpp"
 #include "vec.hpp"
 
 namespace vapor {
@@ -300,13 +301,23 @@ public:
     }
 
     /**
+     * Convenience method using the global executor and allocator
+     * 
+     */
+    template<class F>
+    auto expand(const array_t<D, F>& a, uvec_t<D> count)
+    {
+        return expand(a, count, Runtime::executor(), Runtime::allocator());
+    }
+
+    /**
      * Reconstruct a distributed array on a single process, root
      *
      * The index space of the array argument to this function must match the
      * result of the subspace
      */
     template<class F, class E, class A>
-    auto reconstruct(array_t<D, F>& a, index_space_t<D> global_space, E& executor, A& allocator, int root=0)
+    auto reconstruct(const array_t<D, F>& a, index_space_t<D> global_space, E& executor, A& allocator, int root=0)
     {
         assert(subspace(global_space) == a.space());
         using T = typename array_t<D, F>::value_type;
@@ -334,6 +345,16 @@ public:
             MPI_Type_free(&sendtype);
         }
         return result;
+    }
+
+    /**
+     * Convenience method using the global executor and allocator
+     * 
+     */
+    template<class F>
+    auto reconstruct(const array_t<D, F>& a, index_space_t<D> global_space, int root=0)
+    {
+        return reconstruct(a, global_space, Runtime::executor(), Runtime::allocator(), root);
     }
 
 private:

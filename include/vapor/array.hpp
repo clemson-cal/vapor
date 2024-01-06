@@ -34,6 +34,7 @@ SOFTWARE.
 #include "index_space.hpp"
 #include "memory.hpp"
 #include "vec.hpp"
+#include "runtime.hpp"
 
 namespace vapor {
 
@@ -55,7 +56,7 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<managed_memory_t>>>;
  *
  */
 template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
-auto cache(array_t<D, F> a, E& executor, A& allocator)
+auto cache(const array_t<D, F>& a, E& executor, A& allocator)
 {
     auto memory = allocator.allocate(a.size() * sizeof(T));
     auto data = (T*) memory->data();
@@ -68,6 +69,19 @@ auto cache(array_t<D, F> a, E& executor, A& allocator)
         data[dot(stride, i - start)] = a[i];
     });
     return array(table, a.space(), data);
+}
+
+
+
+
+/**
+ * Convenience cache function using the global executor and allocator
+ * 
+ */
+template<uint D, class F, class T = typename array_t<D, F>::value_type>
+auto cache(const array_t<D, F>& a)
+{
+    return cache(a, Runtime::executor(), Runtime::allocator());
 }
 
 
@@ -162,11 +176,23 @@ struct array_t
     {
         return vapor::cache(*this, executor, allocator);
     }
+    auto cache() const
+    {
+        return vapor::cache(*this);
+    }
     template<bool C, typename E, typename A>
     auto cache_if(E& executor, A& allocator) const
     {
         if constexpr (C)
-            return cache(executor, allocator);
+            return cache(*this, executor, allocator);
+        else 
+            return *this;
+    }
+    template<bool C>
+    auto cache_if() const
+    {
+        if constexpr (C)
+            return cache(*this);
         else 
             return *this;
     }
