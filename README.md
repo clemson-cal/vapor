@@ -37,9 +37,9 @@ generate values lazily when indexed. On the final line, the array `b` is
 cached to a memory-backed array `c`. Indexing the elements of `c` 
 
 ```c++
-auto a = vapor::range(100);                     // a[10] == 10
-auto b = a.map([] (int i) { return 2.0 * i; }); // b[10] == 20.0
-auto c = b.cache();                             // c[10] == 20.0
+auto a = vapor::range(100);                     /* a[10] == 10 */
+auto b = a.map([] (int i) { return 2.0 * i; }); /* b[10] == 20.0 */
+auto c = b.cache();                             /* c[10] == 20.0 */
 ```
 
 #### Rationale
