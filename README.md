@@ -34,6 +34,21 @@ Todo...
 
 ### Functional N-dimensional arrays
 
+Let's start with an example. The following code creates an array of integers `a`,
+and maps it to an array of doubles, `b`. Both of these arrays are purely functional;
+the are not associated with a buffer of memory, but rather generate values lazily
+when indexed. On the final line, the array `b` is cached to a memory-backed array.
+
+```c++
+auto exec = vapor::default_executor();
+auto alloc = vapor::default_allocator();
+auto a = vapor::range(100);
+auto b = a.map([] (uint i) { return 2.0 * i; }); // b[10] == 20.0
+auto c = b.cache(exec, alloc);
+```
+
+#### Rationale
+
 Numeric arrays in VAPOR are defined as a D-dimensional index space, together
 with a function `f: uvec_t<D> -> T`. Arrays are logically immutable, `a[i]`
 returns by value an element of type `T`; `a[i] = x` will not compile. Arrays
@@ -60,6 +75,19 @@ In-place array modifications are modeled using a paradigm inspired by Jax.
 If a is an array, the construct `a = a.at(space).map(f)` will map only the
 elements inside the index space through the function `f`, leaving the other
 values unchanged.
+
+#### Executors
+
+Hardware-agnostic accelerated array transformations in Vapor are accomplished
+by use of an "executor" construct. The execution of a lazily evaluated array,
+to a memory-backed one, is done by parallelizing the traveral of the array,
+either to multiple CPU cores, or to a "device" kernel in the case of GPU
+executions. There is also a bare-bones sequential executor which sequentially
+traverses arrays.
+
+#### Allocators
+
+Todo...
 
 ### Stack-allocated vectors
 
