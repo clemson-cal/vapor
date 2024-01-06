@@ -118,7 +118,7 @@ struct index_space_t
      */
     ivec_t<D> back() const
     {
-        return i0 + di.template cast<int>() - ones_vec<int, D>();
+        return i0 + cast<int>(di) - ones_vec<int, D>();
     }
 
     /**

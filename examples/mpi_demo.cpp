@@ -118,7 +118,7 @@ void create_mpi_datatype()
     if (rank == 0) {
         print("create an MPI data type for a subarray...\n");
     }
-    auto subarray = mpi_subarray_datatype<vec_t<int, 3>>(index_space(uvec(100, 100)), index_space(uvec(10, 10)));
+    auto subarray = mpi_subarray<vec_t<int, 3>>(index_space(uvec(100, 100)), index_space(uvec(10, 10)));
     MPI_Type_free(&subarray);
 }
 

@@ -79,8 +79,8 @@ struct mpi_repr<vec_t<U, S>>
 {
     static MPI_Datatype type()
     {
-        MPI_Datatype u = mpi_repr<U>::type();
-        MPI_Datatype s;
+        auto u = mpi_repr<U>::type();
+        auto s = MPI_Datatype();
         MPI_Type_contiguous(S, u, &s);
         MPI_Type_commit(&s);
         MPI_Type_free(&u);
@@ -100,23 +100,15 @@ struct mpi_repr<vec_t<U, S>>
  * 
  */
 template<typename U, uint D>
-MPI_Datatype mpi_subarray_datatype(index_space_t<D> parent, index_space_t<D> nested)
+MPI_Datatype mpi_subarray(index_space_t<D> parent, index_space_t<D> nested)
 {
     assert(parent.contains(nested));
-
-    MPI_Datatype u = mpi_repr<U>::type();
-    MPI_Datatype s;
-    ivec_t<D> sizes;
-    ivec_t<D> subsizes;
-    ivec_t<D> starts;
-    int order = MPI_ORDER_C;
-
-    for (int n = 0; n < D; ++n)
-    {
-        sizes[n] = parent.di[n];
-        subsizes[n] = nested.di[n];
-        starts[n] = nested.i0[n];
-    }
+    auto u = mpi_repr<U>::type();
+    auto s = MPI_Datatype();
+    auto sizes = cast<int>(parent.shape());
+    auto subsizes = cast<int>(nested.shape());
+    auto starts = cast<int>(nested.start());
+    auto order = MPI_ORDER_C;
     MPI_Type_create_subarray(D, sizes, subsizes, starts, order, u, &s);
     MPI_Type_commit(&s);
     MPI_Type_free(&u);
@@ -214,7 +206,7 @@ public:
     {
         auto c = ivec_t<D>();
         MPI_Cart_coords(_comm, rank, D, c);
-        return c.template cast<uint>();
+        return cast<uint>(c);
     }
     uvec_t<D> coords() const
     {
@@ -222,7 +214,7 @@ public:
         auto t = ivec_t<D>();
         auto c = ivec_t<D>();
         MPI_Cart_get(_comm, D, s, t, c);
-        return c.template cast<uint>();
+        return cast<uint>(c);
     }
     uvec_t<D> shape() const
     {
@@ -230,7 +222,7 @@ public:
         auto t = ivec_t<D>();
         auto c = ivec_t<D>();
         MPI_Cart_get(_comm, D, s, t, c);
-        return s.template cast<uint>();
+        return cast<uint>(s);
     }
     uvec_t<D> topology() const
     {
@@ -238,7 +230,7 @@ public:
         auto t = ivec_t<D>();
         auto c = ivec_t<D>();
         MPI_Cart_get(_comm, D, s, t, c);
-        return t.template cast<uint>();
+        return cast<uint>(t);
     }
 
     /**
@@ -274,17 +266,16 @@ public:
 
         for (int axis = 0; axis < D; ++axis)
         {
-            int sendrank;
-            int recvrank;
-            MPI_Datatype sendtype_r = mpi_subarray_datatype<T>(s, s.upper(count[axis], axis).shift(-count[axis], axis));
-            MPI_Datatype recvtype_r = mpi_subarray_datatype<T>(s, s.lower(count[axis], axis));
-            MPI_Datatype sendtype_l = mpi_subarray_datatype<T>(s, s.lower(count[axis], axis).shift(+count[axis], axis));
-            MPI_Datatype recvtype_l = mpi_subarray_datatype<T>(s, s.upper(count[axis], axis));
-            MPI_Status status;
-            MPI_Cart_shift(_comm, axis, +1, &recvrank, &sendrank);
-            MPI_Sendrecv(a._data, 1, sendtype_r, sendrank, 0, a._data, 1, recvtype_r, recvrank, 0, _comm, &status);
-            MPI_Cart_shift(_comm, axis, -1, &recvrank, &sendrank);
-            MPI_Sendrecv(a._data, 1, sendtype_l, sendrank, 0, a._data, 1, recvtype_l, recvrank, 0, _comm, &status);
+            auto n = int();
+            auto m = int();
+            auto sendtype_r = mpi_subarray<T>(s, s.upper(count[axis], axis).shift(-count[axis], axis));
+            auto sendtype_l = mpi_subarray<T>(s, s.lower(count[axis], axis).shift(+count[axis], axis));
+            auto recvtype_r = mpi_subarray<T>(s, s.lower(count[axis], axis));
+            auto recvtype_l = mpi_subarray<T>(s, s.upper(count[axis], axis));
+            auto status = MPI_Status();
+            MPI_Cart_shift(_comm, axis, +1, &n, &m);
+            MPI_Sendrecv(a._data, 1, sendtype_r, m, 0, a._data, 1, recvtype_r, n, 0, _comm, &status);
+            MPI_Sendrecv(a._data, 1, sendtype_l, n, 0, a._data, 1, recvtype_l, m, 0, _comm, &status);
             MPI_Type_free(&sendtype_l);
             MPI_Type_free(&recvtype_l);
             MPI_Type_free(&sendtype_r);
@@ -320,24 +311,26 @@ public:
     {
         assert(subspace(global_space) == a.space());
         using T = typename array_t<D, F>::value_type;
-        auto result = zeros<T>(global_space).insert(a).cache(executor, allocator);
+        auto gs = global_space;
+        auto result = zeros<T>(gs).insert(a).cache(executor, allocator);
 
         if (rank() == root)
         {
             for (int r = 0; r < size(); ++r)
             {
-                if (r != root)
+                if (r == root)
                 {
-                    MPI_Status status;
-                    MPI_Datatype recvtype = mpi_subarray_datatype<T>(global_space, subspace(global_space, r));
-                    MPI_Recv(result._data, 1, recvtype, r, 0, _comm, &status);
-                    MPI_Type_free(&recvtype);
+                    continue;
                 }
+                auto status = MPI_Status();
+                auto recvtype = mpi_subarray<T>(gs, subspace(gs, r));
+                MPI_Recv(result._data, 1, recvtype, r, 0, _comm, &status);
+                MPI_Type_free(&recvtype);
             }
         }
         else
         {
-            MPI_Datatype sendtype = mpi_subarray_datatype<T>(global_space, a.space());
+            auto sendtype = mpi_subarray<T>(gs, a.space());
             MPI_Send(result._data, 1, sendtype, 0, 0, _comm);
             MPI_Type_free(&sendtype);
         }
