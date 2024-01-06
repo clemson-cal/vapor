@@ -331,7 +331,7 @@ public:
         else
         {
             auto sendtype = mpi_subarray<T>(gs, a.space());
-            MPI_Send(result._data, 1, sendtype, 0, 0, _comm);
+            MPI_Send(result._data, 1, sendtype, root, 0, _comm);
             MPI_Type_free(&sendtype);
         }
         return result;
