@@ -26,7 +26,6 @@ SOFTWARE.
 
 
 #pragma once
-#ifdef VAPOR_MPI
 #include <cassert>
 #include <mpi.h>
 #include "array.hpp"
@@ -341,6 +340,4 @@ private:
     MPI_Comm _comm;
 };
 
-}
-
-#endif // VAPOR_MPI
+} // namespace vapor

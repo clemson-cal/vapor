@@ -1,4 +1,3 @@
-#define VAPOR_MPI
 #include "vapor/comm.hpp"
 #include "vapor/executor.hpp"
 #include "vapor/print.hpp"

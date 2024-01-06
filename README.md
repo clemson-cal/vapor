@@ -2,24 +2,20 @@
 
 ## Description
 
-VAPOR is a lightweight application framework to ease the development of
+Vapor is a lightweight application framework to ease the development of
 GPU-accelerated and massively parallel scientific simulation codes. Its
 objectives are to:
 
 - Provide lightweight, idiomatic C++ abstractions for high-performance array
   transformations and PDE solvers
 - Adapt to hybrid parallel compute architectures (multi-core / multi-node /
-  multi-GPU) with near-zero change to the application code
+  multi-GPU) with zero or nearly zero change to the application code
 - Enable rapid development of small, targeted, simulation codes, by
-  abstracting the business logic of simulation drivers; user configurations,
-  checkpointing, and real-time post-processing are done automatically by
-  inheriting `Simulation` abstract base class
-- Be header-only and dependency-free; a C++17 compiler is sufficient (optional
-  dependencies include CUDA, MPI, and HDF5)
+  abstracting the business logic of simulation drivers
+- Be header-only and dependency-free, requires only a C++17 compiler is
+  (optional dependencies include CUDA, MPI, and HDF5)
 
-## Table of Contents (Optional)
-
-If your README is long, add a table of contents to make it easy for users to find what they need.
+## Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -49,30 +45,32 @@ auto c = b.cache(exec, alloc);
 
 #### Rationale
 
-Numeric arrays in VAPOR are defined as a D-dimensional index space, together
-with a function `f: uvec_t<D> -> T`. Arrays are logically immutable, `a[i]`
-returns by value an element of type `T`; `a[i] = x` will not compile. Arrays
-are transformed mainly by mapping operatons. If `g: T -> U` then `a.map(g)`
-is an array with value type of `U`, and has the same index space as a. Array
-elements are computed lazily, meaning that `b = a.map(f).map(g).map(h)`
-triggers the execution `h(g(f(i))` each time `b[i]` appears.
+Numeric arrays in Vapor comprise a D-dimensional index space, and a function
+`f: ivec_t<D> -> T`. Arrays are logically immutable; `a[i]` returns by value
+an element of type `T`. This means that array assignment by indexing is not
+possible, `a[i] = x` will not compile because the left-hand-side is not a
+reference type. Arrays are transformed mainly by mapping operatons. If `g: T
+-> U` then `a.map(g)` is an array with value type of `U`, and has the same
+index space as `a`. Array elements are computed lazily, meaning that for the
+array `b = a.map(f).map(g).map(h)`, each time `b[i]` appears in the code, the
+function composition `h(g(f(i))` is executed.
 
-An array is cached to a "memory-backed array" by calling `a.cache(exec,
+An array can be cached to a "memory-backed array" by calling `a.cache(exec,
 alloc)`, where `exec` is an executor and `alloc` is an allocator. The executor
-can be a GPU executor on GPU-enabled platforms, or a multi-core executor
-where OpenMP is available. The memory backed array uses strided memory
-access to retrieve the value of a multi-dimensional index in the buffer.
+can be a GPU executor on GPU-enabled platforms, or a multi-core executor where
+OpenMP is available. The memory backed array uses strided memory access to
+retrieve the value of a multi-dimensional index in the buffer.
 
 Unlike arrays from other numeric libraries, including numpy, arrays in
-VAPOR can have a non-zero starting index. This changes the semantics of
+Vapor can have a non-zero starting index. This changes the semantics of
 inserting the values of one array into another, often for the better, and
 is also favorable in dealing with global arrays and domain decomposition.
 For example, if `a` covers the 1d index space (0, 100) and `b` covers (1, 99),
 then the array `a.insert(b)` has the values of `a` at the endpoints, and the
 values of `b` on the interior.
 
-In-place array modifications are modeled using a paradigm inspired by Jax.
-If a is an array, the construct `a = a.at(space).map(f)` will map only the
+In-place array modifications are modeled using a paradigm inspired by Jax. If
+a is an array, the construct `a = a.at(space).map(f)` will map only the
 elements inside the index space through the function `f`, leaving the other
 values unchanged.
 
@@ -91,10 +89,10 @@ Todo...
 
 ### Stack-allocated vectors
 
-VAPOR provides a stack-allocated 1d vector type `vec_t<T, S>`. `S` is an
-unsigned integer which sets the compile-time size of the vector. The
-behavior is not too different from `std::array`, except that `vec_t` can
-be compiled in CUDA device code, and overloads the arithmetic operators.
+Vapor provides a stack-allocated 1d vector type `vec_t<T, S>`. `S` is an
+unsigned integer which sets the compile-time size of the vector. The behavior
+is not too different from `std::array`, except that `vec_t` can be compiled in
+CUDA device code, and overloads the arithmetic operators.
 
 ## Credits
 

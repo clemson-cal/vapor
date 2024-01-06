@@ -76,7 +76,7 @@ auto cache(array_t<D, F> a, E& executor, A& allocator)
 /**
  * A functional n-dimensional array
  *
- * An array is a D-dimensional index space, and a function f: uvec_t<D> -> T.
+ * An array is a D-dimensional index space, and a function f: ivec_t<D> -> T.
  * Arrays are logically immutable, a[i] returns by value an element of type T;
  * a[i] = x will not compile. Arrays are transformed mainly by mapping
  * operatons. If g: T -> U then a.map(g) is an array with value type of U, and
