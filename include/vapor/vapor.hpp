@@ -26,6 +26,9 @@ SOFTWARE.
 
 
 #pragma once
+#define VAPOR_STD_MAP
+#define VAPOR_STD_STRING
+#define VAPOR_STD_VECTOR
 #include "hdf5/hdf5_array.hpp"
 #include "hdf5/hdf5_map.hpp"
 #include "hdf5/hdf5_native.hpp"

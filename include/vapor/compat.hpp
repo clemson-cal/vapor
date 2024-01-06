@@ -37,10 +37,17 @@ namespace vapor {
 	using uint = unsigned int;
 }
 
-#ifndef VAPOR_ARRAY_BOUNDS_CHECK
-#define VAPOR_ARRAY_BOUNDS_CHECK 0
-#endif
+// Enables bounds-checking on vapor arrays
+// #define VAPOR_ARRAY_BOUNDS_CHECK
 
-#ifndef VAPOR_VEC_BOUNDS_CHECK
-#define VAPOR_VEC_BOUNDS_CHECK 0
-#endif
+// Enables bounds-checking on vapor vecs
+// #define VAPOR_VEC_BOUNDS_CHECK
+
+// Enables utility functions on std::map
+// #define VAPOR_STD_MAP
+
+// Enables utility functions on std::string
+// #define VAPOR_STD_STRING
+
+// Enables utility functions on std::vector
+// #define VAPOR_STD_VECTOR

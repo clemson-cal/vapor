@@ -39,14 +39,14 @@ struct vec_t
 {
     HD T& operator[](uint i)
     {
-        #if VAPOR_VEC_BOUNDS_CHECK
+        #ifdef VAPOR_VEC_BOUNDS_CHECK
         assert(i >= 0 && i < S);
         #endif
         return data[i];
     }
     HD const T& operator[](uint i) const
     {
-        #if VAPOR_VEC_BOUNDS_CHECK
+        #ifdef VAPOR_VEC_BOUNDS_CHECK
         assert(i >= 0 && i < S);
         #endif
         return data[i];

@@ -14,7 +14,7 @@ default: \
  examples/srhd1d
 
 examples/array_demo: examples/array_demo.cpp $(VAPOR_INCLUDES)
-	$(CXX) $(CXXFLAGS) -o $@ $< -I include -D VAPOR_ARRAY_BOUNDS_CHECK=1 -D VAPOR_VEC_BOUNDS_CHECK=1
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include -D VAPOR_ARRAY_BOUNDS_CHECK -D VAPOR_VEC_BOUNDS_CHECK
 
 examples/config_demo: examples/config_demo.cpp $(VAPOR_INCLUDES)
 	$(CXX) $(CXXFLAGS) -o $@ $< -I include
@@ -45,4 +45,4 @@ mpi: \
  examples/mpi_demo
  
 examples/mpi_demo: examples/mpi_demo.cpp $(VAPOR_INCLUDES)
-	$(MPICC) $(CXXFLAGS) -o $@ $< -I include -lc++ -D VAPOR_ARRAY_BOUNDS_CHECK=1
+	$(MPICC) $(CXXFLAGS) -o $@ $< -I include -lc++ -D VAPOR_ARRAY_BOUNDS_CHECK

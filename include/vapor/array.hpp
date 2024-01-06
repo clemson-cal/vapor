@@ -126,7 +126,7 @@ struct array_t
 
     HD auto operator[](ivec_t<D> index) const
     {
-        #if VAPOR_ARRAY_BOUNDS_CHECK
+        #ifdef VAPOR_ARRAY_BOUNDS_CHECK
         assert(space().contains(index));
         #endif
         return f(index);
@@ -137,7 +137,7 @@ struct array_t
     }
     HD auto operator[](index_space_t<D> subspace) const
     {
-        #if VAPOR_ARRAY_BOUNDS_CHECK
+        #ifdef VAPOR_ARRAY_BOUNDS_CHECK
         assert(space().contains(subspace));
         #endif
         return array_t<D, F>{f, subspace.di, subspace.i0};
