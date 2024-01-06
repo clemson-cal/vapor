@@ -75,6 +75,16 @@ inline static uvec_t<2> partition_interval(uint num_partitions, uint num_element
 template<uint D>
 struct index_space_t
 {
+    bool operator==(const index_space_t& other) const
+    {
+        return i0 == other.i0 && di == other.di;
+    }
+
+    bool operator!=(const index_space_t& other) const
+    {
+        return i0 != other.i0 || di != other.di;
+    }
+
     /**
      * Return the start of this index space
      * 
@@ -155,7 +165,7 @@ struct index_space_t
     }
 
     /**
-     * An index space representing the n-th partition of this one on an axis
+     * An index sub-space representing the n-th partition of this one on an axis
      * 
      */
     index_space_t subspace(uint num_partitions, uint which_partition, uint axis=0) const
@@ -166,6 +176,25 @@ struct index_space_t
         space.di[axis] = partition[1];
         return space;
     }
+
+    /**
+     * An index sub-space in a D-dimensional decomposition of this one
+     *
+     * The shape argument is analogous to the num_partitions argument in the
+     * one-dimensional version of this function above, and the coords argument
+     * is analogous to the which_partition argument.
+     */
+    index_space_t subspace(uvec_t<D> shape, uvec_t<D> coords) const
+    {
+        auto space = *this;
+
+        for (uint axis = 0; axis < D; ++axis)
+        {
+            space = space.subspace(shape[axis], coords[axis], axis);
+        }
+        return space;
+    }
+
     /**
      * Remove the given number of indexes from the lower and upper extent
      * 

@@ -14,7 +14,7 @@ void create_cartesian_communicator()
     auto space = index_space(uvec(30, 30, 30));
 
     if (comm.rank() == 0) {
-        printf("create a 3d cartesian communicator...\n");
+        print("create a 3d cartesian communicator...\n");
     }
     for (int i = 0; i < comm.size(); ++i)
     {
@@ -56,6 +56,24 @@ void exchange_boundary_data()
         comm.barrier();
     }
     if (comm.rank() == 0) {
+        print("\n");
+    }
+}
+
+void reconstruct_distributed_array()
+{
+    auto comm = cartesian_communicator_t<1>();
+    auto exec = cpu_executor_t();
+    auto alloc = shared_ptr_allocator_t();
+    auto is_glb = index_space(uvec(20));     // global index space
+    auto is_loc = comm.subspace(is_glb);     // local index space
+    auto data_loc = indices(is_loc);
+    auto data_glb = comm.reconstruct(data_loc, is_glb, exec, alloc);
+
+    if (comm.rank() == 0)
+    {
+        print("reconstruct a distributed array...\n");
+        print(data_glb);
         print("\n");
     }
 }
@@ -109,6 +127,7 @@ int main()
     auto mpi = mpi_scoped_initializer();
     create_cartesian_communicator();
     exchange_boundary_data();
+    reconstruct_distributed_array();
     create_mpi_datatype();
     return 0;
 }

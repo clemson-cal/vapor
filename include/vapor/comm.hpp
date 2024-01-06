@@ -210,29 +210,44 @@ public:
     {
         MPI_Barrier(_comm);
     }
-    ivec_t<D> coords() const
+    uvec_t<D> coords(int rank) const
     {
-        auto s = ivec_t<D>();
-        auto t = ivec_t<D>();
         auto c = ivec_t<D>();
-        MPI_Cart_get(_comm, D, s, t, c);
-        return c;
+        MPI_Cart_coords(_comm, rank, D, c);
+        return c.template cast<uint>();
     }
-    ivec_t<D> shape() const
+    uvec_t<D> coords() const
     {
         auto s = ivec_t<D>();
         auto t = ivec_t<D>();
         auto c = ivec_t<D>();
         MPI_Cart_get(_comm, D, s, t, c);
-        return s;
+        return c.template cast<uint>();
     }
-    ivec_t<D> topology() const
+    uvec_t<D> shape() const
     {
         auto s = ivec_t<D>();
         auto t = ivec_t<D>();
         auto c = ivec_t<D>();
         MPI_Cart_get(_comm, D, s, t, c);
-        return t;
+        return s.template cast<uint>();
+    }
+    uvec_t<D> topology() const
+    {
+        auto s = ivec_t<D>();
+        auto t = ivec_t<D>();
+        auto c = ivec_t<D>();
+        MPI_Cart_get(_comm, D, s, t, c);
+        return t.template cast<uint>();
+    }
+
+    /**
+     * Return the local index space, within a global one, for any MPI process
+     *
+     */
+    index_space_t<D> subspace(index_space_t<D> space, int rank) const
+    {
+        return space.subspace(shape(), coords(rank));
     }
 
     /**
@@ -241,14 +256,7 @@ public:
      */
     index_space_t<D> subspace(index_space_t<D> space) const
     {
-        auto c = coords();
-        auto s = shape();
-
-        for (uint axis = 0; axis < D; ++axis)
-        {
-            space = space.subspace(s[axis], c[axis], axis);
-        }
-        return space;
+        return space.subspace(shape(), coords());
     }
 
     /**
@@ -298,6 +306,41 @@ public:
         using T = typename array_t<D, F>::value_type;
         auto result = zeros<T>(a.space().expand(count)).insert(a).cache(executor, allocator);
         fill_halo(result, count);
+        return result;
+    }
+
+    /**
+     * Reconstruct a distributed array on a single process, root
+     *
+     * The index space of the array argument to this function must match the
+     * result of the subspace
+     */
+    template<class F, class E, class A>
+    auto reconstruct(array_t<D, F>& a, index_space_t<D> global_space, E& executor, A& allocator, int root=0)
+    {
+        assert(subspace(global_space) == a.space());
+        using T = typename array_t<D, F>::value_type;
+        auto result = zeros<T>(global_space).insert(a).cache(executor, allocator);
+
+        if (rank() == root)
+        {
+            for (int r = 0; r < size(); ++r)
+            {
+                if (r != root)
+                {
+                    MPI_Status status;
+                    MPI_Datatype recvtype = mpi_subarray_datatype<T>(global_space, subspace(global_space, r));
+                    MPI_Recv(result._data, 1, recvtype, r, 0, _comm, &status);
+                    MPI_Type_free(&recvtype);
+                }
+            }
+        }
+        else
+        {
+            MPI_Datatype sendtype = mpi_subarray_datatype<T>(global_space, a.space());
+            MPI_Send(result._data, 1, sendtype, 0, 0, _comm);
+            MPI_Type_free(&sendtype);
+        }
         return result;
     }
 
