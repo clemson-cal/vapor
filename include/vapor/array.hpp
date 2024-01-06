@@ -166,12 +166,12 @@ struct array_t
     {
         return array_selection_t<D, F>{sel, *this};
     }
-    template<typename G>
+    template<class G>
     auto insert(array_t<D, G> b)
     {
         return select(in(b.space(), space()), b, *this);
     }
-    template<typename E, typename A>
+    template<class E, class A>
     auto cache(E& executor, A& allocator) const
     {
         return vapor::cache(*this, executor, allocator);
@@ -180,11 +180,11 @@ struct array_t
     {
         return vapor::cache(*this);
     }
-    template<bool C, typename E, typename A>
+    template<bool C, class E, class A>
     auto cache_if(E& executor, A& allocator) const
     {
         if constexpr (C)
-            return cache(*this, executor, allocator);
+            return vapor::cache(*this, executor, allocator);
         else 
             return *this;
     }
@@ -192,7 +192,7 @@ struct array_t
     auto cache_if() const
     {
         if constexpr (C)
-            return cache(*this);
+            return vapor::cache(*this);
         else 
             return *this;
     }
