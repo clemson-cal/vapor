@@ -30,17 +30,16 @@ Todo...
 
 ### Functional N-dimensional arrays
 
-Let's start with an example. The following code creates an array of integers `a`,
-and maps it to an array of doubles, `b`. Both of these arrays are purely functional;
-the are not associated with a buffer of memory, but rather generate values lazily
-when indexed. On the final line, the array `b` is cached to a memory-backed array.
+Let's start with an example. The following code creates an array of integers
+`a`, and maps it to an array of doubles, `b`. Both of these arrays are purely
+functional; they are not associated with a buffer of memory, but rather
+generate values lazily when indexed. On the final line, the array `b` is
+cached to a memory-backed array `c`. Indexing the elements of `c` 
 
 ```c++
-auto exec = vapor::default_executor();
-auto alloc = vapor::default_allocator();
-auto a = vapor::range(100);
-auto b = a.map([] (uint i) { return 2.0 * i; }); // b[10] == 20.0
-auto c = b.cache(exec, alloc);
+auto a = vapor::range(100);                     // a[10] == 10
+auto b = a.map([] (int i) { return 2.0 * i; }); // b[10] == 20.0
+auto c = b.cache();                             // c[10] == 20.0
 ```
 
 #### Rationale
@@ -55,11 +54,9 @@ index space as `a`. Array elements are computed lazily, meaning that for the
 array `b = a.map(f).map(g).map(h)`, each time `b[i]` appears in the code, the
 function composition `h(g(f(i))` is executed.
 
-An array can be cached to a "memory-backed array" by calling `a.cache(exec,
-alloc)`, where `exec` is an executor and `alloc` is an allocator. The executor
-can be a GPU executor on GPU-enabled platforms, or a multi-core executor where
-OpenMP is available. The memory backed array uses strided memory access to
-retrieve the value of a multi-dimensional index in the buffer.
+An array can be cached to a "memory-backed array" by calling `a.cache()`. The
+resulting memory-backed array uses strided memory access to retrieve the value
+of a multi-dimensional index in the buffer.
 
 Unlike arrays from other numeric libraries, including numpy, arrays in
 Vapor can have a non-zero starting index. This changes the semantics of
