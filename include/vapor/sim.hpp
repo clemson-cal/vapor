@@ -228,6 +228,15 @@ public:
      */
     const Config& get_config() const { return config; }
 
+    /**
+     * Run a simulation to completion, using arguments to main
+     *
+     * Should not be overridden by derived classes
+     */
+    int run(int argc, const char **argv)
+    {
+        return vapor::run(argc, argv, *this);
+    }
 protected:
     Config config;
 };

@@ -96,8 +96,7 @@ public:
 int main(int argc, const char **argv)
 {
     try {
-        auto sim = DemoSimulation();
-        return run(argc, argv, sim);
+        return DemoSimulation().run(argc, argv);
     }
     catch (const std::exception& e) {
         printf("[error]: %s\n", e.what());
