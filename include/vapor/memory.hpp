@@ -175,6 +175,7 @@ template<class T>
 class ref_counted_ptr_t
 {
 public:
+    ref_counted_ptr_t() {}
     ref_counted_ptr_t(T *ptr, int *use_count) : _ptr(ptr), _use_count(use_count)
     {
         assert(*use_count == 0);
