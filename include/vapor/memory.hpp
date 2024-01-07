@@ -219,13 +219,19 @@ private:
     HD void retain()
     {
         #ifndef __CUDA_ARCH__
-        *_use_count += 1;
+        if (_use_count != nullptr)
+        {
+            *_use_count += 1;
+        }
         #endif
     }
     HD void release()
     {
         #ifndef __CUDA_ARCH__
-        *_use_count -= 1;
+        if (_use_count != nullptr)
+        {
+            *_use_count -= 1;
+        }
         #endif
     }
     T *_ptr = nullptr;
