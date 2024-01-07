@@ -52,9 +52,6 @@ template<typename U, uint S> struct hdf5_repr<vapor::vec_t<U, S>>
     {
         return val.data;
     }
-    static void allocate(T& val, hid_t space, hid_t type)
-    {
-    }
     static hid_t space(const T&)
     {
         return H5Screate(H5S_SCALAR);
@@ -67,18 +64,22 @@ template<typename U, uint S> struct hdf5_repr<vapor::vec_t<U, S>>
         H5Tclose(element_type);
         return type;
     }
+    template <class A> static void allocate(T& val, hid_t space, hid_t type, A&)
+    {
+    }
 };
 
 
 
 
 /**
- * HDF5 representation of vapor::shared_array_t<D, U>
+ * HDF5 representation of vapor::memory_backed_array_t
  * 
  */
-template<uint D, typename U> struct hdf5_repr<memory_backed_array_t<D, U, std::shared_ptr>>
+template<uint D, typename U, template<typename> typename P>
+struct hdf5_repr<memory_backed_array_t<D, U, P>>
 {
-    using T = memory_backed_array_t<D, U, std::shared_ptr>;
+    using T = memory_backed_array_t<D, U, P>;
     static const U* data(const T& val)
     {
         return val._data;
@@ -87,7 +88,21 @@ template<uint D, typename U> struct hdf5_repr<memory_backed_array_t<D, U, std::s
     {
         return val._data;
     }
-    static void allocate(T& val, hid_t space, hid_t type)
+    static hid_t space(const T& val)
+    {
+        hsize_t dims[D];
+
+        for (uint n = 0; n < D; ++n)
+        {
+            dims[n] = val._shape[n];
+        }
+        return H5Screate_simple(D, dims, nullptr);
+    }
+    static hid_t type(const T& val)
+    {
+        return hdf5_repr<U>::type(U());
+    }
+    template<class A> static void allocate(T& val, hid_t space, hid_t type, A& allocator)
     {
         if (H5Sget_simple_extent_ndims(space) != D)
         {
@@ -103,24 +118,10 @@ template<uint D, typename U> struct hdf5_repr<memory_backed_array_t<D, U, std::s
         }
         auto start = zeros_ivec<D>();
         auto stride = strides_row_major(shape);
-        auto memory = std::make_shared<vapor::managed_memory_t>(product(shape) * sizeof(U));
+        auto memory = allocator.allocate(product(shape) * sizeof(U));
         auto data = (U*) memory->data();
         auto table = lookup(start, stride, data, memory);
         val = array(table, index_space(start, shape), data);
-    }
-    static hid_t space(const T& val)
-    {
-        hsize_t dims[D];
-
-        for (uint n = 0; n < D; ++n)
-        {
-            dims[n] = val._shape[n];
-        }
-        return H5Screate_simple(D, dims, nullptr);
-    }
-    static hid_t type(const T& val)
-    {
-        return hdf5_repr<U>::type(U());
     }
 };
 

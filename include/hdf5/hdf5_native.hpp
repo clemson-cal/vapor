@@ -37,14 +37,14 @@ namespace vapor {
  * HDF5 representation of native data types
  * 
  */
-#define HDF5_REPR_POD(T, h)                                        \
-template<> struct hdf5_repr<T>                                     \
-{                                                                  \
-    static const T* data(const T& val) { return &val; }            \
-    static T* data(T& val) { return &val; }                        \
-    static void allocate(T&, hid_t space, hid_t type) { }          \
-    static hid_t space(const T&) { return H5Screate(H5S_SCALAR); } \
-    static hid_t type(const T&) { return H5Tcopy(h); }             \
+#define HDF5_REPR_POD(T, h)                                          \
+template<> struct hdf5_repr<T>                                       \
+{                                                                    \
+    static const T* data(const T& val) { return &val; }              \
+    static T* data(T& val) { return &val; }                          \
+    static hid_t space(const T&) { return H5Screate(H5S_SCALAR); }   \
+    static hid_t type(const T&) { return H5Tcopy(h); }               \
+    template<class A> static void allocate(T&, hid_t, hid_t, A&) { } \
 }
 HDF5_REPR_POD(char, H5T_NATIVE_CHAR);
 HDF5_REPR_POD(signed char, H5T_NATIVE_SCHAR);
@@ -72,7 +72,6 @@ template<> struct hdf5_repr<bool>
     using T = bool;
     static const T* data(const T& val) { return &val; }
     static T* data(T& val) { return &val; }
-    static void allocate(T&, hid_t space, hid_t type) { }
     static hid_t space(const T&) { return H5Screate(H5S_SCALAR); }
     static hid_t type(const T&)
     {
@@ -83,6 +82,7 @@ template<> struct hdf5_repr<bool>
         H5Tenum_insert(type, "FALSE", &f);
         return type;
     }
+    template<class A> static void allocate(T&, hid_t, hid_t, A&) { }
 };
 
 } // namespace vapor

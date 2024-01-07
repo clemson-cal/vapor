@@ -27,6 +27,7 @@ SOFTWARE.
 
 #pragma once
 #include <hdf5.h>
+#include "vapor/runtime.hpp"
 #include "visit_struct/visit_struct.hpp"
 
 namespace vapor {
@@ -45,9 +46,9 @@ namespace vapor {
  * {
  *     static const T* data(const T& val) { return &val; }
  *     static T* data(T& val) { return &val; }
- *     static void allocate(T&, hid_t space, hid_t type) { }
  *     static hid_t space(const T&) { return H5Screate(H5S_SCALAR); }
  *     static hid_t type(const T&) { return H5Tcopy(...); }
+ *     template<class A> static void allocate(T&, hid_t space, hid_t type, A& alloc) { }
  * }
  */
 template<typename T> struct hdf5_repr;
@@ -118,50 +119,6 @@ void hdf5_write(hid_t location, const char *name, const T& val)
     }
 }
 
-
-
-
-/**
- * Read an HDF5 representable object from an HDF5 location
- * 
- */
-template<typename T>
-void hdf5_read(hid_t location, const char *name, T& val)
-{
-    if constexpr (visit_struct::traits::is_visitable<T>::value) {
-        auto group = H5Gopen(location, name, H5P_DEFAULT);
-        visit_struct::for_each(val, [group] (const char *key, auto& item)
-        {
-            hdf5_read(group, key, item);
-        });
-        H5Gclose(group);
-    }
-    else if constexpr (is_key_value_container_t<T>::value) {
-        auto group = H5Gopen(location, name, H5P_DEFAULT);
-        auto op = [] (hid_t group, const char *key, const H5L_info2_t *info, void *op_data) -> herr_t {
-            T& val = *((T*) op_data);
-            hdf5_read(group, key, val[key]);
-            return 0;
-        };
-        hsize_t idx = 0;
-        H5Literate(group, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, op, &val);
-        H5Gclose(group);
-    }
-    else {
-        auto set = H5Dopen(location, name, H5P_DEFAULT);
-        auto space = H5Dget_space(set);
-        auto type = H5Dget_type(set);
-        hdf5_repr<T>::allocate(val, space, type);
-        H5Dread(set, type, space, space, H5P_DEFAULT, hdf5_repr<T>::data(val));
-        H5Tclose(type);
-        H5Sclose(space);
-        H5Dclose(set);
-    }
-}
-
-
-
-
 template<typename T>
 void hdf5_write_file(const char *filename, const T& val)
 {
@@ -173,12 +130,69 @@ void hdf5_write_file(const char *filename, const T& val)
 
 
 
+/**
+ * Read an HDF5 representable object from an HDF5 location
+ * 
+ */
+template<typename T, class A>
+void hdf5_read(hid_t location, const char *name, T& val, A& alloc)
+{
+    struct op_data_t
+    {
+        T* value;
+        A* alloc;
+    };
+    if constexpr (visit_struct::traits::is_visitable<T>::value) {
+        auto group = H5Gopen(location, name, H5P_DEFAULT);
+        visit_struct::for_each(val, [group, &alloc] (const char *key, auto& item)
+        {
+            hdf5_read(group, key, item, alloc);
+        });
+        H5Gclose(group);
+    }
+    else if constexpr (is_key_value_container_t<T>::value) {
+        auto group = H5Gopen(location, name, H5P_DEFAULT);
+        auto op_data = op_data_t{&val, &alloc};
+        auto op = [] (hid_t group, const char *key, const H5L_info2_t *info, void *op_data) -> herr_t {
+            T& value = *((op_data_t*) op_data)->value;
+            A& alloc = *((op_data_t*) op_data)->alloc;
+            hdf5_read(group, key, value[key], alloc);
+            return 0;
+        };
+        hsize_t idx = 0;
+        H5Literate(group, H5_INDEX_NAME, H5_ITER_NATIVE, &idx, op, &op_data);
+        H5Gclose(group);
+    }
+    else {
+        auto set = H5Dopen(location, name, H5P_DEFAULT);
+        auto space = H5Dget_space(set);
+        auto type = H5Dget_type(set);
+        hdf5_repr<T>::allocate(val, space, type, alloc);
+        H5Dread(set, type, space, space, H5P_DEFAULT, hdf5_repr<T>::data(val));
+        H5Tclose(type);
+        H5Sclose(space);
+        H5Dclose(set);
+    }
+}
+
+template<typename T>
+void hdf5_read(hid_t location, const char *name, T& val)
+{
+    hdf5_read(location, name, val, Runtime::allocator());
+}
+
+template<typename T, class A>
+void hdf5_read_file(const char *filename, T& val, A& alloc)
+{
+    auto h5f = H5Fopen(filename, H5P_DEFAULT, H5P_DEFAULT);
+    hdf5_read(h5f, "/", val, alloc);
+    H5Fclose(h5f);
+}
+
 template<typename T>
 void hdf5_read_file(const char *filename, T& val)
 {
-    auto h5f = H5Fopen(filename, H5P_DEFAULT, H5P_DEFAULT);
-    hdf5_read(h5f, "/", val);
-    H5Fclose(h5f);
+    hdf5_read_file(filename, val, Runtime::allocator());
 }
 
 } // namespace vapor

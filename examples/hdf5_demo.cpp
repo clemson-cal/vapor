@@ -71,7 +71,7 @@ int main(int argc, const char **argv)
     auto conf2 = config_t();
 
     vapor::hdf5_write_file("hdf5_demo.h5", conf1);
-    vapor::hdf5_read_file("hdf5_demo.h5", conf2);
+    vapor::hdf5_read_file("hdf5_demo.h5", conf2, alloc);
     vapor::print(conf1);
     vapor::print("\n");
     vapor::print(conf2);
@@ -81,7 +81,7 @@ int main(int argc, const char **argv)
     dict1["a"] = 1.0;
     dict1["b"] = 2.0;
     vapor::hdf5_write_file("hdf5_demo_map.h5", dict1);
-    vapor::hdf5_read_file("hdf5_demo_map.h5", dict2);
+    vapor::hdf5_read_file("hdf5_demo_map.h5", dict2, alloc);
 
     vapor::print(dict1);
     vapor::print("\n");

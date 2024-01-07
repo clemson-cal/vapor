@@ -56,7 +56,7 @@ public:
     }
 private:
     default_executor_t _executor;
-    pool_allocator_t _allocator;
+    shared_ptr_allocator_t _allocator;
 };
 
 } // namespace vapor
