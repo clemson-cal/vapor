@@ -67,7 +67,7 @@ int main()
         return 0.0;
     };
 
-    auto momentum_squared = [=] (dvec_t<num_prim> u)
+    auto momentum_squared = [=] (dvec_t<num_cons> u)
     {
         if constexpr (vector_components == 1)
         {
@@ -271,7 +271,6 @@ int main()
     auto dt = dx * 0.3;
     auto p = xc.map(initial_primitive).cache(exec, alloc);
     auto u = p.map(prim_to_cons).cache(exec, alloc);
-    auto p2 = u.map(cons_to_prim).cache(exec, alloc);
     auto interior_faces = index_space(ivec(1), uvec(N - 1));
     auto interior_cells = index_space(ivec(1), uvec(N - 2));
     auto t = 0.0;

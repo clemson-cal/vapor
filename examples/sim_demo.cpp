@@ -64,7 +64,7 @@ public:
     {
         return state.time;
     }
-    virtual vapor::uint get_iteration(const State& state) const override
+    vapor::uint get_iteration(const State& state) const override
     {
         return state.iteration;
     }

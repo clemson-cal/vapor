@@ -115,7 +115,7 @@ public:
      *
      * May be overridden by derived classes 
      */
-    virtual vapor::uint updates_per_batch() { return 10; }
+    virtual vapor::uint updates_per_batch() const { return 10; }
 
     /**
      * Return the time between checkpoint task recurrences
