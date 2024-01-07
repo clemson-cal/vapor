@@ -22,6 +22,7 @@ SOFTWARE.
 ================================================================================
 */
 
+#define VAPOR_USE_SHARED_PTR_ALLOCATOR
 #include "vapor/sim.hpp"
 #include <unistd.h> // usleep, for demo simulation class
 

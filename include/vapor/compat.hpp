@@ -51,3 +51,12 @@ namespace vapor {
 
 // Enables utility functions on std::vector
 // #define VAPOR_STD_VECTOR
+
+// Sets the default allocator to one that allocates using std::shared_ptr of
+// mananged memory blocks. When this macro is not defined, the default
+// allocator is the pool allocator. Note that the shared pointer allocator is
+// not compatible with CUDA, and may be slower than the pool allocator due to
+// heavy use of system malloc. The shared pointer allocator is thread-safe
+// whereas the pool allocator is not.
+// 
+// #define VAPOR_USE_SHARED_PTR_ALLOCATOR

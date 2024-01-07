@@ -312,4 +312,13 @@ public:
     }
 };
 
+
+
+
+#ifdef VAPOR_USE_SHARED_PTR_ALLOCATOR
+using default_allocator_t = shared_ptr_allocator_t;
+#else
+using default_allocator_t = pool_allocator_t;
+#endif
+
 } // namespace vapor

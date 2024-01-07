@@ -28,6 +28,7 @@ SOFTWARE.
 #define VAPOR_STD_STRING
 #define VAPOR_STD_VECTOR
 #define VAPOR_STD_MAP
+#define VAPOR_USE_SHARED_PTR_ALLOCATOR
 #include "vapor/print.hpp"
 #include "vapor/executor.hpp"
 #include "hdf5/hdf5_array.hpp"
