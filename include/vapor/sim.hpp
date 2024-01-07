@@ -91,7 +91,7 @@ public:
      *
      * Must be overriden by derived classes
      */
-    virtual State initial_state() const = 0;
+    virtual void initial_state(State& state) const = 0;
 
     /**
      * Update the simulation state by one iteration
@@ -402,7 +402,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
         vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
         vapor::set_from_key_vals(sim.get_config(), argc, argv);
         vapor::print_to_file(sim.get_config(), "session.cfg");
-        state = sim.initial_state();
+        sim.initial_state(state);
     }
     tasks.checkpoint.interval = sim.checkpoint_interval();
     tasks.timeseries.interval = sim.timeseries_interval();

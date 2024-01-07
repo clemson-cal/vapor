@@ -68,13 +68,11 @@ public:
     {
         return state.iteration;
     }
-    State initial_state() const override
+    void initial_state(State& state) const override
     {
-        return State{
-            0.0,
-            0,
-            vapor::zeros<double>(vapor::uvec(config.num_zones)).cache(executor, allocator)
-        };
+        state.time = 0.0;
+        state.iteration = 0;
+        state.u = vapor::zeros<double>(vapor::uvec(config.num_zones)).cache();
     }
     void update(State& state) const override
     {
@@ -90,9 +88,6 @@ public:
     { 
         return config.cpi;
     }
-private:
-    vapor::cpu_executor_t executor;
-    vapor::shared_ptr_allocator_t allocator;
 };
 
 
