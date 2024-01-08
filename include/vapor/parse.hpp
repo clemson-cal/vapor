@@ -272,7 +272,6 @@ void scan(const char* str, uint size, std::vector<T>& val)
             scan(&str[n], size - n, val.back());
             state = lexer_state::expect_sep_or_end;
             break;
-
         case lexer_state::expect_sep_or_end:
             if (str[n] == ',' || str[n] == ' ')
                 state = lexer_state::ready;

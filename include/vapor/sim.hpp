@@ -31,6 +31,7 @@ SOFTWARE.
 #define VAPOR_STD_VECTOR
 #include <chrono>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include "hdf5/hdf5_array.hpp"
@@ -178,7 +179,7 @@ public:
      * be collected from the user configuration.
      * 
      */
-    virtual std::vector<vapor::uint> get_timeseries_cols() const
+    virtual std::set<vapor::uint> get_timeseries_cols() const
     {
         return {};
     }
@@ -209,7 +210,7 @@ public:
      * collected from the user configuration.
      * 
      */
-    virtual std::vector<vapor::uint> get_product_cols() const
+    virtual std::set<vapor::uint> get_product_cols() const
     {
         return {};
     }
