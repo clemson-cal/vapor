@@ -51,8 +51,8 @@ namespace vapor {
     struct task_state_t;
     struct task_states_t;
     template<class C, class S, class D> class Simulation;
-    template<class Config, class State, class DiagnosticData>
-    int run(int argc, const char **argv, Simulation<Config, State, DiagnosticData>& sim);
+    template<class Config, class State, class Product>
+    int run(int argc, const char **argv, Simulation<Config, State, Product>& sim);
 }
 
 
@@ -68,7 +68,7 @@ class vapor::Simulation
 public:
     using Config = C;
     using State = S;
-    using DiagnosticData = D;
+    using Product = D;
 
     /**
      * Return a time for use by the simulation driver
@@ -132,11 +132,11 @@ public:
     virtual double timeseries_interval() const { return 0.0; }
 
     /**
-     * Return the time between diagnostic task recurrences
+     * Return the time between product task recurrences
      *
      * Will likely be overridden by derived classes
      */
-    virtual double diagnostic_interval() const { return 0.0; }
+    virtual double product_interval() const { return 0.0; }
 
     /**
      * Return a status message to be printed by the driver
@@ -182,32 +182,32 @@ public:
     }
 
     /**
-     * Return integers identifying the diagnostic fields to be computed
+     * Return integers identifying the product fields to be computed
      *
-     * The integers returned must be valid keys to the get_diagnostic_name and
-     * compute_diagnostic functions below. They could be hard-coded, or be
+     * The integers returned must be valid keys to the get_product_name and
+     * compute_product functions below. They could be hard-coded, or be
      * collected from the user configuration.
      * 
      */
-    virtual std::vector<vapor::uint> get_diagnostic_cols() const
+    virtual std::vector<vapor::uint> get_product_cols() const
     {
         return {};
     }
 
     /**
-     * Return a short name for one of the provided diagnostic measurements
+     * Return a short name for one of the provided product measurements
      *
      */
-    virtual const char* get_diagnostic_name(vapor::uint column) const
+    virtual const char* get_product_name(vapor::uint column) const
     {
         return nullptr;
     }
 
     /**
-     * Compute and return a diagnsotic field from the simulation state
+     * Compute and return a product from the simulation state
      *
      */
-    virtual DiagnosticData compute_diagnostic(const State& state, vapor::uint column) const
+    virtual Product compute_product(const State& state, vapor::uint column) const
     {
         return {};
     }
@@ -335,15 +335,15 @@ struct vapor::task_states_t
 {
     task_state_t checkpoint;
     task_state_t timeseries;
-    task_state_t diagnostic;
+    task_state_t product;
 };
-VISITABLE_STRUCT(vapor::task_states_t, checkpoint, timeseries, diagnostic);
+VISITABLE_STRUCT(vapor::task_states_t, checkpoint, timeseries, product);
 
 
 
 
-template<class Config, class State, class DiagnosticData>
-int vapor::run(int argc, const char **argv, Simulation<Config, State, DiagnosticData>& sim)
+template<class Config, class State, class Product>
+int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& sim)
 {
     auto state = State();
     auto tasks = task_states_t();
@@ -359,7 +359,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
             vapor::hdf5_write(h5f, "timeseries", timeseries_data);
             vapor::hdf5_write(h5f, "tasks", tasks);
             H5Fclose(h5f);
-            printf("write checkpoint %s\n", fname.data);
+            printf("write %s\n", fname.data);
         }
     };
 
@@ -377,21 +377,21 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
         }
     };
 
-    auto diagnostic = [&] (const auto& state)
+    auto product = [&] (const auto& state)
     {
-        if (tasks.diagnostic.should_be_performed(sim.get_time(state)))
+        if (tasks.product.should_be_performed(sim.get_time(state)))
         {
-            auto fname = vapor::format("diagnostic.%04d.h5", tasks.diagnostic.number);
+            auto fname = vapor::format("prods.%04d.h5", tasks.product.number);
             auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-            for (auto col : sim.get_diagnostic_cols())
+            for (auto col : sim.get_product_cols())
             {
-                auto name = sim.get_diagnostic_name(col);
-                auto field = sim.compute_diagnostic(state, col);
+                auto name = sim.get_product_name(col);
+                auto field = sim.compute_product(state, col);
                 vapor::hdf5_write(h5f, name, field);
             }
             H5Fclose(h5f);
-            printf("write diagnostic file %s\n", fname.data);
+            printf("write %s\n", fname.data);
         }
     };
 
@@ -404,7 +404,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
         vapor::hdf5_read(h5f, "tasks", tasks);
         vapor::set_from_key_vals(sim.get_config(), argc - 1, argv + 1);
         H5Fclose(h5f);
-        printf("read checkpoint %s\n", argv[1]);
+        printf("read %s\n", argv[1]);
     }
     else
     {
@@ -415,7 +415,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
     }
     tasks.checkpoint.interval = sim.checkpoint_interval();
     tasks.timeseries.interval = sim.timeseries_interval();
-    tasks.diagnostic.interval = sim.diagnostic_interval();
+    tasks.product.interval = sim.product_interval();
 
     vapor::print(sim.get_config());
     vapor::print("\n");
@@ -423,8 +423,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
     while (sim.should_continue(state))
     {
         timeseries(state);
-        diagnostic(state);
         checkpoint(state);
+        product(state);
 
         auto secs = time_call(sim.updates_per_batch(), [&sim, &state]
         {
@@ -435,8 +435,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Diagnostic
         vapor::print("\n");
     }
     timeseries(state);
-    diagnostic(state);
     checkpoint(state);
+    product(state);
 
     return 0;
 }

@@ -52,12 +52,12 @@ VISITABLE_STRUCT(State, time, iteration, u);
 
 
 
-using DiagnosticData = vapor::memory_backed_array_t<1, double, std::shared_ptr>;
+using Product = vapor::memory_backed_array_t<1, double, std::shared_ptr>;
 
 
 
 
-class DemoSimulation : public vapor::Simulation<Config, State, DiagnosticData>
+class DemoSimulation : public vapor::Simulation<Config, State, Product>
 {
 public:
     double get_time(const State& state) const override
