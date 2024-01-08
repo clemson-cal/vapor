@@ -125,9 +125,12 @@ static void scan_key_val(const char *str, char sep, F parser)
 
         case lexer_state::expect_rhs:
             if (c == '#' || c == sep || c == '\0') {
-                // throw std::runtime_error("[scan_key_val] expected a value");
-                // forgive empty RHS, do not call parser
+                // empty RHS calls parser with an empty string
                 state = lexer_state::ready;
+                rhs_start = str;
+                rhs_final = str;
+                parser(lhs_start, lhs_final - lhs_start,
+                       rhs_start, rhs_final - rhs_start);
             }
             else if (! isspace(c)) {
                 state = lexer_state::rhs;
