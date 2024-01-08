@@ -71,6 +71,26 @@ public:
     using Product = D;
 
     /**
+     * Return a name for the simulation class
+     *
+     * This should also be the name of the executable, because it will be used
+     * in generating a usage message from inside the run function.
+     */
+    virtual const char* name() const { return nullptr; }
+
+    /**
+     * Return an author name or names for the simulation
+     *
+     */
+    virtual const char* author() const { return nullptr; }
+
+    /**
+     * Return a short description of the simulation
+     *
+     */
+    virtual const char* description() const { return nullptr; }
+
+    /**
      * Return a time for use by the simulation driver
      *
      * The returned value is used by the driver to check whether it is time to
@@ -395,6 +415,56 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
         }
     };
 
+    for (int n = 0; n < argc; ++n)
+    {
+        if (strcmp(argv[n], "-h") == 0)
+        {
+            if (auto name = sim.name())
+                printf("usage: %s [restart.h5] [key=val...]\n", name);
+            if (auto author = sim.author())
+                printf("author: %s\n", author);
+            if (auto description = sim.description())
+                printf("description: %s\n", description);
+
+            {
+                uint col = 0;
+                while (auto name = sim.get_product_name(col))
+                {
+                    if (col == 0)
+                    {
+                        vapor::print("\nsimulation products:\n");
+                    }
+                    vapor::print(format("%d: %s\n", col, sim.get_product_name(col)));
+                    col += 1;
+                }
+                if (col > 0)
+                {
+                    vapor::print("\n");
+                }
+            }
+
+            {
+                uint col = 0;
+                while (auto name = sim.get_timeseries_name(col))
+                {
+                    if (col == 0)
+                    {
+                        vapor::print("\ntime series options:\n");
+                    }
+                    vapor::print(format("%d: %s\n", col, sim.get_timeseries_name(col)));
+                    col += 1;
+                }
+                if (col > 0)
+                {
+                    vapor::print("\n");
+                }
+            }
+            return 0;
+        }
+        else if (argv[n][0] == '-') {
+            throw std::runtime_error(vapor::format("unrecognized option %s", argv[n]));
+        }
+    }
     if (argc > 1 && strstr(argv[1], ".h5"))
     {
         auto h5f = H5Fopen(argv[1], H5P_DEFAULT, H5P_DEFAULT);
@@ -417,8 +487,33 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     tasks.timeseries.interval = sim.timeseries_interval();
     tasks.product.interval = sim.product_interval();
 
+    vapor::print("\n");
     vapor::print(sim.get_config());
     vapor::print("\n");
+
+    if (! sim.get_product_cols().empty())
+    {
+        for (auto col : sim.get_product_cols())
+        {
+            if (auto name = sim.get_product_name(col))
+                print(format("product %d: %s\n", col, name));
+            else
+                throw std::runtime_error(format("product number %d is not provided", col));
+        }
+        vapor::print("\n");
+    }
+
+    if (! sim.get_timeseries_cols().empty())
+    {
+        for (auto col : sim.get_timeseries_cols())
+        {
+            if (auto name = sim.get_timeseries_name(col))
+                print(format("timeseries %d: %s\n", col, name));
+            else
+                throw std::runtime_error(format("timeseries number %d is not provided", col));
+        }
+        vapor::print("\n");
+    }
 
     while (sim.should_continue(state))
     {

@@ -91,7 +91,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("ready -> comment\n");
             }
             else {
-                throw std::runtime_error("[scan_key_val] bad identifier");
+                throw std::runtime_error(format("scan_key_val got bad identifier %s", str));
             }
             break;
 
@@ -107,7 +107,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 lhs_final = str;
             }
             else if (c == '\0') {
-                throw std::runtime_error("[scan_key_val] line ended without '='");
+                throw std::runtime_error("scan_key_val got line ended without '='");
             }
             break;
 
@@ -119,7 +119,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("expect_equals -> expect_rhs\n");
             }
             else {
-                throw std::runtime_error("[scan_key_val] line ended without '='");
+                throw std::runtime_error("scan_key_val got line ended without '='");
             }
             break;
 
@@ -317,7 +317,9 @@ auto set_from_key_vals(T& target, int argc, const char **argv)
 {
     for (int n = 1; n < argc; ++n)
     {
-        set_from_key_vals(target, argv[n]);
+        if (argv[n][0] != '-') {
+            set_from_key_vals(target, argv[n]);
+        }
     }
 }
 
