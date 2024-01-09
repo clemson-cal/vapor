@@ -87,14 +87,12 @@ struct is_key_value_container_t : public std::false_type {};
 template<typename T>
 void hdf5_write(hid_t location, const char *name, const T& val)
 {
-    auto require_group = [location] (const char *group_name) {
-        if (H5Lexists(location, group_name, H5P_DEFAULT))
-            return H5Gopen(location, group_name, H5P_DEFAULT);
-        else
-            return H5Gcreate(location, group_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    };
     if constexpr (visit_struct::traits::is_visitable<T>::value) {
-        auto group = require_group(name);
+	auto group = hid_t();
+        if (H5Lexists(location, name, H5P_DEFAULT))
+            group = H5Gopen(location, name, H5P_DEFAULT);
+        else
+            group = H5Gcreate(location, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         visit_struct::for_each(val, [group] (const char *key, const auto& item)
         {
             hdf5_write(group, key, item);
@@ -102,7 +100,11 @@ void hdf5_write(hid_t location, const char *name, const T& val)
         H5Gclose(group);
     }
     else if constexpr (is_key_value_container_t<T>::value) {
-        auto group = require_group(name);
+	auto group = hid_t();
+        if (H5Lexists(location, name, H5P_DEFAULT))
+            group = H5Gopen(location, name, H5P_DEFAULT);
+        else
+            group = H5Gcreate(location, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         for (const auto& [key, item] : val) {
             hdf5_write(group, key.data(), item);
         }

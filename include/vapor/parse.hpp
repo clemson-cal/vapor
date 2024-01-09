@@ -302,7 +302,7 @@ auto set_from_key_vals(T& target, const char *str)
 {
     auto found = false;
 
-    scan_key_val(str, '\n', [&target, &found] (auto l, auto nl, auto r, auto nr)
+    scan_key_val(str, '\n', [&target, &found] (const char* l, size_t nl, const char* r, size_t nr)
     {
         visit_struct::for_each(target, [l, nl, r, nr, &found] (auto key, auto& val)
         {

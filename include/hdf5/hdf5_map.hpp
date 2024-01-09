@@ -28,8 +28,10 @@ SOFTWARE.
 #pragma once
 #include <map>
 #include <string>
+#include "hdf5_repr.hpp"
 
 namespace vapor {
+
 
 
 
@@ -38,8 +40,9 @@ namespace vapor {
  *
  */
 template<typename U>
-struct vapor::is_key_value_container_t<std::map<std::string, U>> : public std::true_type
+struct is_key_value_container_t<std::map<std::string, U>> : public std::true_type
 {
 };
 
 } // namespace vapor
+
