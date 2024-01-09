@@ -195,45 +195,57 @@ struct index_space_t
         return space;
     }
 
+    index_space_t<D> shift(int amount, uint axis) const
+    {
+        auto result = *this;
+        result.i0[axis] += amount;
+        return result;
+    }
+
+    index_space_t nudge(ivec_t<D> lower, ivec_t<D> upper) const
+    {
+        auto j0 = i0;
+        auto dj = di;
+
+        for (uint axis = 0; axis < D; ++axis)
+        {
+            j0[axis] += lower[axis];
+            dj[axis] += upper[axis] - lower[axis];
+        }
+        return {j0, dj};
+    }
+
     /**
      * Remove the given number of indexes from the lower and upper extent
      * 
      */
     index_space_t contract(uvec_t<D> count) const
     {
-        auto j0 = i0;
-        auto dj = di;
-
-        for (uint axis = 0; axis < D; ++axis)
-        {
-            j0[axis] += count[axis];
-            dj[axis] -= count[axis] * 2;
-        }
-        return {j0, dj};
+        return nudge(cast<int>(count), -cast<int>(count));
     }
 
+    /**
+     * Remove indexes from all axes
+     * 
+     */
     index_space_t contract(uint count) const
     {
         return contract(uniform_vec<D>(count));
     }
 
     /**
-     * Add the given number of indexes to the lower and upper extent
+     * Add the given number of indexes from the lower and upper extent
      * 
      */
     index_space_t expand(uvec_t<D> count) const
     {
-        auto j0 = i0;
-        auto dj = di;
-
-        for (uint axis = 0; axis < D; ++axis)
-        {
-            j0[axis] -= count[axis];
-            dj[axis] += count[axis] * 2;
-        }
-        return {j0, dj};
+        return nudge(-cast<int>(count), cast<int>(count));
     }
 
+    /**
+     * Add indexes to all axes
+     * 
+     */
     index_space_t expand(uint count) const
     {
         return expand(uniform_vec<D>(count));
@@ -258,13 +270,6 @@ struct index_space_t
     {
         auto result = *this;
         result.di[axis] = amount;
-        return result;
-    }
-
-    index_space_t<D> shift(int amount, uint axis) const
-    {
-        auto result = *this;
-        result.i0[axis] += amount;
         return result;
     }
 
