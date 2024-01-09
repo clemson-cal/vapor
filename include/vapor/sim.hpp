@@ -426,49 +426,52 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
 
     for (int n = 0; n < argc; ++n)
     {
-        if (strcmp(argv[n], "-h") == 0)
+        if (strcmp(argv[n], "-h") == 0 || strcmp(argv[n], "--help") == 0)
         {
             if (auto name = sim.name())
                 printf("usage: %s [restart.h5] [key=val...]\n", name);
             if (auto author = sim.author())
                 printf("author: %s\n", author);
             if (auto description = sim.description())
-                printf("description: %s\n", description);
+                printf("\n%s\n", description);
 
+            vapor::print("\n");
+            vapor::print("-h --help            show this help message\n");
+            vapor::print("-n --new-session     clear the session.cfg file\n");
+
+
+            for (uint col = 0; ; ++col)
             {
-                uint col = 0;
-                while (auto name = sim.get_product_name(col))
-                {
-                    if (col == 0)
-                    {
-                        vapor::print("\nsimulation products:\n");
+                if (auto name = sim.get_product_name(col)) {
+                    if (col == 0) {
+                        vapor::print("\nsimulation products available ->\n");
                     }
                     vapor::print(format("%d: %s\n", col, sim.get_product_name(col)));
-                    col += 1;
-                }
-                if (col > 0)
-                {
-                    vapor::print("\n");
+                } else {
+                    break;
                 }
             }
 
+            for (uint col = 0; ; ++col)
             {
-                uint col = 0;
-                while (auto name = sim.get_timeseries_name(col))
-                {
-                    if (col == 0)
-                    {
-                        vapor::print("\ntime series options:\n");
+                if (auto name = sim.get_timeseries_name(col)) {
+                    if (col == 0) {
+                        vapor::print("\ntime series data available ->\n");
                     }
                     vapor::print(format("%d: %s\n", col, sim.get_timeseries_name(col)));
-                    col += 1;
                 }
-                if (col > 0)
-                {
-                    vapor::print("\n");
+                else {
+                    break;
                 }
             }
+
+            vapor::print("\nuser configuration ->\n");
+            vapor::print(sim.get_config());
             return 0;
+        }
+        else if (strcmp(argv[n], "-n") == 0 || strcmp(argv[n], "--new-session") == 0)
+        {
+            std::filesystem::remove("session.cfg");
         }
         else if (argv[n][0] == '-') {
             throw std::runtime_error(vapor::format("unrecognized option %s", argv[n]));
@@ -501,7 +504,6 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     tasks.timeseries.interval = sim.timeseries_interval();
     tasks.product.interval = sim.product_interval();
 
-    vapor::print("\n");
     vapor::print(sim.get_config());
     vapor::print("\n");
 
@@ -514,7 +516,6 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
             else
                 throw std::runtime_error(format("product number %d is not provided", col));
         }
-        vapor::print("\n");
     }
 
     if (! sim.get_timeseries_cols().empty())
@@ -526,7 +527,6 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
             else
                 throw std::runtime_error(format("timeseries number %d is not provided", col));
         }
-        vapor::print("\n");
     }
 
     while (sim.should_continue(state))
