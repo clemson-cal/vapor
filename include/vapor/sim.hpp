@@ -31,6 +31,7 @@ SOFTWARE.
 #define VAPOR_STD_VECTOR
 #include <chrono>
 #include <map>
+#include <filesystem>
 #include <set>
 #include <string>
 #include <vector>
@@ -90,6 +91,12 @@ public:
      *
      */
     virtual const char* description() const { return nullptr; }
+
+    /**
+     * A filesystem location where simulations outputs should be written
+     *
+     */
+    virtual const char* output_directory() const { return nullptr; }
 
     /**
      * Return a time for use by the simulation driver
@@ -369,18 +376,19 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     auto state = State();
     auto tasks = task_states_t();
     auto timeseries_data = std::map<std::string, std::vector<double>>();
+    auto output_directory = std::filesystem::path(sim.output_directory() ? sim.output_directory() : ".");
     auto checkpoint = [&] (const auto& state)
     {
         if (tasks.checkpoint.should_be_performed(sim.get_time(state)))
         {
-            auto fname = vapor::format("chkpt.%04d.h5", tasks.checkpoint.number);
-            auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+            auto fname = output_directory / vapor::format("chkpt.%04d.h5", tasks.checkpoint.number).data;
+            auto h5f = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
             vapor::hdf5_write(h5f, "state", state);
             vapor::hdf5_write(h5f, "config", sim.get_config());
             vapor::hdf5_write(h5f, "timeseries", timeseries_data);
             vapor::hdf5_write(h5f, "tasks", tasks);
             H5Fclose(h5f);
-            printf("write %s\n", fname.data);
+            printf("write %s\n", fname.c_str());
         }
     };
 
@@ -402,8 +410,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     {
         if (tasks.product.should_be_performed(sim.get_time(state)))
         {
-            auto fname = vapor::format("prods.%04d.h5", tasks.product.number);
-            auto h5f = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+            auto fname = output_directory / vapor::format("prods.%04d.h5", tasks.checkpoint.number).data;
+            auto h5f = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
             for (auto col : sim.get_product_cols())
             {
@@ -412,7 +420,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
                 vapor::hdf5_write(h5f, name, field);
             }
             H5Fclose(h5f);
-            printf("write %s\n", fname.data);
+            printf("write %s\n", fname.c_str());
         }
     };
 
@@ -483,6 +491,11 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
         vapor::set_from_key_vals(sim.get_config(), argc, argv);
         vapor::print_to_file(sim.get_config(), "session.cfg");
         sim.initial_state(state);
+    }
+
+    if (auto outdir = sim.output_directory()) {
+        printf("write output to %s\n", outdir);
+        std::filesystem::create_directories(outdir);
     }
     tasks.checkpoint.interval = sim.checkpoint_interval();
     tasks.timeseries.interval = sim.timeseries_interval();
