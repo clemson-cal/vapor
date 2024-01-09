@@ -99,7 +99,8 @@ int main(int argc, const char **argv)
         return DemoSimulation().run(argc, argv);
     }
     catch (const std::exception& e) {
-        printf("[error]: %s\n", e.what());
+        vapor::print(e.what());
+        vapor::print("\n");
     }
     return 0;
 }

@@ -29,6 +29,9 @@ SOFTWARE.
 #ifdef VAPOR_STD_VECTOR
 #include <vector>
 #endif
+#ifdef VAPOR_STD_STRING
+#include <string>
+#endif
 #include <cstring>
 #include <stdexcept>
 #include "print.hpp"
@@ -91,7 +94,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("ready -> comment\n");
             }
             else {
-                throw std::runtime_error(format("scan_key_val got bad identifier %s", str));
+                throw std::runtime_error(format("parse error: scan_key_val got bad identifier %s", str));
             }
             break;
 
@@ -107,7 +110,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 lhs_final = str;
             }
             else if (c == '\0') {
-                throw std::runtime_error("scan_key_val got line ended without '='");
+                throw std::runtime_error("parse error: ot line ended without '='");
             }
             break;
 
@@ -119,7 +122,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("expect_equals -> expect_rhs\n");
             }
             else {
-                throw std::runtime_error("scan_key_val got line ended without '='");
+                throw std::runtime_error("parse error: ot line ended without '='");
             }
             break;
 
@@ -185,7 +188,7 @@ void scan(const char* str, uint size, bool& val)
         val = false;
     }
     else {
-        throw std::runtime_error(format("expected true|false, got %.*s", size, str));
+        throw std::runtime_error(format("parse error: expected true|false, got %.*s", size, str));
     }
 }
 void scan(const char* str, uint, uint& val)
@@ -240,12 +243,12 @@ void scan(const char* str, uint size, vec_t<D, S>& val)
 
         case lexer_state::expect_end:
             if (str[n] == ',')
-                throw std::runtime_error(format("vec size must be %d", S));
+                throw std::runtime_error(format("parse error: vec size must be %d", S));
             break;
         }
     }
     if (m < S) {
-        throw std::runtime_error(format("vec size must be %d", S));
+        throw std::runtime_error(format("parse error: vec size must be %d", S));
     }
 }
 
@@ -284,6 +287,16 @@ void scan(const char* str, uint size, std::vector<T>& val)
 
 
 
+#ifdef VAPOR_STD_STRING
+static inline void scan(const char* str, uint size, std::string& val)
+{
+    val = std::string(str, size);
+}
+#endif // VAPOR_STD_STRING
+
+
+
+
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
 auto set_from_key_vals(T& target, const char *str)
 {
@@ -303,7 +316,7 @@ auto set_from_key_vals(T& target, const char *str)
         });
         if (! found)
         {
-            throw std::runtime_error(format("no data member '%.*s'", int(nl), l));
+            throw std::runtime_error(format("parse error: no data member '%.*s'", int(nl), l));
         }
     });
 }
