@@ -411,7 +411,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
         if (tasks.product.should_be_performed(sim.get_time(state)))
         {
             auto outdir = std::filesystem::path(sim.output_directory());
-            auto fname = outdir / vapor::format("prods.%04d.h5", tasks.checkpoint.number).data;
+            auto fname = outdir / vapor::format("prods.%04d.h5", tasks.product.number).data;
             auto h5f = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
             for (auto col : sim.get_product_cols())
