@@ -96,7 +96,7 @@ public:
      * A filesystem location where simulations outputs should be written
      *
      */
-    virtual const char* output_directory() const { return nullptr; }
+    virtual const char* output_directory() const { return "."; }
 
     /**
      * Return a time for use by the simulation driver
@@ -376,12 +376,12 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     auto state = State();
     auto tasks = task_states_t();
     auto timeseries_data = std::map<std::string, std::vector<double>>();
-    auto output_directory = std::filesystem::path(sim.output_directory() ? sim.output_directory() : ".");
     auto checkpoint = [&] (const auto& state)
     {
         if (tasks.checkpoint.should_be_performed(sim.get_time(state)))
         {
-            auto fname = output_directory / vapor::format("chkpt.%04d.h5", tasks.checkpoint.number).data;
+            auto outdir = std::filesystem::path(sim.output_directory());
+            auto fname = outdir / vapor::format("chkpt.%04d.h5", tasks.checkpoint.number).data;
             auto h5f = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
             vapor::hdf5_write(h5f, "state", state);
             vapor::hdf5_write(h5f, "config", sim.get_config());
@@ -410,7 +410,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     {
         if (tasks.product.should_be_performed(sim.get_time(state)))
         {
-            auto fname = output_directory / vapor::format("prods.%04d.h5", tasks.product.number).data;
+            auto outdir = std::filesystem::path(sim.output_directory());
+            auto fname = outdir / vapor::format("prods.%04d.h5", tasks.checkpoint.number).data;
             auto h5f = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
             for (auto col : sim.get_product_cols())
@@ -439,7 +440,6 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
             vapor::print("-h --help            show this help message\n");
             vapor::print("-n --new-session     clear the session.cfg file\n");
 
-
             for (uint col = 0; ; ++col)
             {
                 if (auto name = sim.get_product_name(col)) {
@@ -464,13 +464,13 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
                     break;
                 }
             }
-
             vapor::print("\nuser configuration ->\n");
             vapor::print(sim.get_config());
             return 0;
         }
         else if (strcmp(argv[n], "-n") == 0 || strcmp(argv[n], "--new-session") == 0)
         {
+            vapor::print("new session, use default configuration\n");
             std::filesystem::remove("session.cfg");
         }
         else if (argv[n][0] == '-') {
@@ -490,20 +490,20 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     }
     else
     {
+        if (std::filesystem::exists("session.cfg")) {
+            vapor::print("load configuration from session.cfg\n");
+        }
         vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
         vapor::set_from_key_vals(sim.get_config(), argc, argv);
         vapor::print_to_file(sim.get_config(), "session.cfg");
         sim.initial_state(state);
     }
 
-    if (auto outdir = sim.output_directory()) {
-        printf("write output to %s\n", outdir);
-        std::filesystem::create_directories(outdir);
-    }
     tasks.checkpoint.interval = sim.checkpoint_interval();
     tasks.timeseries.interval = sim.timeseries_interval();
     tasks.product.interval = sim.product_interval();
 
+    vapor::print("\n");
     vapor::print(sim.get_config());
     vapor::print("\n");
 
@@ -527,6 +527,11 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
             else
                 throw std::runtime_error(format("timeseries number %d is not provided", col));
         }
+    }
+
+    if (auto outdir = sim.output_directory()) {
+        printf("write output to %s\n", outdir);
+        std::filesystem::create_directories(outdir);
     }
 
     while (sim.should_continue(state))
