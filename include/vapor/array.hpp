@@ -55,8 +55,10 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<managed_memory_t>>>;
  * Execute an array using the given executor and allocator
  *
  */
-template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
-auto cache(const array_t<D, F>& a, E& executor, A& allocator)
+template<uint D, class F, class E, class A,
+    class T = typename array_t<D, F>::value_type,
+    class R = typename A::allocation_t>
+array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator)
 {
     auto memory = allocator.allocate(a.size() * sizeof(T));
     auto data = (T*) memory->data();
@@ -78,8 +80,10 @@ auto cache(const array_t<D, F>& a, E& executor, A& allocator)
  * Convenience cache function using the global executor and allocator
  * 
  */
-template<uint D, class F, class T = typename array_t<D, F>::value_type>
-auto cache(const array_t<D, F>& a)
+template<uint D, class F,
+    class T = typename array_t<D, F>::value_type,
+    class R = typename default_allocator_t::allocation_t>
+array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a)
 {
     return cache(a, Runtime::executor(), Runtime::allocator());
 }

@@ -155,7 +155,7 @@ void hdf5_read(hid_t location, const char *name, T& val, A& alloc)
     else if constexpr (is_key_value_container_t<T>::value) {
         auto group = H5Gopen(location, name, H5P_DEFAULT);
         auto op_data = op_data_t{&val, &alloc};
-        auto op = [] (hid_t group, const char *key, const H5L_info2_t *info, void *op_data) -> herr_t {
+        auto op = [] (hid_t group, const char *key, const H5L_info_t *info, void *op_data) -> herr_t {
             T& value = *((op_data_t*) op_data)->value;
             A& alloc = *((op_data_t*) op_data)->alloc;
             hdf5_read(group, key, value[key], alloc);

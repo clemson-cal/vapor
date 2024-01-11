@@ -248,6 +248,8 @@ private:
 class pool_allocator_t
 {
 public:
+    using allocation_t = ref_counted_ptr_t<managed_memory_t>;
+
     pool_allocator_t& operator=(const pool_allocator_t& other) = delete;
     pool_allocator_t(const pool_allocator_t& other) = delete;
     pool_allocator_t(pool_allocator_t&& other)
@@ -271,7 +273,7 @@ public:
             use_counts[n] = 0;
         }
     }
-    ref_counted_ptr_t<managed_memory_t> allocate(size_t bytes) const
+    allocation_t allocate(size_t bytes) const
     {
         for (size_t n = 0; n < num_allocations; ++n)
         {
@@ -313,9 +315,11 @@ private:
 class shared_ptr_allocator_t
 {
 public:
-    std::shared_ptr<managed_memory_t> allocate(size_t count) const
+    using allocation_t = std::shared_ptr<managed_memory_t>;
+
+    allocation_t allocate(size_t bytes) const
     {
-        return std::make_shared<managed_memory_t>(count);
+        return std::make_shared<managed_memory_t>(bytes);
     }
 };
 
