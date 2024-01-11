@@ -313,7 +313,8 @@ std::string vapor::readfile(const char *filename)
             str.push_back(c);
         }
     }
-    fclose(infile);
+	if (infile)
+		fclose(infile);
     return str;
 }
 
