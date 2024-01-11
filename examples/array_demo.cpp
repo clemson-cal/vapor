@@ -56,7 +56,7 @@ void make_cached_1d_array()
     int N = 10;
     auto a = array([] HD (ivec_t<1> i) { return 2 * i[0]; }, N);
     auto b = a * 2;
-    auto c = b.cache(exec2, alloc);
+    auto c = cache(b, exec2, alloc);
 
     for (int i = 0; i < N; ++i)
     {
@@ -87,12 +87,12 @@ void array_reductions()
 {
     auto exec = cpu_executor_t();
     auto alloc = shared_ptr_allocator_t();
-    auto a = range(10).cache(exec, alloc);
+    auto a = cache(range(10), exec, alloc);
     printf("the maximum value of range(10) is %d\n", max(a, exec));
 
-    auto b = array([] (auto) { return vec(1.0, 1.0); }, uvec(10)).cache(exec, alloc);
-    auto s = sum(b, exec);
-    printf("the sum of 10 elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", s[0], s[1]);
+    auto b = array([] HD (ivec_t<1>) { return vec(1.0, 1.0); }, uvec(10)).cache(exec, alloc);
+    //auto s = sum(b, exec);
+    //printf("the sum of 10 elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", s[0], s[1]);
 }
 
 void generator_arrays()

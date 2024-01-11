@@ -176,14 +176,14 @@ struct array_t
         return select(in(b.space(), space()), b, *this);
     }
     template<class E, class A>
-    auto cache(E& executor, A& allocator) const
-    {
+	auto cache(E& executor, A& allocator) const
+	{
         return vapor::cache(*this, executor, allocator);
     }
-    auto cache() const
+	auto cache() const
     {
         return vapor::cache(*this);
-    }
+	}
     template<bool C, class E, class A>
     auto cache_if(E& executor, A& allocator) const
     {

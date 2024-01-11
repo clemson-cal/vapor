@@ -191,7 +191,7 @@ HD auto uniform_vec(T val)
  *
  */
 template<typename U, typename T, uint S>
-vec_t<U, S> cast(const vec_t<T, S>& a)
+HD vec_t<U, S> cast(const vec_t<T, S>& a)
 {
     auto result = vec_t<U, S>();
 

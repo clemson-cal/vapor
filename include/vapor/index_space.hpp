@@ -75,12 +75,12 @@ inline static uvec_t<2> partition_interval(uint num_partitions, uint num_element
 template<uint D>
 struct index_space_t
 {
-    bool operator==(const index_space_t& other) const
+    HD bool operator==(const index_space_t& other) const
     {
         return i0 == other.i0 && di == other.di;
     }
 
-    bool operator!=(const index_space_t& other) const
+    HD bool operator!=(const index_space_t& other) const
     {
         return i0 != other.i0 || di != other.di;
     }
@@ -89,7 +89,7 @@ struct index_space_t
      * Return the start of this index space
      * 
      */
-    ivec_t<D> start() const
+    HD ivec_t<D> start() const
     {
         return i0;
     }
@@ -98,7 +98,7 @@ struct index_space_t
      * Return the shape of this index space
      * 
      */
-    uvec_t<D> shape() const
+    HD uvec_t<D> shape() const
     {
         return di;
     }
@@ -107,7 +107,7 @@ struct index_space_t
      * Return the first index that would be visited in a traversal
      *
      */
-    ivec_t<D> front() const
+    HD ivec_t<D> front() const
     {
         return i0;
     }
@@ -116,7 +116,7 @@ struct index_space_t
      * Return the final index that would be visited in a traversal
      *
      */
-    ivec_t<D> back() const
+    HD ivec_t<D> back() const
     {
         return i0 + cast<int>(di) - ones_vec<int, D>();
     }
@@ -125,7 +125,7 @@ struct index_space_t
      * Return true if this index space has a zero-extent on any axis
      *
      */
-    bool empty() const
+    HD bool empty() const
     {
         return size() == 0;
     }
@@ -134,7 +134,7 @@ struct index_space_t
      * Return the number of elements in this index space
      * 
      */
-    uint size() const
+    HD uint size() const
     {
         return product(di);
     }
