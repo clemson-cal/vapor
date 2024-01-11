@@ -212,6 +212,11 @@ struct gpu_executor_t
             auto nb = dim3((ni + bs.x - 1) / bs.x);
             gpu_loop<<<nb, bs>>>(subspace, function);
         }
+        for (uint device = 0; device < num_devices; ++device)
+        {
+            cudaSetDevice(device);
+            cudaDeviceSynchronize();
+        }
     }
 
     template<typename F>
@@ -229,6 +234,11 @@ struct gpu_executor_t
             auto bs = THREAD_BLOCK_SIZE_2D;
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
             gpu_loop<<<nb, bs>>>(subspace, function);
+        }
+        for (uint device = 0; device < num_devices; ++device)
+        {
+            cudaSetDevice(device);
+            cudaDeviceSynchronize();
         }
     }
 
@@ -248,6 +258,11 @@ struct gpu_executor_t
             auto bs = THREAD_BLOCK_SIZE_3D;
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
             gpu_loop<<<nb, bs>>>(subspace, function);
+        }
+        for (uint device = 0; device < num_devices; ++device)
+        {
+            cudaSetDevice(device);
+            cudaDeviceSynchronize();
         }
     }
 
