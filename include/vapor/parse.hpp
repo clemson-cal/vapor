@@ -179,7 +179,7 @@ static void scan_key_val(const char *str, char sep, F parser)
 
 
 
-void scan(const char* str, uint size, bool& val)
+static inline void scan(const char* str, uint size, bool& val)
 {
     if (size == 4 && strncmp(str, "true", 4) == 0) {
         val = true;
@@ -191,19 +191,19 @@ void scan(const char* str, uint size, bool& val)
         throw std::runtime_error(format("parse error: expected true|false, got %.*s", size, str));
     }
 }
-void scan(const char* str, uint, uint& val)
+static inline void scan(const char* str, uint, uint& val)
 {
     sscanf(str, "%u", &val);
 }
-void scan(const char* str, uint, int& val)
+static inline void scan(const char* str, uint, int& val)
 {
     sscanf(str, "%d", &val);
 }
-void scan(const char* str, uint, float& val)
+static inline void scan(const char* str, uint, float& val)
 {
     sscanf(str, "%f", &val);
 }
-void scan(const char* str, uint, double& val)
+static inline void scan(const char* str, uint, double& val)
 {
     sscanf(str, "%lf", &val);
 }
@@ -298,7 +298,7 @@ static inline void scan(const char* str, uint size, std::string& val)
 
 
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
-auto set_from_key_vals(T& target, const char *str)
+void set_from_key_vals(T& target, const char *str)
 {
     auto found = false;
 
@@ -325,7 +325,7 @@ auto set_from_key_vals(T& target, const char *str)
 
 
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
-auto set_from_key_vals(T& target, int argc, const char **argv)
+void set_from_key_vals(T& target, int argc, const char **argv)
 {
     for (int n = 1; n < argc; ++n)
     {

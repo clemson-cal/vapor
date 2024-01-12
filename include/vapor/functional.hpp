@@ -63,7 +63,7 @@ struct identity_t
     template<typename U>
     HD auto operator()(U u) const { return u; }
 };
-auto identity()
+static inline auto identity()
 {
     return identity_t{};
 }

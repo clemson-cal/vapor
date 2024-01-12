@@ -96,7 +96,7 @@ array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a)
  * An array is a D-dimensional index space, and a function f: ivec_t<D> -> T.
  * Arrays are logically immutable, a[i] returns by value an element of type T;
  * a[i] = x will not compile. Arrays are transformed mainly by mapping
- * operatons. If g: T -> U then a.map(g) is an array with value type of U, and
+ * operations. If g: T -> U then a.map(g) is an array with value type of U, and
  * the same index space as a. Array elements are computed lazily, meaning that
  * b = a.map(f).map(g).map(h) triggers the execution h(g(f(i)) each time b[i]
  * appears.
