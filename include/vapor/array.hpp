@@ -41,7 +41,6 @@ namespace vapor {
 
 
 
-template<uint D> class communicator_t;
 template<uint D, class F> struct array_t;
 template<uint D, class F> struct array_selection_t;
 template<uint D, typename T> auto uniform(T val, index_space_t<D> space);

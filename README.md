@@ -24,7 +24,23 @@ objectives are to:
 
 ## Installation
 
-Todo...
+The following will compile the programs in the examples directory, other than
+the ones which require CUDA.
+
+```bash
+git clone https://github.com/clemson-cal/vapor
+cd vapor
+make
+
+```
+
+To compile the CUDA examples, you can run `make gpu`. Note that the
+`hdf5_demo` and `sim_demo` examples require the HDF5 library and header files
+to be visible in your system path. To build a particular demo program, you can
+type `make examples/euler1d`.
+
+Vapor does not yet provide a robust build system. Small changes to the
+Makefile might be needed to get things running on your system.
 
 ## Usage
 
@@ -93,13 +109,15 @@ CUDA device code, and overloads the arithmetic operators.
 
 ## Credits
 
-Todo...
+This library was authored by Jonathan Zrake over the 2023 - 2024 Winter break,
+with significant intellectual contributions from Marcus DuPont, and Andrew
+MacFadyen.
 
 ## License
 
 MIT License
 
-Copyright (c) 2023 Clemson Computational Astrophysics Lab
+Copyright (c) 2023-2024 Clemson Computational Astrophysics Lab
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
