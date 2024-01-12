@@ -376,15 +376,22 @@ auto in(index_space_t<D> sel, index_space_t<D> space)
  *
  * Reductions require arrays to be memory-backed and contiguous
  */
-template<uint D, typename T, template<typename> typename P, class E>
-T min(const memory_backed_array_t<D, T, P>& a, E& executor)
+template<uint D, typename T, template<typename> typename P, class E, class A>
+T min(const memory_backed_array_t<D, T, P>& a, E& executor, A& allocator)
 {
     return executor.reduce(
         a.data(),
         a.size(),
         [] HD (const T& a, const T& b) { return a < b ? a : b; },
-        std::numeric_limits<T>::max()
+        std::numeric_limits<T>::max(),
+        allocator
     );
+}
+
+template<uint D, typename T, template<typename> typename P>
+T min(const memory_backed_array_t<D, T, P>& a)
+{
+    return min(a, Runtime::executor(), Runtime::allocator());
 }
 
 /**
@@ -392,15 +399,22 @@ T min(const memory_backed_array_t<D, T, P>& a, E& executor)
  *
  * Reductions require arrays to be memory-backed and contiguous
  */
-template<uint D, typename T, template<typename> typename P, class E>
-T max(const memory_backed_array_t<D, T, P>& a, E& executor)
+template<uint D, typename T, template<typename> typename P, class E, class A>
+T max(const memory_backed_array_t<D, T, P>& a, E& executor, A& allocator)
 {
     return executor.reduce(
         a.data(),
         a.size(),
         [] HD (const T& a, const T& b) { return a > b ? a : b; },
-        std::numeric_limits<T>::min()
+        std::numeric_limits<T>::min(),
+        allocator
     );
+}
+
+template<uint D, typename T, template<typename> typename P>
+T max(const memory_backed_array_t<D, T, P>& a)
+{
+    return max(a, Runtime::executor(), Runtime::allocator());
 }
 
 /**
@@ -408,15 +422,22 @@ T max(const memory_backed_array_t<D, T, P>& a, E& executor)
  *
  * Reductions require arrays to be memory-backed and contiguous
  */
-template<uint D, typename T, template<typename> typename P, class E>
-T sum(const memory_backed_array_t<D, T, P>& a, E& executor)
+template<uint D, typename T, template<typename> typename P, class E, class A>
+T sum(const memory_backed_array_t<D, T, P>& a, E& executor, A& allocator)
 {
     return executor.reduce(
         a.data(),
         a.size(),
         [] HD (const T& a, const T& b) { return a + b; },
-        T()
+        T(),
+        allocator
     );
+}
+
+template<uint D, typename T, template<typename> typename P>
+T sum(const memory_backed_array_t<D, T, P>& a)
+{
+    return sum(a, Runtime::executor(), Runtime::allocator());
 }
 
 } // namespace vapor

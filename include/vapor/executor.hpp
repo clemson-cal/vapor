@@ -32,6 +32,7 @@ SOFTWARE.
 #include <cub/cub.cuh>
 #endif
 #include "index_space.hpp"
+#include "memory.hpp"
 
 namespace vapor {
 
@@ -81,8 +82,8 @@ struct cpu_executor_t
                     function(vec(i, j, k));
     }
 
-    template<typename T, typename R>
-    T reduce(const T* data, size_t size, R reducer, T start) const
+    template<typename T, class R, class A>
+    T reduce(const T* data, size_t size, R reducer, T start, A&) const
     {
         auto result = start;
 
@@ -140,11 +141,12 @@ struct omp_executor_t
                     function(vec(i, j, k));
     }
 
-    template<typename T, typename R>
-    T reduce(const T* data, size_t size, R reducer, T start) const
+    template<typename T, class R, class A>
+    T reduce(const T* data, size_t size, R reducer, T start, A&) const
     {
         auto result = start;
 
+        // TODO: directives for a proper OMP reduction should go here
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
         return result;
@@ -266,24 +268,15 @@ struct gpu_executor_t
         sync_devices();
     }
 
-    template<typename T, typename R>
-    T reduce(const T* data, size_t size, R reducer, T start) const
+    template<typename T, class R, class A>
+    T reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
     {
-        // Reductions need to be implemented for multiple devices, and can
-        // also be simplified by using a managed memory block for the scratch
-        // buffer and the result.
-        T result;
-        T *result_buf = nullptr;
-        void *scratch = nullptr;
         size_t scratch_bytes = 0;
-        cub::DeviceReduce::Reduce(scratch, scratch_bytes, data, result_buf, size, reducer, start);
-        cudaMalloc(&result_buf, sizeof(T));
-        cudaMalloc(&scratch, scratch_bytes);
-        cub::DeviceReduce::Reduce(scratch, scratch_bytes, data, result_buf, size, reducer, start);
-        cudaMemcpy(&result, result_buf, sizeof(T), cudaMemcpyDeviceToHost);
-        cudaFree(result_buf);
-        cudaFree(scratch);
-        return result;
+        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, nullptr, nullptr, size, reducer, start);
+        auto scratch = allocator.allocate(scratch_bytes);
+        auto results = allocator.allocate(sizeof(T));
+        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, result_buf->data(), size, reducer, start);
+        return *((T*) result->data());
     }
 
     void sync_devices() const

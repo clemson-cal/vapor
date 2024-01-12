@@ -26,7 +26,7 @@ examples/hdf5_demo: examples/hdf5_demo.cpp $(VAPOR_INCLUDES) $(HDF5_INCLUDES)
 	$(CXX) $(CXXFLAGS) -o $@ $< -I include -lhdf5
 
 examples/sim_demo: examples/sim_demo.cpp $(VAPOR_INCLUDES) $(HDF5_INCLUDES)
-	$(CXX) $(CXXFLAGS) -o $@ $< -I include -lhdf5 -lstdc++fs
+	$(CXX) $(CXXFLAGS) -o $@ $< -I include -lhdf5
 
 examples/srhd1d: examples/srhd1d.cpp $(VAPOR_INCLUDES)
 	$(CXX) $(CXXFLAGS) -o $@ $< -I include
