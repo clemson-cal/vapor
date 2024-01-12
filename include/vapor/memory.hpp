@@ -103,6 +103,10 @@ public:
     {
         return _data;
     }
+    size_t size() const
+    {
+        return _bytes;
+    }
 private:
     void release()
     {

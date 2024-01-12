@@ -218,6 +218,9 @@ struct gpu_executor_t
 		else {
 			num_devices = num_devices_available;
 		}
+        if (num_devices > VAPOR_MAX_DEVICES) {
+            throw std::runtime_error("VAPOR_MAX_DEVICES needs to be increased");
+        }
     }
 
     template<typename F>
@@ -271,12 +274,39 @@ struct gpu_executor_t
     template<typename T, class R, class A>
     T reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
     {
-        size_t scratch_bytes = 0;
-        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, nullptr, nullptr, size, reducer, start);
-        auto scratch = allocator.allocate(scratch_bytes);
-        auto results = allocator.allocate(sizeof(T));
-        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, result_buf->data(), size, reducer, start);
-        return *((T*) result->data());
+        auto scratch = vec_t<typename A::allocation_t, VAPOR_MAX_DEVICES>{};
+        auto results = allocator.allocate(sizeof(T) * num_devices);
+        auto results_data = (T*) results->data();
+        auto result = start;
+        auto space = index_space(ivec(0), uvec(size));
+
+        for (int device = 0; device < num_devices; ++device)
+        {
+            auto subspace = space.subspace(num_devices, device);
+            auto scratch_bytes = size_t(0);
+            cub::DeviceReduce::Reduce(nullptr, scratch_bytes, nullptr, nullptr, subspace.size(), reducer, start);
+            scratch[device] = allocator.allocate(scratch_bytes);
+        }
+        for (int device = 0; device < num_devices; ++device)
+        {
+            auto subspace = space.subspace(num_devices, device);
+            cub::DeviceReduce::Reduce(
+                scratch[device]->data(),
+                scratch[device]->size(),
+                &data[subspace.i0[0]],
+                &results_data[device],
+                size,
+                reducer,
+                start
+            );
+        }
+        sync_devices();
+
+        for (int device = 0; device < num_devices; ++device)
+        {
+            result = reducer(result, results_data[device]);
+        }
+        return result;
     }
 
     void sync_devices() const

@@ -60,3 +60,8 @@ namespace vapor {
 // whereas the pool allocator is not.
 // 
 // #define VAPOR_USE_SHARED_PTR_ALLOCATOR
+
+// This could be readily increased if ever needed, it simply enables static
+// allocations of per-device data in a few places.
+// 
+#define VAPOR_MAX_DEVICES 8
