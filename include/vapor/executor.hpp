@@ -201,14 +201,21 @@ struct gpu_executor_t
 {
     gpu_executor_t()
     {
-        num_devices = atoi(std::getenv("VAPOR_NUM_DEVICES"));
-
         int num_devices_available;
         cudaGetDeviceCount(&num_devices_available);
 
-        if (num_devices > num_devices_available) {
-            throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
-        }
+		if (auto str = std::getenv("VAPOR_NUM_DEVICES")) {
+        	num_devices = atoi(str);
+			if (num_devices > num_devices_available) {
+				throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
+			}
+			if (num_devices <= 0) {
+				throw std::runtime_error("VAPOR_NUM_DEVICES must be greater than zero");
+			}
+		}
+		else {
+			num_devices = num_devices_available;
+		}
     }
 
     template<typename F>
