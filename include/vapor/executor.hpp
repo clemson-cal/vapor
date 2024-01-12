@@ -26,6 +26,8 @@ SOFTWARE.
 
 
 #pragma once
+#include <cstdlib>
+#include <stdexcept>
 #ifdef __CUDACC__
 #include <cub/cub.cuh>
 #endif
@@ -197,13 +199,22 @@ static const dim3 THREAD_BLOCK_SIZE_3D(4, 4, 4);
 
 struct gpu_executor_t
 {
+    gpu_executor_t()
+    {
+        num_devices = atoi(std::getenv("VAPOR_NUM_DEVICES"));
+
+        int num_devices_available;
+        cudaGetDeviceCount(&num_devices_available);
+
+        if (num_devices > num_devices_available) {
+            throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
+        }
+    }
+
     template<typename F>
     void loop(index_space_t<1> space, F function) const
     {
-        int num_devices;
-        cudaGetDeviceCount(&num_devices);
-
-        for (uint device = 0; device < num_devices; ++device)
+        for (int device = 0; device < num_devices; ++device)
         {
             cudaSetDevice(device);
             auto subspace = space.subspace(num_devices, device);
@@ -212,20 +223,13 @@ struct gpu_executor_t
             auto nb = dim3((ni + bs.x - 1) / bs.x);
             gpu_loop<<<nb, bs>>>(subspace, function);
         }
-        for (uint device = 0; device < num_devices; ++device)
-        {
-            cudaSetDevice(device);
-            cudaDeviceSynchronize();
-        }
+        sync_devices();
     }
 
     template<typename F>
     void loop(index_space_t<2> space, F function) const
     {
-        int num_devices;
-        cudaGetDeviceCount(&num_devices);
-
-        for (uint device = 0; device < num_devices; ++device)
+        for (int device = 0; device < num_devices; ++device)
         {
             cudaSetDevice(device);
             auto subspace = space.subspace(num_devices, device);
@@ -235,20 +239,13 @@ struct gpu_executor_t
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
             gpu_loop<<<nb, bs>>>(subspace, function);
         }
-        for (uint device = 0; device < num_devices; ++device)
-        {
-            cudaSetDevice(device);
-            cudaDeviceSynchronize();
-        }
+        sync_devices();
     }
 
     template<typename F>
     void loop(index_space_t<3> space, F function) const
     {
-        int num_devices;
-        cudaGetDeviceCount(&num_devices);
-
-        for (uint device = 0; device < num_devices; ++device)
+        for (int device = 0; device < num_devices; ++device)
         {
             cudaSetDevice(device);
             auto subspace = space.subspace(num_devices, device);
@@ -259,16 +256,15 @@ struct gpu_executor_t
             auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
             gpu_loop<<<nb, bs>>>(subspace, function);
         }
-        for (uint device = 0; device < num_devices; ++device)
-        {
-            cudaSetDevice(device);
-            cudaDeviceSynchronize();
-        }
+        sync_devices();
     }
 
     template<typename T, typename R>
     T reduce(const T* data, size_t size, R reducer, T start) const
     {
+        // Reductions need to be implemented for multiple devices, and can
+        // also be simplified by using a managed memory block for the scratch
+        // buffer and the result.
         T result;
         T *result_buf = nullptr;
         void *scratch = nullptr;
@@ -282,6 +278,17 @@ struct gpu_executor_t
         cudaFree(scratch);
         return result;
     }
+
+    void sync_devices() const
+    {
+        for (uint device = 0; device < num_devices; ++device)
+        {
+            cudaSetDevice(device);
+            cudaDeviceSynchronize();
+        }
+    }
+
+    int num_devices;
 };
 #endif // __CUDACC__
 
