@@ -5,25 +5,21 @@
 	"vapor": ".",
 	"programs": {
 		"array_demo": {
-
 		},
 		"config_demo": {
-
 		},
 		"euler1d": {
-
 		},
 		"hdf5_demo": {
-
+			"deps": ["hdf5"]
 		},
-		"hdf5_demo": {
-
+		"mpi_demo": {
+			"deps": ["mpi"]
 		},
 		"sim_demo": {
-
+			"deps": ["hdf5"]
 		},
 		"srhd1d": {
-
 		}
 	},
 	"default_modes": ["dbg", "cpu", "omp"]

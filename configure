@@ -1,22 +1,69 @@
 #!/usr/bin/env python3
 
+
+"""
+================================================================================
+Copyright 2023 - 2024, Jonathan Zrake
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+================================================================================
+
+This Python script is Makefile generator for programs based on Vapor
+
+
+Examples
+--------
+
+./configure
+Generates a Makefile with rules to build targets, in dbg, cpu, and omp modes,
+for each program.
+
+./configure --modes omp gpu
+Creates targets in omp and gpu modes
+
+./configure --stdout
+Dumps the Makefile to the terminal
+
+
+Limitations
+-----------
+
+- No support, yet, for programs that require MPI and CUDA
+- GPU mode implies CUDA; there is no option yet for AMD
+- No loading, yet, of system-dependant linker, such as -lstdc++fs
+
+================================================================================
+"""
+
+
 header = r"""VAPOR_HOME = {vapor}
 CXX_DBG = c++
 CXX_CPU = c++
 CXX_OMP = c++
 CXX_GPU = nvcc
+CXX_MPI = mpicc
 
 FLAG_ANY = -Wall -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
 FLAG_DBG = -O0 -g -D VAPOR_DEBUG
 FLAG_CPU = -Ofast
 FLAG_OMP = -Ofast -Xpreprocessor -fopenmp
 FLAG_GPU = -O3 -x cu --extended-lambda
-
-LIBS_ANY = -lhdf5
-LIBS_DBG =
-LIBS_CPU =
-LIBS_OMP = -lomp
-LIBS_GPU =
 """
 
 
@@ -25,14 +72,32 @@ $(OBJ): | {build}
 $(EXE): | {bin}
 
 build:
-	@mkdir -p $@
+    @mkdir -p $@
 bin:
-	@mkdir -p $@
+    @mkdir -p $@
 clean:
-	$(RM) $(DEP) $(OBJ) $(EXE)
+    $(RM) $(DEP) $(OBJ) $(EXE)
 
 -include $(DEP)
-"""
+""".replace('    ', '\t')
+
+
+def get_lib(mode, deps=list()):
+    lib = list()
+    if mode == "omp":
+        lib.append("-lomp")
+    if "hdf5" in deps:
+        lib.append("-lhdf5")
+    if "mpi" in deps:
+        lib.append("-lc++")
+    return ' '.join(lib)
+
+
+def get_cxx(mode, deps=list()):
+    if "mpi" in deps:
+        return "mpi"
+    else:
+        return mode
 
 
 def main():
@@ -101,13 +166,15 @@ def main():
         f.write("\n")
         for program in programs:
             for mode in modes:
+                lib = get_lib(mode, **project["programs"][program])
+                cxx = get_cxx(mode, **project["programs"][program])
                 f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
                 f.write("\n")
-                f.write(f"\t$(CXX_{mode.upper()}) -o $@ $< $(LIBS_ANY) $(LIBS_{mode.upper()})")
+                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< {lib}")
                 f.write("\n")
                 f.write(f"{build}/{program}_{mode}.o: {src}/{program}.cpp")
                 f.write("\n")
-                f.write(f"\t$(CXX_{mode.upper()}) -o $@ $< $(FLAG_ANY) $(FLAG_{mode.upper()}) -c")
+                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< $(FLAG_ANY) $(FLAG_{mode.upper()}) -c")
                 f.write("\n")
             f.write("\n")
         f.write(footer.format(**env))
