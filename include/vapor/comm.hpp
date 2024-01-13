@@ -265,7 +265,7 @@ public:
     {
         auto s = a.space().with_start(zeros_ivec<D>());
 
-        for (int axis = 0; axis < D; ++axis)
+        for (uint axis = 0; axis < D; ++axis)
         {
             auto n = int();
             auto m = int();

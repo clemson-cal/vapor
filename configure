@@ -91,7 +91,7 @@ CXX_DBG = c++
 CXX_CPU = c++
 CXX_OMP = c++
 CXX_GPU = nvcc
-CXX_MPI = mpicc
+CXX_MPI = mpicxx
 
 CXXFLAGS = -Wall -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
 CXXFLAGS_DBG = -O0 -g -D VAPOR_DEBUG
@@ -116,14 +116,12 @@ clean:
 """.replace('    ', '\t').strip()
 
 
-def get_lib(mode, deps=list(), libs=list()):
+def get_lib(mode, deps=list(), libs=list(), lomp="-lomp"):
     lib = [l for l in libs]
     if mode == "omp":
-        lib.append("-lomp")
+        lib.append(lomp)
     if "hdf5" in deps:
         lib.append("-lhdf5")
-    if "mpi" in deps:
-        lib.append("-lc++")
     return ' '.join(lib)
 
 
@@ -210,7 +208,7 @@ def main():
         f.write("\n")
         for program in programs:
             for mode in modes:
-                lib = get_lib(mode, **project["programs"][program], libs=system["libs"])
+                lib = get_lib(mode, **project["programs"][program], libs=system["libs"], lomp=system["lomp"])
                 cxx = get_cxx(mode, **project["programs"][program])
                 f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
                 f.write("\n")
