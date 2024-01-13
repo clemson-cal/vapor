@@ -93,8 +93,8 @@ CXX_OMP = c++
 CXX_GPU = nvcc
 CXX_MPI = mpicxx
 
-CXXFLAGS = -Wall -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
-CXXFLAGS_DBG = -O0 -g -D VAPOR_DEBUG
+CXXFLAGS = -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
+CXXFLAGS_DBG = -Wall -O0 -g -D VAPOR_DEBUG
 CXXFLAGS_CPU = -Ofast
 CXXFLAGS_OMP = -Ofast {omp_flags}
 CXXFLAGS_GPU = -O3 -x cu --extended-lambda
