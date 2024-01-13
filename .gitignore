@@ -1,5 +1,7 @@
 bin
 build
+Makefile
+system.json
 *.cfg
 *.dSYM
 *.h5

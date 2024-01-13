@@ -24,15 +24,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ================================================================================
 
-This Python script is Makefile generator for programs based on Vapor
+
+Purpose: Makefile generator for Vapor-based projects
 
 
-Examples
---------
+Scheme:
+
+Projects based on Vapor contains a collection of _programs_. A program refers
+to a single .cpp file, designed for a specfic type of calculation. That .cpp
+file includes the vapor header files, and should not have any object file
+dependancies (yet, this could be relaxed in the future). A given program can
+be compiled in any of several _modes_. The currently supported modes are
+
+- dbg: target compiled with -O0 -g -D VAPOR_DEBUG
+- cpu: target compiled with -Ofast; cpu (single-core) executor is the default
+- omp: target compiled with {omp_flags}; omp executor is default
+- gpu: target compiled with nvcc; gpu executor is default
+
+This configure script can be run listing any of the above modes modes after
+the --modes flag. One Makefile _target_ is written for each program, and for
+each of the requested modes.
+
+For example, the Vapor project contains an examples directory with a source
+file called array_demo.cpp. If run with --modes omp gpu, then two targets
+will be derived from the array_demo program: array_demo_omp, and
+array_demo_gpu. The associated executables are placed in a bin/ directory by
+default.
+
+
+Examples:
 
 ./configure
 Generates a Makefile with rules to build targets, in dbg, cpu, and omp modes,
-for each program.
+for each program
 
 ./configure --modes omp gpu
 Creates targets in omp and gpu modes
@@ -41,30 +65,40 @@ Creates targets in omp and gpu modes
 Dumps the Makefile to the terminal
 
 
-Limitations
------------
+Project file:
 
-- No support, yet, for programs that require MPI and CUDA
-- GPU mode implies CUDA; there is no option yet for AMD
-- No loading, yet, of system-dependant linker, such as -lstdc++fs
+The configure script looks in the current working directory for a JSON file
+called project.json. An example of this file can be found in the Vapor root
+directory.
+
+
+System file:
+
+The configure script optionally loads a JSON file called system.json from the
+current directory. Allowed keys include:
+
+- libs: Extra linker arguments which may be needed on a given system
+- omp_flags: Equivalent of -fopenmp; defaults to -Xpreprocessor -fopenmp,
+  which works on Darwin
 
 ================================================================================
 """
 
 
-header = r"""VAPOR_HOME = {vapor}
+header = r"""
+VAPOR_HOME = {vapor}
 CXX_DBG = c++
 CXX_CPU = c++
 CXX_OMP = c++
 CXX_GPU = nvcc
 CXX_MPI = mpicc
 
-FLAG_ANY = -Wall -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
-FLAG_DBG = -O0 -g -D VAPOR_DEBUG
-FLAG_CPU = -Ofast
-FLAG_OMP = -Ofast -Xpreprocessor -fopenmp
-FLAG_GPU = -O3 -x cu --extended-lambda
-"""
+CXXFLAGS = -Wall -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
+CXXFLAGS_DBG = -O0 -g -D VAPOR_DEBUG
+CXXFLAGS_CPU = -Ofast
+CXXFLAGS_OMP = -Ofast {omp_flags}
+CXXFLAGS_GPU = -O3 -x cu --extended-lambda
+""".strip()
 
 
 footer = r"""
@@ -79,11 +113,11 @@ clean:
     $(RM) $(DEP) $(OBJ) $(EXE)
 
 -include $(DEP)
-""".replace('    ', '\t')
+""".replace('    ', '\t').strip()
 
 
-def get_lib(mode, deps=list()):
-    lib = list()
+def get_lib(mode, deps=list(), libs=list()):
+    lib = [l for l in libs]
     if mode == "omp":
         lib.append("-lomp")
     if "hdf5" in deps:
@@ -106,7 +140,17 @@ def main():
     import argparse
     import io
 
-    project = json.load(open("project.json"))
+    try:
+        system = json.load(open("system.json"))
+    except FileNotFoundError as e:
+        system = dict(omp_flags="-Xpreprocessor -fopenmp", libs=list())
+
+    try:
+        project = json.load(open("project.json"))
+    except FileNotFoundError:
+        print("project.json file not found in current directory")
+        exit()
+
     default_modes = project.get("default_modes", ["dbg", "cpu", "omp"])
 
     parser = argparse.ArgumentParser()
@@ -119,7 +163,6 @@ def main():
     src = project.get("src", "src")
     bin = project.get("bin", "bin")
     build = project.get("build", "build")
-    env = dict(vapor=vapor, src=src, bin=bin, build=build)
     programs = project["programs"].keys()
 
     def open_output():
@@ -129,7 +172,8 @@ def main():
             return open("Makefile", "w")
 
     with open_output() as f:
-        f.write(header.format(**env))
+        f.write(header.format(**project, **system))
+        f.write("\n")
         f.write("\n")
         for mode in modes:
             for prog in programs:
@@ -166,7 +210,7 @@ def main():
         f.write("\n")
         for program in programs:
             for mode in modes:
-                lib = get_lib(mode, **project["programs"][program])
+                lib = get_lib(mode, **project["programs"][program], libs=system["libs"])
                 cxx = get_cxx(mode, **project["programs"][program])
                 f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
                 f.write("\n")
@@ -174,11 +218,11 @@ def main():
                 f.write("\n")
                 f.write(f"{build}/{program}_{mode}.o: {src}/{program}.cpp")
                 f.write("\n")
-                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< $(FLAG_ANY) $(FLAG_{mode.upper()}) -c")
+                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< $(CXXFLAGS) $(CXXFLAGS_{mode.upper()}) -c")
                 f.write("\n")
             f.write("\n")
-        f.write(footer.format(**env))
-
+        f.write(footer.format(**project))
+        f.write('\n')
         if args.stdout:
             print(f.getvalue())
 

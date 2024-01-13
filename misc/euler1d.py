@@ -1,10 +1,10 @@
 """
 Solves the 1d Euler equations using a first-order Godunov scheme
 
-When run with Jax, this code performs at roughly 20 Mzps on a single-vapor CPU,
-and about 2.6 Gzps on an A100. See the sister code euler1d.cpp for the C++
-implementation. That code is typically 6x faster than Jax on the CPU and 4x
-faster on the GPU.
+When run with Jax, this code performs at roughly 20 Mzps on a single-vapor
+CPU, and about 2.6 Gzps on an A100. See the sister code examples/euler1d.cpp
+for the C++ implementation. That code is typically 6x faster than Jax on the
+CPU and 4x faster on the GPU.
 """
 from time import perf_counter_ns
 

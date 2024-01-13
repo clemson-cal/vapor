@@ -1,0 +1,4 @@
+{
+	"libs": ["-lstdc++fs"],
+	"omp_flags": "-fopenmp"
+}
