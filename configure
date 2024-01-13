@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-header = r"""VAPOR_HOME = {home}
+header = r"""VAPOR_HOME = {vapor}
 CXX_DBG = c++
 CXX_CPU = c++
 CXX_OMP = c++
@@ -41,74 +41,75 @@ def main():
     import argparse
     import io
 
+    project = json.load(open("project.json"))
+    default_modes = project.get("default_modes", ["dbg", "cpu", "omp"])
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--modes", nargs="*", choices=['dbg', 'cpu', 'omp', 'gpu'], default=['dbg', 'cpu', 'omp'])
-    parser.add_argument("--stdout", action='store_true')
+    parser.add_argument("--modes", nargs="*", choices=["dbg", "cpu", "omp", "gpu"], default=default_modes)
+    parser.add_argument("--stdout", action="store_true")
     args = parser.parse_args()
 
-    project = json.load(open('project.json'))
-    programs = project["programs"].keys()
-
-    home = '.'
     modes = args.modes
-    src = 'examples'
-    bin = 'bin'
-    build = 'build'
-    env = dict(home=home, src=src, bin=bin, build=build)
+    vapor = project.get("vapor", "vapor")
+    src = project.get("src", "src")
+    bin = project.get("bin", "bin")
+    build = project.get("build", "build")
+    env = dict(vapor=vapor, src=src, bin=bin, build=build)
+    programs = project["programs"].keys()
 
     def open_output():
         if args.stdout:
             return io.StringIO()
         else:
-            return open('Makefile', 'w')
+            return open("Makefile", "w")
 
     with open_output() as f:
         f.write(header.format(**env))
-        f.write('\n')
+        f.write("\n")
         for mode in modes:
             for prog in programs:
-                f.write(f'EXE_{mode.upper()} += {bin}/{prog}_{mode}')
-                f.write('\n')
+                f.write(f"EXE_{mode.upper()} += {bin}/{prog}_{mode}")
+                f.write("\n")
         for mode in modes:
             for prog in programs:
-                f.write(f'OBJ_{mode.upper()} += {build}/{prog}_{mode}.o')
-                f.write('\n')
+                f.write(f"OBJ_{mode.upper()} += {build}/{prog}_{mode}.o")
+                f.write("\n")
         for mode in modes:
             for prog in programs:
-                f.write(f'DEP_{mode.upper()} += {build}/{prog}_{mode}.d')
-                f.write('\n')
-        f.write('\n')
+                f.write(f"DEP_{mode.upper()} += {build}/{prog}_{mode}.d")
+                f.write("\n")
+        f.write("\n")
         for mode in modes:
             f.write(f"EXE += $(EXE_{mode.upper()})")
-            f.write('\n')
+            f.write("\n")
         for mode in modes:
             f.write(f"OBJ += $(OBJ_{mode.upper()})")
-            f.write('\n')
+            f.write("\n")
         for mode in modes:
             f.write(f"DEP += $(DEP_{mode.upper()})")
-            f.write('\n')
-        f.write('\n')
+            f.write("\n")
+        f.write("\n")
         for mode in modes:
-            f.write(f'{mode}: $(EXE_{mode.upper()})')
-            f.write('\n')
-        f.write(f'all: ' + ' '.join(modes))
-        f.write('\n')
-        f.write('\n')
+            f.write(f"{mode}: $(EXE_{mode.upper()})")
+            f.write("\n")
+        f.write(f"all: " + " ".join(modes))
+        f.write("\n")
+        f.write("\n")
         for program in programs:
-            f.write(f'{program}: ' + ' '.join(f'{bin}/{program}_{mode}' for mode in modes))
-            f.write('\n')
-        f.write('\n')
+            f.write(f"{program}: " + " ".join(f"{bin}/{program}_{mode}" for mode in modes))
+            f.write("\n")
+        f.write("\n")
         for program in programs:
             for mode in modes:
                 f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
-                f.write('\n')
+                f.write("\n")
                 f.write(f"\t$(CXX_{mode.upper()}) -o $@ $< $(LIBS_ANY) $(LIBS_{mode.upper()})")
-                f.write('\n')
+                f.write("\n")
                 f.write(f"{build}/{program}_{mode}.o: {src}/{program}.cpp")
-                f.write('\n')
+                f.write("\n")
                 f.write(f"\t$(CXX_{mode.upper()}) -o $@ $< $(FLAG_ANY) $(FLAG_{mode.upper()}) -c")
-                f.write('\n')
-            f.write('\n')
+                f.write("\n")
+            f.write("\n")
         f.write(footer.format(**env))
 
         if args.stdout:
