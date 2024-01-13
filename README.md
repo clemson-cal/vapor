@@ -127,14 +127,14 @@ modes are
 - gpu: target compiled with `nvcc`; GPU executor is default
 
 This configure script can be run listing any of the above modes modes after
-the --modes flag. One Makefile _target_ is written for each program, and for
-each of the requested modes.
+the `--modes` flag. One Makefile _target_ is written for each program, and
+for each of the requested modes.
 
 For example, the Vapor project contains an examples directory with a source
-file called array_demo.cpp. If run with --modes omp gpu, then two targets
-will be derived from the array_demo program: array_demo_omp, and
-array_demo_gpu. The associated executables are placed in a bin/ directory by
-default.
+file called `array_demo.cpp`. If run with `--modes omp gpu`, then two targets
+will be derived from the `array_demo` program: `array_demo_omp`, and
+`array_demo_gpu`. The associated executables are placed in a bin/ directory
+by default.
 
 
 ### Examples

@@ -1,4 +1,5 @@
 {
 	"libs": ["-lstdc++fs"],
-	"omp_flags": "-fopenmp"
+	"omp_flags": "-fopenmp",
+	"lomp": "-lgomp"
 }

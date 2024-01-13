@@ -138,29 +138,41 @@ def main():
     import argparse
     import io
 
-    try:
-        system = json.load(open("system.json"))
-    except FileNotFoundError as e:
-        system = dict(omp_flags="-Xpreprocessor -fopenmp", libs=list())
+    system = {
+        "libs": [],
+        "omp_flags": "-Xpreprocessor -fopenmp",
+        "lomp": "-lomp",
+    }
+    project = {
+        "src": "src",
+        "bin": "bin",
+        "build": "build",
+        "vapor": "vapor",
+        "programs": {},
+        "default_modes": ["dbg", "cpu", "omp"]
+    }
 
     try:
-        project = json.load(open("project.json"))
+        system.update(json.load(open("system.json")))
+    except FileNotFoundError as e:
+        pass
+
+    try:
+        project.update(json.load(open("project.json")))
     except FileNotFoundError:
         print("project.json file not found in current directory")
         exit()
 
-    default_modes = project.get("default_modes", ["dbg", "cpu", "omp"])
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--modes", nargs="*", choices=["dbg", "cpu", "omp", "gpu"], default=default_modes)
+    parser.add_argument("--modes", nargs="*", choices=["dbg", "cpu", "omp", "gpu"], default=project["default_modes"])
     parser.add_argument("--stdout", action="store_true")
     args = parser.parse_args()
 
     modes = args.modes
-    vapor = project.get("vapor", "vapor")
-    src = project.get("src", "src")
-    bin = project.get("bin", "bin")
-    build = project.get("build", "build")
+    vapor = project["vapor"]
+    src = project["src"]
+    bin = project["bin"]
+    build = project["build"]
     programs = project["programs"].keys()
 
     def open_output():
