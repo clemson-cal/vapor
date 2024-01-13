@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+
+header = r"""VAPOR_HOME = {home}
+CXX_DBG = c++
+CXX_CPU = c++
+CXX_OMP = c++
+CXX_GPU = nvcc
+
+FLAG_ANY = -Wall -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
+FLAG_DBG = -O0 -g -D VAPOR_DEBUG
+FLAG_CPU = -Ofast
+FLAG_OMP = -Ofast -Xpreprocessor -fopenmp
+FLAG_GPU = -O3 -x cu --extended-lambda
+
+LIBS_ANY = -lhdf5
+LIBS_DBG =
+LIBS_CPU =
+LIBS_OMP = -lomp
+LIBS_GPU =
+"""
+
+
+footer = r"""
+$(OBJ): | {build}
+$(EXE): | {bin}
+
+build:
+	@mkdir -p $@
+bin:
+	@mkdir -p $@
+clean:
+	$(RM) $(DEP) $(OBJ) $(EXE)
+
+-include $(DEP)
+"""
+
+
+def main():
+    import sys
+    import json
+    import argparse
+    import io
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--modes", nargs="*", choices=['dbg', 'cpu', 'omp', 'gpu'], default=['dbg', 'cpu', 'omp'])
+    parser.add_argument("--stdout", action='store_true')
+    args = parser.parse_args()
+
+    project = json.load(open('project.json'))
+    programs = project["programs"].keys()
+
+    home = '.'
+    modes = args.modes
+    src = 'examples'
+    bin = 'bin'
+    build = 'build'
+    env = dict(home=home, src=src, bin=bin, build=build)
+
+    def open_output():
+        if args.stdout:
+            return io.StringIO()
+        else:
+            return open('Makefile', 'w')
+
+    with open_output() as f:
+        f.write(header.format(**env))
+        f.write('\n')
+        for mode in modes:
+            for prog in programs:
+                f.write(f'EXE_{mode.upper()} += {bin}/{prog}_{mode}')
+                f.write('\n')
+        for mode in modes:
+            for prog in programs:
+                f.write(f'OBJ_{mode.upper()} += {build}/{prog}_{mode}.o')
+                f.write('\n')
+        for mode in modes:
+            for prog in programs:
+                f.write(f'DEP_{mode.upper()} += {build}/{prog}_{mode}.d')
+                f.write('\n')
+        f.write('\n')
+        for mode in modes:
+            f.write(f"EXE += $(EXE_{mode.upper()})")
+            f.write('\n')
+        for mode in modes:
+            f.write(f"OBJ += $(OBJ_{mode.upper()})")
+            f.write('\n')
+        for mode in modes:
+            f.write(f"DEP += $(DEP_{mode.upper()})")
+            f.write('\n')
+        f.write('\n')
+        for mode in modes:
+            f.write(f'{mode}: $(EXE_{mode.upper()})')
+            f.write('\n')
+        f.write(f'all: ' + ' '.join(modes))
+        f.write('\n')
+        f.write('\n')
+        for program in programs:
+            f.write(f'{program}: ' + ' '.join(f'{bin}/{program}_{mode}' for mode in modes))
+            f.write('\n')
+        f.write('\n')
+        for program in programs:
+            for mode in modes:
+                f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
+                f.write('\n')
+                f.write(f"\t$(CXX_{mode.upper()}) -o $@ $< $(LIBS_ANY) $(LIBS_{mode.upper()})")
+                f.write('\n')
+                f.write(f"{build}/{program}_{mode}.o: {src}/{program}.cpp")
+                f.write('\n')
+                f.write(f"\t$(CXX_{mode.upper()}) -o $@ $< $(FLAG_ANY) $(FLAG_{mode.upper()}) -c")
+                f.write('\n')
+            f.write('\n')
+        f.write(footer.format(**env))
+
+        if args.stdout:
+            print(f.getvalue())
+
+if __name__ == "__main__":
+    main()

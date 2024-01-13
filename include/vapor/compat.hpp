@@ -65,3 +65,10 @@ namespace vapor {
 // allocations of per-device data in a few places.
 // 
 #define VAPOR_MAX_DEVICES 8
+
+// VAPOR_DEBUG implies bounds checking on arrays and vecs
+//
+#ifdef VAPOR_DEBUG
+#define VAPOR_ARRAY_BOUNDS_CHECK
+#define VAPOR_VEC_BOUNDS_CHECK
+#endif

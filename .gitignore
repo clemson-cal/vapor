@@ -1,12 +1,5 @@
-examples/array_demo
-examples/array_demo_gpu
-examples/config_demo
-examples/euler1d
-examples/euler1d_gpu
-examples/hdf5_demo
-examples/mpi_demo
-examples/sim_demo
-examples/srhd1d
+bin
+build
 *.cfg
 *.dSYM
 *.h5
