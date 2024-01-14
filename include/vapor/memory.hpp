@@ -73,8 +73,10 @@ public:
         release();
         _data = other._data;
         _bytes = other._bytes;
+        _device = other._device;
         other._data = nullptr;
         other._bytes = 0;
+        other._device = -1;
     }
     managed_memory_t()
     {
@@ -87,13 +89,20 @@ public:
     {
         release();
     }
-    void allocate(size_t bytes)
+    void allocate(size_t bytes, int device=-1)
     {
-        if (bytes > _bytes) {
+        if (bytes > _bytes || device != _device) {
             release();
             _bytes = bytes;
+            _device = device;
             #ifdef __CUDACC__
-            cudaMallocManaged(&_data, _bytes);
+            if (device == -1) {
+                cudaMallocManaged(&_data, _bytes);
+            }
+            else {
+                cudaSetDevice(_device);
+                cudaMalloc(&_data, _bytes);
+            }
             #else
             _data = malloc(_bytes);
             #endif
@@ -107,10 +116,17 @@ public:
     {
         return _bytes;
     }
+    int device() const
+    {
+        return _device;
+    }
 private:
     void release()
     {
         #ifdef __CUDACC__
+        if (_device != -1) {
+            cudaSetDevice(_device);
+        }
         cudaFree(_data);
         #else
         free(_data);
@@ -120,6 +136,7 @@ private:
     }
     void *_data = nullptr;
     size_t _bytes = 0;
+    int _device = -1;
 };
 
 
@@ -277,13 +294,13 @@ public:
             use_counts[n] = 0;
         }
     }
-    allocation_t allocate(size_t bytes) const
+    allocation_t allocate(size_t bytes, int device=-1) const
     {
         for (size_t n = 0; n < num_allocations; ++n)
         {
             if (use_counts[n] == 0)
             {
-                allocations[n].allocate(bytes);
+                allocations[n].allocate(bytes, device);
                 return ref_counted_ptr_t<managed_memory_t>(&allocations[n], &use_counts[n]);
             }
         }
@@ -321,7 +338,7 @@ class shared_ptr_allocator_t
 public:
     using allocation_t = std::shared_ptr<managed_memory_t>;
 
-    allocation_t allocate(size_t bytes) const
+    allocation_t allocate(size_t bytes, int device=-1) const
     {
         return std::make_shared<managed_memory_t>(bytes);
     }
