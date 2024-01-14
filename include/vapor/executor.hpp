@@ -80,15 +80,27 @@ struct cpu_executor_t
                     function(vec(i, j, k));
     }
 
+    template<uint D, typename F>
+    void loop_device(index_space_t<D> space, F function, int) const
+    {
+        loop(space, function);
+    }
+
     template<typename T, class R, class A>
-    T reduce(const T* data, size_t size, R reducer, T start, A&) const
+    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
     {
         auto result = start;
 
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
-        return result;
+
+        auto result_buffer = allocator.allocate(sizeof(T), device);
+        result_buffer->write(0, result);
+        return result_buffer;
     }
+
+    void sync_devices(int device=-1) const { }
+    int num_devices() const { return 1; }
 };
 
 
@@ -139,16 +151,27 @@ struct omp_executor_t
                     function(vec(i, j, k));
     }
 
+    template<uint D, typename F>
+    void loop_device(index_space_t<D> space, F function, int) const
+    {
+        loop(space, function);
+    }
+
     template<typename T, class R, class A>
-    T reduce(const T* data, size_t size, R reducer, T start, A&) const
+    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
     {
         auto result = start;
 
-        // TODO: directives for a proper OMP reduction should go here
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
-        return result;
+
+        auto result_buffer = allocator.allocate(sizeof(T), device);
+        result_buffer->write(0, result);
+        return result_buffer;
     }
+
+    void sync_devices(int device=-1) const { }
+    int num_devices() const { return 1; }
 };
 #endif // _OPENMP
 
@@ -204,139 +227,105 @@ struct gpu_executor_t
         int num_devices_available;
         cudaGetDeviceCount(&num_devices_available);
 
-		if (auto str = std::getenv("VAPOR_NUM_DEVICES")) {
-        	num_devices = atoi(str);
-			if (num_devices > num_devices_available) {
-				throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
-			}
-			if (num_devices <= 0) {
-				throw std::runtime_error("VAPOR_NUM_DEVICES must be greater than zero");
-			}
-		}
-		else {
-			num_devices = num_devices_available;
-		}
-        if (num_devices > VAPOR_MAX_DEVICES) {
+        if (auto str = std::getenv("VAPOR_NUM_DEVICES")) {
+            _num_devices = atoi(str);
+            if (_num_devices > num_devices_available) {
+                throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
+            }
+            if (_num_devices <= 0) {
+                throw std::runtime_error("VAPOR_NUM_DEVICES must be greater than zero");
+            }
+        }
+        else {
+            _num_devices = num_devices_available;
+        }
+        if (_num_devices > VAPOR_MAX_DEVICES) {
             throw std::runtime_error("VAPOR_MAX_DEVICES needs to be increased");
         }
     }
 
-    template<typename F>
-    void loop(index_space_t<1> space, F function) const
+    template<uint D, typename F>
+    void loop(index_space_t<D> space, F function) const
     {
-        for (int device = 0; device < num_devices; ++device)
+        for (int device = 0; device < _num_devices; ++device)
         {
-            cudaSetDevice(device);
-            auto subspace = space.subspace(num_devices, device);
-            auto ni = subspace.di[0];
-            auto bs = THREAD_BLOCK_SIZE_1D;
-            auto nb = dim3((ni + bs.x - 1) / bs.x);
-            gpu_loop<<<nb, bs>>>(subspace, function);
+            auto subspace = space.subspace(_num_devices, device);
+            loop_device(subspace, function, device);
         }
-        sync_devices();
-    }
-
-    template<typename F>
-    void loop(index_space_t<2> space, F function) const
-    {
-        for (int device = 0; device < num_devices; ++device)
-        {
-            cudaSetDevice(device);
-            auto subspace = space.subspace(num_devices, device);
-            auto ni = subspace.di[0];
-            auto nj = subspace.di[1];
-            auto bs = THREAD_BLOCK_SIZE_2D;
-            auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
-            gpu_loop<<<nb, bs>>>(subspace, function);
-        }
-        sync_devices();
-    }
-
-    template<typename F>
-    void loop(index_space_t<3> space, F function) const
-    {
-        for (int device = 0; device < num_devices; ++device)
-        {
-            cudaSetDevice(device);
-            auto subspace = space.subspace(num_devices, device);
-            auto ni = subspace.di[0];
-            auto nj = subspace.di[1];
-            auto nk = subspace.di[2];
-            auto bs = THREAD_BLOCK_SIZE_3D;
-            auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
-            gpu_loop<<<nb, bs>>>(subspace, function);
-        }
-        sync_devices();
-    }
-
-    template<typename T, class R, class A>
-    T reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
-    {
-		// size_t scratch_bytes = 0;
-        // cudaSetDevice(0);
-        // cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
-        // auto scratch = allocator.allocate(scratch_bytes);
-        // auto results = allocator.allocate(sizeof(T));
-        // cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
-		// cudaDeviceSynchronize();
-		// return *((T*) results->data());
-
-        auto scratch = vec_t<typename A::allocation_t, VAPOR_MAX_DEVICES>{};
-        auto results = allocator.allocate(sizeof(T) * num_devices);
-        auto results_data = (T*) results->data();
-        auto result = start;
-        auto space = index_space(ivec(0), uvec(size));
-
-        for (int device = 0; device < num_devices; ++device)
-        {
-            auto subspace = space.subspace(num_devices, device);
-            auto scratch_bytes = size_t(0);
-			cudaSetDevice(device);
-            cub::DeviceReduce::Reduce(
-				(T*)nullptr,
-				scratch_bytes,
-				(T*)nullptr,
-				(T*)nullptr,
-				subspace.size(),
-				reducer,
-				start
-			);
-            scratch[device] = allocator.allocate(scratch_bytes);
-        }
-        for (int device = 0; device < num_devices; ++device)
-        {
-            auto subspace = space.subspace(num_devices, device);
-			auto scratch_bytes = scratch[device]->size();
-			cudaSetDevice(device);
-            cub::DeviceReduce::Reduce(
-                scratch[device]->data(),
-                scratch_bytes,
-                &data[subspace.i0[0]],
-                &results_data[device],
-                subspace.size(),
-                reducer,
-                start
-            );
-        }
-        sync_devices();
-
-        for (int device = 0; device < num_devices; ++device)
-        {
-            result = reducer(result, results_data[device]);
-        }
-        return result;
-    }
-
-    void sync_devices() const
-    {
-        for (uint device = 0; device < num_devices; ++device)
+        for (int device = 0; device < _num_devices; ++device)
         {
             cudaSetDevice(device);
             cudaDeviceSynchronize();
         }
     }
 
-    int num_devices;
+    template<typename F>
+    void loop_device(index_space_t<1> space, F function, int device) const
+    {
+        cudaSetDevice(device);
+        auto ni = subspace.di[0];
+        auto bs = THREAD_BLOCK_SIZE_1D;
+        auto nb = dim3((ni + bs.x - 1) / bs.x);
+        gpu_loop<<<nb, bs>>>(subspace, function);
+    }
+
+    template<typename F>
+    void loop_device(index_space_t<2> space, F function, int device) const
+    {
+        cudaSetDevice(device);
+        auto ni = subspace.di[0];
+        auto nj = subspace.di[1];
+        auto bs = THREAD_BLOCK_SIZE_2D;
+        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
+        gpu_loop<<<nb, bs>>>(subspace, function);
+    }
+
+    template<typename F>
+    void loop_device(index_space_t<3> space, F function, int device) const
+    {
+        cudaSetDevice(device);
+        auto ni = subspace.di[0];
+        auto nj = subspace.di[1];
+        auto nk = subspace.di[2];
+        auto bs = THREAD_BLOCK_SIZE_3D;
+        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
+        gpu_loop<<<nb, bs>>>(subspace, function);
+    }
+
+    template<typename T, class R, class A>
+    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    {
+        cudaSetDevice(device);
+        size_t scratch_bytes = 0;
+        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        auto scratch = allocator.allocate(scratch_bytes, device);
+        auto results = allocator.allocate(sizeof(T), device);
+        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
+        return results;
+    }
+
+    void sync_devices(int device=-1) const
+    {
+        if (device == -1)
+        {
+            for (uint d = 0; d < _num_devices; ++d)
+            {
+                sync_devices(d);
+            }
+        }
+        else
+        {
+            cudaSetDevice(device);
+            cudaDeviceSynchronize();
+        }
+    }
+
+    int num_devices() const
+    {
+        return _num_devices;
+    }
+
+    int _num_devices;
 };
 #endif // __CUDACC__
 

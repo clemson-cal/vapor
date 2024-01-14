@@ -57,18 +57,24 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<managed_memory_t>>>;
 template<uint D, class F, class E, class A,
     class T = typename array_t<D, F>::value_type,
     class R = typename A::allocation_t>
-array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator)
+array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator, int device=-1)
 {
-    auto memory = allocator.allocate(a.size() * sizeof(T));
+    auto memory = allocator.allocate(a.size() * sizeof(T), device);
     auto data = (T*) memory->data();
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, memory);
 
-    executor.loop(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
+    auto f = [start, stride, data, a] HD (ivec_t<D> i)
     {
         data[dot(stride, i - start)] = a[i];
-    });
+    };
+    if (device == -1) {
+        executor.loop(a.space(), f);
+    }
+    else {
+        executor.loop_device(a.space(), f, device);
+    }
     return array(table, a.space(), data);
 }
 
@@ -175,9 +181,9 @@ struct array_t
         return select(in(b.space(), space()), b, *this);
     }
     template<class E, class A>
-	auto cache(E& executor, A& allocator) const
+	auto cache(E& executor, A& allocator, int device=-1) const
 	{
-        return vapor::cache(*this, executor, allocator);
+        return vapor::cache(*this, executor, allocator, device);
     }
 	auto cache() const
     {
@@ -371,87 +377,84 @@ auto in(index_space_t<D> sel, index_space_t<D> space)
     return array(index_space_contains(sel), space);
 }
 
+
+
+
 /**
- * Compute the minimum value of all array elements
+ * Array reductions
  *
- * Reductions require arrays to be memory-backed and contiguous
+ */
+template<uint D, class F, class R, class E, class A,
+    typename T = typename array_t<D, F>::value_type,
+    typename B = typename A::allocation_t>
+T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
+{
+    auto num_devices = executor.num_devices();
+    auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
+    auto subresult = vec_t<B, VAPOR_MAX_DEVICES>{};
+
+    for (int device = 0; device < num_devices; ++device)
+    {
+        auto subspace = a.space().subspace(num_devices, device);
+        subarrays[device] = a[subspace].cache(executor, allocator, device);
+    }
+    for (int device = 0; device < num_devices; ++device)
+    {
+        subresult[device] = executor.reduce(
+            subarrays[device].data(),
+            subarrays[device].size(),
+            reducer,
+            start,
+            allocator,
+            device
+        );
+    }
+    auto result = start;
+
+    for (int device = 0; device < num_devices; ++device)
+    {
+        result = reducer(result, subresult[device]->template read<T>(0));
+    }
+    return result;
+}
+
+
+
+
+/**
+ * Convenience methods for common reductions
+ *
  */
 template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
 T min(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    if (a.data()) {
-        return executor.reduce(
-            a.data(),
-            a.size(),
-            [] HD (const T& a, const T& b) { return a < b ? a : b; },
-            std::numeric_limits<T>::max(),
-            allocator
-        );
-    }
-    else {
-        auto b = a.cache(executor, allocator);
-        return min(b, executor, allocator);
-    }
+    auto r = [] HD (const T& a, const T& b) { return a < b ? a : b; };
+    return reduce(a, r, std::numeric_limits<T>::max(), executor, allocator);
 }
-
 template<uint D, class F>
 auto min(const array_t<D, F>& a)
 {
     return min(a, Runtime::executor(), Runtime::allocator());
 }
 
-/**
- * Compute the maximum value of all array elements
- *
- * Reductions require arrays to be memory-backed and contiguous
- */
 template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
 T max(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    if (a.data()) {
-        return executor.reduce(
-            a.data(),
-            a.size(),
-            [] HD (const T& a, const T& b) { return a > b ? a : b; },
-            std::numeric_limits<T>::min(),
-            allocator
-        );
-    }
-    else {
-        auto b = a.cache(executor, allocator);
-        return max(b, executor, allocator);
-    }
+    auto r = [] HD (const T& a, const T& b) { return a > b ? a : b; };
+    return reduce(a, r, std::numeric_limits<T>::min(), executor, allocator);
 }
-
 template<uint D, class F>
 auto max(const array_t<D, F>& a)
 {
     return max(a, Runtime::executor(), Runtime::allocator());
 }
 
-/**
- * Compute the sum over all array elements
- *
- * Reductions require arrays to be memory-backed and contiguous
- */
 template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
 T sum(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    if (a.data()) {
-        return executor.reduce(
-            a.data(),
-            a.size(),
-            [] HD (const T& a, const T& b) { return a + b; },
-            T(),
-            allocator
-        );
-    }
-    else {
-        auto b = a.cache(executor, allocator);
-        return sum(b, executor, allocator);
-    }
+    auto r = [] HD (const T& a, const T& b) { return a + b; };
+    return reduce(a, r, T(), executor, allocator);
 }
-
 template<uint D, class F>
 auto sum(const array_t<D, F>& a)
 {

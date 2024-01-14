@@ -120,6 +120,36 @@ public:
     {
         return _device;
     }
+    template <typename T> T read(size_t i) const
+    {
+        #ifdef __CUDACC__
+        if (_device == -1) {
+            return ((T*)_data)[i];
+        }
+        else {
+            T value;
+            cudaSetDevice(_device);
+            cudaMemcpy(&value, _data + i * sizeof(T), sizeof(T), cudaMemcpyDeviceToHost);
+            return value;
+        }
+        #else
+        return ((T*)_data)[i];
+        #endif
+    }
+    template <typename T> void write(size_t i, const T& value) const
+    {
+        #ifdef __CUDACC__
+        if (_device == -1) {
+            ((T*)_data)[i] = value;
+        }
+        else {
+            cudaSetDevice(_device);
+            cudaMemcpy(_data + i * sizeof(T), &value, sizeof(T), cudaMemcpyHostToDevice);
+        }
+        #else
+        ((T*)_data)[i] = value;
+        #endif
+    }
 private:
     void release()
     {

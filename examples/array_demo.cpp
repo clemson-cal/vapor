@@ -85,16 +85,17 @@ void map_subset()
 
 void array_reductions()
 {
-	#ifndef __CUDACC__
+    #ifndef __CUDACC__
     auto exec = cpu_executor_t();
     auto alloc = shared_ptr_allocator_t();
-	#else
-	auto exec = default_executor_t();
+    #else
+    auto exec = default_executor_t();
     auto alloc = pool_allocator_t();
-	#endif
+    #endif
     
-	auto a = cache(range(11), exec, alloc);
+    auto a = cache(range(11), exec, alloc);
     printf("the maximum value of range(10) is %d\n", max(a, exec, alloc));
+    printf("the sum of range(10) is %d\n", sum(a, exec, alloc));
     auto b = array([] HD (ivec_t<1>) { return vec(1.0, 1.0); }, uvec(10)).cache(exec, alloc);
     auto s = sum(b, exec, alloc);
     printf("the sum of 10 elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", s[0], s[1]);
