@@ -89,11 +89,11 @@ struct cpu_executor_t
     template<typename T, class R, class A>
     auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
-        auto data = (T*)buffer.data();
+        auto data = buffer.data();
         auto size = buffer.size();
         auto result = start;
         for (size_t i = 0; i < size; ++i)
-            result = reducer(result, data[i]);
+            result = reducer(result, ((T*)data)[i]);
         return result;
     }
 
@@ -166,11 +166,11 @@ struct omp_executor_t
     template<typename T, class R, class A>
     auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
-        auto data = (T*)buffer.data();
+        auto data = buffer.data();
         auto size = buffer.size();
         auto result = start;
         for (size_t i = 0; i < size; ++i)
-            result = reducer(result, data[i]);
+            result = reducer(result, ((T*)data)[i]);
         return result;
     }
 
@@ -321,7 +321,7 @@ struct gpu_executor_t
         cub::DeviceReduce::Reduce(nullptr, scratch_bytes, (T*)data, (T*)nullptr, size, reducer, start);
         auto scratch = allocator.allocate(scratch_bytes);
         auto results = allocator.allocate(sizeof(T));
-        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
+        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, (T*)data, (T*)results->data(), size, reducer, start);
         cudaDeviceSynchronize();
         return results->template read<T>(0);
     }
@@ -342,9 +342,9 @@ struct gpu_executor_t
         auto data = buffer.data();
         auto size = buffer.size();
         cub::DeviceReduce::Reduce(nullptr, scratch_bytes, (T*)data, (T*)nullptr, size, reducer, start);
-        auto scratch = allocator.allocate(scratch_bytes, device);
-        auto results = allocator.allocate(sizeof(T), device);
-        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
+        auto scratch = allocator.allocate(scratch_bytes, buffer.device());
+        auto results = allocator.allocate(sizeof(T), buffer.device());
+        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, (T*)data, (T*)results->data(), size, reducer, start);
         return results;
     }
 
