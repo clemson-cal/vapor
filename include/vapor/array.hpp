@@ -376,20 +376,26 @@ auto in(index_space_t<D> sel, index_space_t<D> space)
  *
  * Reductions require arrays to be memory-backed and contiguous
  */
-template<uint D, typename T, template<typename> typename P, class E, class A>
-T min(const memory_backed_array_t<D, T, P>& a, E& executor, A& allocator)
+template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
+T min(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    return executor.reduce(
-        a.data(),
-        a.size(),
-        [] HD (const T& a, const T& b) { return a < b ? a : b; },
-        std::numeric_limits<T>::max(),
-        allocator
-    );
+    if (a.data()) {
+        return executor.reduce(
+            a.data(),
+            a.size(),
+            [] HD (const T& a, const T& b) { return a < b ? a : b; },
+            std::numeric_limits<T>::max(),
+            allocator
+        );
+    }
+    else {
+        auto b = a.cache(executor, allocator);
+        return min(b, executor, allocator);
+    }
 }
 
-template<uint D, typename T, template<typename> typename P>
-T min(const memory_backed_array_t<D, T, P>& a)
+template<uint D, class F>
+auto min(const array_t<D, F>& a)
 {
     return min(a, Runtime::executor(), Runtime::allocator());
 }
@@ -399,20 +405,26 @@ T min(const memory_backed_array_t<D, T, P>& a)
  *
  * Reductions require arrays to be memory-backed and contiguous
  */
-template<uint D, typename T, template<typename> typename P, class E, class A>
-T max(const memory_backed_array_t<D, T, P>& a, E& executor, A& allocator)
+template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
+T max(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    return executor.reduce(
-        a.data(),
-        a.size(),
-        [] HD (const T& a, const T& b) { return a > b ? a : b; },
-        std::numeric_limits<T>::min(),
-        allocator
-    );
+    if (a.data()) {
+        return executor.reduce(
+            a.data(),
+            a.size(),
+            [] HD (const T& a, const T& b) { return a > b ? a : b; },
+            std::numeric_limits<T>::min(),
+            allocator
+        );
+    }
+    else {
+        auto b = a.cache(executor, allocator);
+        return max(b, executor, allocator);
+    }
 }
 
-template<uint D, typename T, template<typename> typename P>
-T max(const memory_backed_array_t<D, T, P>& a)
+template<uint D, class F>
+auto max(const array_t<D, F>& a)
 {
     return max(a, Runtime::executor(), Runtime::allocator());
 }
@@ -422,20 +434,26 @@ T max(const memory_backed_array_t<D, T, P>& a)
  *
  * Reductions require arrays to be memory-backed and contiguous
  */
-template<uint D, typename T, template<typename> typename P, class E, class A>
-T sum(const memory_backed_array_t<D, T, P>& a, E& executor, A& allocator)
+template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
+T sum(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    return executor.reduce(
-        a.data(),
-        a.size(),
-        [] HD (const T& a, const T& b) { return a + b; },
-        T(),
-        allocator
-    );
+    if (a.data()) {
+        return executor.reduce(
+            a.data(),
+            a.size(),
+            [] HD (const T& a, const T& b) { return a + b; },
+            T(),
+            allocator
+        );
+    }
+    else {
+        auto b = a.cache(executor, allocator);
+        return sum(b, executor, allocator);
+    }
 }
 
-template<uint D, typename T, template<typename> typename P>
-T sum(const memory_backed_array_t<D, T, P>& a)
+template<uint D, class F>
+auto sum(const array_t<D, F>& a)
 {
     return sum(a, Runtime::executor(), Runtime::allocator());
 }

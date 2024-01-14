@@ -48,9 +48,7 @@ struct cpu_executor_t
         int i1 = space.i0[0] + space.di[0];
 
         for (int i = i0; i < i1; ++i)
-        {
             function(vec(i));
-        }
     }
 
     template<typename F>
