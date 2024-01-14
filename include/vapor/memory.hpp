@@ -129,7 +129,7 @@ public:
         else {
             T value;
             cudaSetDevice(_device);
-            cudaMemcpy(&value, _data + i * sizeof(T), sizeof(T), cudaMemcpyDeviceToHost);
+            cudaMemcpy(&value, (T*)_data + i, sizeof(T), cudaMemcpyDeviceToHost);
             return value;
         }
         #else
@@ -144,7 +144,7 @@ public:
         }
         else {
             cudaSetDevice(_device);
-            cudaMemcpy(_data + i * sizeof(T), &value, sizeof(T), cudaMemcpyHostToDevice);
+            cudaMemcpy((T*)_data + i, &value, sizeof(T), cudaMemcpyHostToDevice);
         }
         #else
         ((T*)_data)[i] = value;
