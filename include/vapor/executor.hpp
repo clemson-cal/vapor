@@ -307,6 +307,7 @@ struct gpu_executor_t
         auto scratch = allocator.allocate(scratch_bytes);
         auto results = allocator.allocate(sizeof(T));
         cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
+        cudaDeviceSynchronize();
         return results->template read<T>(0);
     }
 

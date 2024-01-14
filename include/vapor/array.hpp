@@ -393,7 +393,7 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 
     if (num_devices == 1) {
         auto b = a.cache(executor, allocator);
-        return executor.reduce(b.data(), b.size(), reducer, start, allocator); 
+        return executor.reduce(b.data(), b.size(), reducer, start, allocator);
     }
     else {
         auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
