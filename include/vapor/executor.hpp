@@ -87,8 +87,10 @@ struct cpu_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
+    auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
+        auto data = (T*)buffer.data();
+        auto size = buffer.size();
         auto result = start;
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
@@ -96,14 +98,15 @@ struct cpu_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce_async(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
         assert(false);
-        return allocator.allocate(0, device);
+        return allocator.allocate(0, buffer.device());
     }
 
-    void sync_devices(int device=-1) const { }
-    int num_devices() const { return 1; }
+    auto has_async_reduction() const { return false; }
+    auto sync_devices(int device=-1) const { }
+    auto num_devices() const { return 1; }
 };
 
 
@@ -161,8 +164,10 @@ struct omp_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
+    auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
+        auto data = (T*)buffer.data();
+        auto size = buffer.size();
         auto result = start;
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
@@ -170,14 +175,15 @@ struct omp_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce_async(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
         assert(false);
-        return allocator.allocate(0, device);
+        return allocator.allocate(0, buffer.device());
     }
 
-    void sync_devices(int device=-1) const { }
-    int num_devices() const { return 1; }
+    auto has_async_reduction() const { return false; }
+    auto sync_devices(int device=-1) const { }
+    auto num_devices() const { return 1; }
 };
 #endif // _OPENMP
 
@@ -298,12 +304,21 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
+    /**
+     * This reduce operator blocks and returns an item of type T
+     * 
+     * The data pointer can be managed memory or device memory. The reduction
+     * is carried out on device zero.
+     */
     template<typename T, class R, class A>
-    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
+    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
+        assert(buffer.managed());
         cudaSetDevice(0);
-        size_t scratch_bytes = 0;
-        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        auto scratch_bytes = size_t(0);
+        auto data = buffer.data();
+        auto size = buffer.size();
+        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, (T*)data, (T*)nullptr, size, reducer, start);
         auto scratch = allocator.allocate(scratch_bytes);
         auto results = allocator.allocate(sizeof(T));
         cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
@@ -311,12 +326,22 @@ struct gpu_executor_t
         return results->template read<T>(0);
     }
 
+    /**
+     * This reduce operator returns immediately and returns a buffer
+     * 
+     * The buffer must be a device allocation, i.e. it cannot be managed.
+     * Reading from the buffer via buffer_t::read will block until the
+     * reduction is completed.
+     */
     template<typename T, class R, class A>
-    auto reduce_async(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
-        cudaSetDevice(device);
-        size_t scratch_bytes = 0;
-        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        assert(! buffer.managed());
+        cudaSetDevice(buffer.device());
+        auto scratch_bytes = size_t(0);
+        auto data = buffer.data();
+        auto size = buffer.size();
+        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, (T*)data, (T*)nullptr, size, reducer, start);
         auto scratch = allocator.allocate(scratch_bytes, device);
         auto results = allocator.allocate(sizeof(T), device);
         cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
@@ -339,10 +364,8 @@ struct gpu_executor_t
         }
     }
 
-    int num_devices() const
-    {
-        return _num_devices;
-    }
+    auto has_async_reduction() const { return true; }
+    auto num_devices() const { return _num_devices; }
 
     int _num_devices;
 };

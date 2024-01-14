@@ -45,7 +45,7 @@ template<uint D, class F> struct array_t;
 template<uint D, class F> struct array_selection_t;
 template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
 template<uint D, typename T, template<typename> typename P>
-using memory_backed_array_t = array_t<D, lookup_t<D, T, P<managed_memory_t>>>;
+using memory_backed_array_t = array_t<D, lookup_t<D, T, P<buffer_t>>>;
 
 
 
@@ -59,11 +59,11 @@ template<uint D, class F, class E, class A,
     class R = typename A::allocation_t>
 array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator, int device=-1)
 {
-    auto memory = allocator.allocate(a.size() * sizeof(T), device);
-    auto data = (T*) memory->data();
+    auto buffer = allocator.allocate(a.size() * sizeof(T), device);
+    auto data = (T*) buffer->data();
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
-    auto table = lookup(start, stride, data, memory);
+    auto table = lookup(start, stride, data, buffer);
 
     auto f = [start, stride, data, a] HD (ivec_t<D> i)
     {
@@ -75,7 +75,7 @@ array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allo
     else {
         executor.loop_async(a.space(), f, device);
     }
-    return array(table, a.space(), data);
+    return array(table, a.space(), buffer.get());
 }
 
 
@@ -169,7 +169,15 @@ struct array_t
     }
     auto data() const
     {
-        return _data;
+        return _buffer ? (const value_type*)_buffer->data() : nullptr;
+    }
+    auto data()
+    {
+        return _buffer ? (value_type*)_buffer->data() : nullptr;
+    }
+    auto buffer() const
+    {
+        return _buffer;
     }
     auto at(index_space_t<D> sel) const
     {
@@ -219,7 +227,7 @@ struct array_t
     F f;
     uvec_t<D> _shape;
     ivec_t<D> _start = {0};
-    value_type* _data = nullptr;
+    buffer_t *_buffer = nullptr;
 };
 
 
@@ -286,9 +294,9 @@ array_t<D, F> array(F f, uvec_t<D> shape, ivec_t<D> start={0})
  * An nd array from a an index function and an index space
  */
 template<uint D, class F, typename T = typename array_t<D, F>::value_type>
-array_t<D, F> array(F f, index_space_t<D> space, T* data=nullptr)
+array_t<D, F> array(F f, index_space_t<D> space, buffer_t* buffer=nullptr)
 {
-    return {f, space.di, space.i0, data};
+    return {f, space.di, space.i0, buffer};
 }
 
 /**
@@ -389,13 +397,12 @@ template<uint D, class F, class R, class E, class A,
     typename B = typename A::allocation_t>
 T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
-    auto num_devices = executor.num_devices();
-
-    if (num_devices == 1) {
+    if (! executor.has_async_reduction()) {
         auto b = a.cache(executor, allocator);
-        return executor.reduce(b.data(), b.size(), reducer, start, allocator);
+        return executor.reduce(*b.buffer(), reducer, start, allocator);
     }
     else {
+        auto num_devices = executor.num_devices();
         auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
         auto subresult = vec_t<B, VAPOR_MAX_DEVICES>{};
 
@@ -407,7 +414,7 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
         for (int device = 0; device < num_devices; ++device)
         {
             const auto& b = subarrays[device];
-            subresult[device] = executor.reduce_async(b.data(), b.size(), reducer, start, allocator, device);
+            subresult[device] = executor.reduce_async(*b.buffer(), reducer, start, allocator);
         }
         auto result = start;
 

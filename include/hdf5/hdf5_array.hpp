@@ -82,11 +82,11 @@ struct hdf5_repr<memory_backed_array_t<D, U, P>>
     using T = memory_backed_array_t<D, U, P>;
     static const U* data(const T& val)
     {
-        return val._data;
+        return val.data();
     }
     static U* data(T& val)
     {
-        return val._data;
+        return val.data();
     }
     static hid_t space(const T& val)
     {
@@ -118,10 +118,10 @@ struct hdf5_repr<memory_backed_array_t<D, U, P>>
         }
         auto start = zeros_ivec<D>();
         auto stride = strides_row_major(shape);
-        auto memory = allocator.allocate(product(shape) * sizeof(U));
-        auto data = (U*) memory->data();
-        auto table = lookup(start, stride, data, memory);
-        val = array(table, index_space(start, shape), data);
+        auto buffer = allocator.allocate(product(shape) * sizeof(U));
+        auto data = (U*) buffer->data();
+        auto table = lookup(start, stride, data, buffer);
+        val = array(table, index_space(start, shape), buffer.get());
     }
 };
 

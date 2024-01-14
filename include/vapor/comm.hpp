@@ -275,8 +275,8 @@ public:
             auto recvtype_l = mpi_subarray<T>(s, s.upper(count[axis], axis));
             auto status = MPI_Status();
             MPI_Cart_shift(_comm, axis, +1, &n, &m);
-            MPI_Sendrecv(a._data, 1, sendtype_r, m, 0, a._data, 1, recvtype_r, n, 0, _comm, &status);
-            MPI_Sendrecv(a._data, 1, sendtype_l, n, 0, a._data, 1, recvtype_l, m, 0, _comm, &status);
+            MPI_Sendrecv(a.data(), 1, sendtype_r, m, 0, a.data(), 1, recvtype_r, n, 0, _comm, &status);
+            MPI_Sendrecv(a.data(), 1, sendtype_l, n, 0, a.data(), 1, recvtype_l, m, 0, _comm, &status);
             MPI_Type_free(&sendtype_l);
             MPI_Type_free(&recvtype_l);
             MPI_Type_free(&sendtype_r);
@@ -335,14 +335,14 @@ public:
                 }
                 auto status = MPI_Status();
                 auto recvtype = mpi_subarray<T>(gs, subspace(gs, r));
-                MPI_Recv(result._data, 1, recvtype, r, 0, _comm, &status);
+                MPI_Recv(result.data(), 1, recvtype, r, 0, _comm, &status);
                 MPI_Type_free(&recvtype);
             }
         }
         else
         {
             auto sendtype = mpi_subarray<T>(gs, a.space());
-            MPI_Send(result._data, 1, sendtype, root, 0, _comm);
+            MPI_Send(result.data(), 1, sendtype, root, 0, _comm);
             MPI_Type_free(&sendtype);
         }
         return result;

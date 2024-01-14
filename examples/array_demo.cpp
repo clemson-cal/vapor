@@ -93,13 +93,13 @@ void array_reductions()
     auto alloc = pool_allocator_t();
     #endif
     
-    auto N = long(10000000);
+    auto N = int(1000);
     auto a = cache(range(N), exec, alloc);
-    printf("the maximum value of range(%ld) is %ld\n", N, max(a, exec, alloc));
-    printf("the sum of range(%ld) is %ld\n", N, sum(a, exec, alloc));
+    printf("the maximum value of range(%d) is %d\n", N, max(a, exec, alloc));
+    printf("the sum of range(%d) is %d\n", N, sum(a, exec, alloc));
     auto b = array([] HD (ivec_t<1>) { return vec(1.0, 1.0); }, uvec(N)).cache(exec, alloc);
     auto s = sum(b, exec, alloc);
-    printf("the sum of %ld elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", N, s[0], s[1]);
+    printf("the sum of %d elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", N, s[0], s[1]);
 }
 
 void generator_arrays()

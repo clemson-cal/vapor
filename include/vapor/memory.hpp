@@ -25,16 +25,15 @@ Rationale:
 
 This library relies heavily on CUDA's unified memory model. Blocks of memory
 to be managed by the CUDA runtime have a move-only RAII container called
-managed_memory_t. On non-CUDA platforms the allocation reduces to malloc /
-free.
+buffer_t. On non-CUDA platforms the allocation reduces to malloc / free.
 
 Reference counted, managed memory allocations are used as the backing buffers
-for cached arrays. An allocator pool maintains a list of managed_memory_t
-instances and corresponding use counts, and vends out unused allocations as
-e.g. ref_counted_ptr_t<double>. The ref-counted container automatically
-increments and decrements the use counts. Vended allocations serve as the
-backing buffers for cached arrays. An allocation with a zero use count is
-available to be vended out again by the pool.
+for cached arrays. An allocator pool maintains a list of buffer_t instances
+and corresponding use counts, and vends out unused allocations as e.g.
+ref_counted_ptr_t<double>. The ref-counted container automatically increments
+and decrements the use counts. Vended allocations serve as the backing
+buffers for cached arrays. An allocation with a zero use count is available
+to be vended out again by the pool.
 
 The pool must outlive any arrays that were cached using the pool's
 allocations. It is an error to return a cached array from a function, if the
@@ -59,16 +58,16 @@ namespace vapor {
 
 
 /**
- * An RAII read-write block of managed device memory
+ * An RAII read-write block of host, device, or managed memory
  *
  * On non-CUDA platforms the memory is ordinary CPU memory
  * 
  */
-class managed_memory_t
+class buffer_t
 {
 public:
-    managed_memory_t(const managed_memory_t& other) = delete;
-    managed_memory_t(managed_memory_t&& other)
+    buffer_t(const buffer_t& other) = delete;
+    buffer_t(buffer_t&& other)
     {
         release();
         _data = other._data;
@@ -78,16 +77,20 @@ public:
         other._bytes = 0;
         other._device = -1;
     }
-    managed_memory_t()
+    buffer_t()
     {
     }
-    managed_memory_t(size_t bytes)
+    buffer_t(size_t bytes)
     {
         allocate(bytes);
     }
-    ~managed_memory_t()
+    ~buffer_t()
     {
         release();
+    }
+    bool managed() const
+    {
+        return _device == -1;
     }
     void allocate(size_t bytes, int device=-1)
     {
@@ -108,7 +111,11 @@ public:
             #endif
         }
     }
-    void *data()
+    auto *data() const
+    {
+        return _data;
+    }
+    auto *data()
     {
         return _data;
     }
@@ -175,6 +182,8 @@ private:
 /**
  * A minimal unique pointer to a single POD item in managed memory
  *
+ * This class is not currently in use by the library and may be removed in the
+ * future.
  */
 template<typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
 class managed_memory_ptr_t
@@ -205,7 +214,7 @@ public:
         return *_data;
     }
 private:
-    managed_memory_t mem;
+    buffer_t mem;
     T *_data;
 };
 
@@ -299,7 +308,7 @@ private:
 class pool_allocator_t
 {
 public:
-    using allocation_t = ref_counted_ptr_t<managed_memory_t>;
+    using allocation_t = ref_counted_ptr_t<buffer_t>;
 
     pool_allocator_t& operator=(const pool_allocator_t& other) = delete;
     pool_allocator_t(const pool_allocator_t& other) = delete;
@@ -316,7 +325,7 @@ public:
     }
     pool_allocator_t(uint num_allocations=1024) : num_allocations(num_allocations)
     {
-        allocations = new managed_memory_t[num_allocations];
+        allocations = new buffer_t[num_allocations];
         use_counts = new int[num_allocations];
 
         for (uint n = 0; n < num_allocations; ++n)
@@ -331,6 +340,7 @@ public:
             if (use_counts[n] == 0 && (allocations[n].size() == 0 || allocations[n].device() == device))
             {
                 allocations[n].allocate(bytes, device);
+                return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);
             }
         }
         assert(false); // the pool is out of allocations
@@ -346,7 +356,7 @@ public:
     }
 private:
     size_t num_allocations = 0;
-    managed_memory_t* allocations = nullptr;
+    buffer_t* allocations = nullptr;
     int* use_counts = nullptr;
 };
 
@@ -365,11 +375,11 @@ private:
 class shared_ptr_allocator_t
 {
 public:
-    using allocation_t = std::shared_ptr<managed_memory_t>;
+    using allocation_t = std::shared_ptr<buffer_t>;
 
     allocation_t allocate(size_t bytes, int device=-1) const
     {
-        return std::make_shared<managed_memory_t>(bytes);
+        return std::make_shared<buffer_t>(bytes);
     }
 };
 
