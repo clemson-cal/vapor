@@ -66,7 +66,7 @@ int main(int argc, const char **argv)
         true,
         "hey",
         {2.3, 3.1, 1.0},
-        vapor::range(6).map([] (auto i) { return float(i); }).cache(exec, alloc),
+        vapor::range(6).map([] HD (int i) { return float(i); }).cache(exec, alloc),
         {0, 1, 2, 3, 4}
     };
     auto conf2 = config_t();
