@@ -301,6 +301,7 @@ struct gpu_executor_t
     template<typename T, class R, class A>
     auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
     {
+        cudaSetDevice(0);
         size_t scratch_bytes = 0;
         cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
         auto scratch = allocator.allocate(scratch_bytes);
