@@ -328,10 +328,9 @@ public:
     {
         for (size_t n = 0; n < num_allocations; ++n)
         {
-            if (use_counts[n] == 0)
+            if (use_counts[n] == 0 && (allocations[n].size() == 0 || allocations[n].device() == device))
             {
                 allocations[n].allocate(bytes, device);
-                return ref_counted_ptr_t<managed_memory_t>(&allocations[n], &use_counts[n]);
             }
         }
         assert(false); // the pool is out of allocations
