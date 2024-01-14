@@ -81,22 +81,25 @@ struct cpu_executor_t
     }
 
     template<uint D, typename F>
-    void loop_device(index_space_t<D> space, F function, int) const
+    void loop_async(index_space_t<D> space, F function, int) const
     {
-        loop(space, function);
+        assert(false);
     }
 
     template<typename T, class R, class A>
-    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
     {
         auto result = start;
-
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
+        return result;
+    }
 
-        auto result_buffer = allocator.allocate(sizeof(T), device);
-        result_buffer->write(0, result);
-        return result_buffer;
+    template<typename T, class R, class A>
+    auto reduce_async(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    {
+        assert(false);
+        return allocator.allocate(0, device);
     }
 
     void sync_devices(int device=-1) const { }
@@ -152,22 +155,25 @@ struct omp_executor_t
     }
 
     template<uint D, typename F>
-    void loop_device(index_space_t<D> space, F function, int) const
+    void loop_async(index_space_t<D> space, F function, int) const
     {
-        loop(space, function);
+        assert(false);
     }
 
     template<typename T, class R, class A>
-    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
     {
         auto result = start;
-
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
+        return result;
+    }
 
-        auto result_buffer = allocator.allocate(sizeof(T), device);
-        result_buffer->write(0, result);
-        return result_buffer;
+    template<typename T, class R, class A>
+    auto reduce_async(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    {
+        assert(false);
+        return allocator.allocate(0, device);
     }
 
     void sync_devices(int device=-1) const { }
@@ -250,7 +256,7 @@ struct gpu_executor_t
         for (int device = 0; device < _num_devices; ++device)
         {
             auto subspace = space.subspace(_num_devices, device);
-            loop_device(subspace, function, device);
+            loop_async(subspace, function, device);
         }
         for (int device = 0; device < _num_devices; ++device)
         {
@@ -260,7 +266,7 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_device(index_space_t<1> space, F function, int device) const
+    void loop_async(index_space_t<1> space, F function, int device) const
     {
         cudaSetDevice(device);
         auto ni = subspace.di[0];
@@ -270,7 +276,7 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_device(index_space_t<2> space, F function, int device) const
+    void loop_async(index_space_t<2> space, F function, int device) const
     {
         cudaSetDevice(device);
         auto ni = subspace.di[0];
@@ -281,7 +287,7 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_device(index_space_t<3> space, F function, int device) const
+    void loop_async(index_space_t<3> space, F function, int device) const
     {
         cudaSetDevice(device);
         auto ni = subspace.di[0];
@@ -293,7 +299,18 @@ struct gpu_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
+    auto reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
+    {
+        size_t scratch_bytes = 0;
+        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        auto scratch = allocator.allocate(scratch_bytes);
+        auto results = allocator.allocate(sizeof(T));
+        cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
+        return results->template read<T>(0);
+    }
+
+    template<typename T, class R, class A>
+    auto reduce_async(const T* data, size_t size, R reducer, T start, A& allocator, int device) const
     {
         cudaSetDevice(device);
         size_t scratch_bytes = 0;

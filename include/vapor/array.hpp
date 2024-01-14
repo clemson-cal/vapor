@@ -73,7 +73,7 @@ array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allo
         executor.loop(a.space(), f);
     }
     else {
-        executor.loop_device(a.space(), f, device);
+        executor.loop_async(a.space(), f, device);
     }
     return array(table, a.space(), data);
 }
@@ -390,32 +390,33 @@ template<uint D, class F, class R, class E, class A,
 T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
     auto num_devices = executor.num_devices();
-    auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
-    auto subresult = vec_t<B, VAPOR_MAX_DEVICES>{};
 
-    for (int device = 0; device < num_devices; ++device)
-    {
-        auto subspace = a.space().subspace(num_devices, device);
-        subarrays[device] = a[subspace].cache(executor, allocator, device);
+    if (num_devices == 1) {
+        auto b = a.cache(executor, allocator);
+        return executor.reduce(b.data(), b.size(), reducer, start, allocator); 
     }
-    for (int device = 0; device < num_devices; ++device)
-    {
-        subresult[device] = executor.reduce(
-            subarrays[device].data(),
-            subarrays[device].size(),
-            reducer,
-            start,
-            allocator,
-            device
-        );
-    }
-    auto result = start;
+    else {
+        auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
+        auto subresult = vec_t<B, VAPOR_MAX_DEVICES>{};
 
-    for (int device = 0; device < num_devices; ++device)
-    {
-        result = reducer(result, subresult[device]->template read<T>(0));
+        for (int device = 0; device < num_devices; ++device)
+        {
+            auto subspace = a.space().subspace(num_devices, device);
+            subarrays[device] = a[subspace].cache(executor, allocator, device);
+        }
+        for (int device = 0; device < num_devices; ++device)
+        {
+            const auto& b = subarrays[device];
+            subresult[device] = executor.reduce_async(b.data(), b.size(), reducer, start, allocator, device);
+        }
+        auto result = start;
+
+        for (int device = 0; device < num_devices; ++device)
+        {
+            result = reducer(result, subresult[device]->template read<T>(0));
+        }
+        return result;
     }
-    return result;
 }
 
 
@@ -436,7 +437,6 @@ auto min(const array_t<D, F>& a)
 {
     return min(a, Runtime::executor(), Runtime::allocator());
 }
-
 template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
 T max(const array_t<D, F>& a, E& executor, A& allocator)
 {
@@ -448,7 +448,6 @@ auto max(const array_t<D, F>& a)
 {
     return max(a, Runtime::executor(), Runtime::allocator());
 }
-
 template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
 T sum(const array_t<D, F>& a, E& executor, A& allocator)
 {
