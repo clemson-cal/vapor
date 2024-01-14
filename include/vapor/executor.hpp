@@ -272,6 +272,14 @@ struct gpu_executor_t
     template<typename T, class R, class A>
     T reduce(const T* data, size_t size, R reducer, T start, A& allocator) const
     {
+		// size_t scratch_bytes = 0;
+        // cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        // auto scratch = allocator.allocate(scratch_bytes);
+        // auto results = allocator.allocate(sizeof(T));
+        // cub::DeviceReduce::Reduce(scratch->data(), scratch_bytes, data, (T*)results->data(), size, reducer, start);
+		// cudaDeviceSynchronize();
+		// return *((T*) results->data());
+
         auto scratch = vec_t<typename A::allocation_t, VAPOR_MAX_DEVICES>{};
         auto results = allocator.allocate(sizeof(T) * num_devices);
         auto results_data = (T*) results->data();
@@ -282,18 +290,29 @@ struct gpu_executor_t
         {
             auto subspace = space.subspace(num_devices, device);
             auto scratch_bytes = size_t(0);
-            cub::DeviceReduce::Reduce(nullptr, scratch_bytes, nullptr, nullptr, subspace.size(), reducer, start);
+			cudaSetDevice(device);
+            cub::DeviceReduce::Reduce(
+				(T*)nullptr,
+				scratch_bytes,
+				(T*)nullptr,
+				(T*)nullptr,
+				subspace.size(),
+				reducer,
+				start
+			);
             scratch[device] = allocator.allocate(scratch_bytes);
         }
         for (int device = 0; device < num_devices; ++device)
         {
             auto subspace = space.subspace(num_devices, device);
+			auto scratch_bytes = scratch[device]->size();
+			cudaSetDevice(device);
             cub::DeviceReduce::Reduce(
                 scratch[device]->data(),
-                scratch[device]->size(),
+                scratch_bytes,
                 &data[subspace.i0[0]],
                 &results_data[device],
-                size,
+                subspace.size(),
                 reducer,
                 start
             );
