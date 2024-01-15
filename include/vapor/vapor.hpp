@@ -42,6 +42,7 @@ SOFTWARE.
 #include "vapor/functional.hpp"
 #include "vapor/index_space.hpp"
 #include "vapor/memory.hpp"
+#include "vapor/optional.hpp"
 #include "vapor/parse.hpp"
 #include "vapor/print.hpp"
 #include "vapor/runtime.hpp"
