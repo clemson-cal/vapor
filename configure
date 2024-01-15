@@ -132,6 +132,10 @@ def get_cxx(mode, deps=list()):
         return mode
 
 
+def skip_target(prog, mode, project):
+    return mode == "gpu" and "mpi" in project["programs"][prog].get("deps", list())
+
+
 def main():
     import sys
     import json
@@ -187,16 +191,11 @@ def main():
         f.write("\n")
         for mode in modes:
             for prog in programs:
-                f.write(f"EXE_{mode.upper()} += {bin}/{prog}_{mode}")
-                f.write("\n")
-        for mode in modes:
-            for prog in programs:
-                f.write(f"OBJ_{mode.upper()} += {build}/{prog}_{mode}.o")
-                f.write("\n")
-        for mode in modes:
-            for prog in programs:
-                f.write(f"DEP_{mode.upper()} += {build}/{prog}_{mode}.d")
-                f.write("\n")
+                if skip_target(prog, mode, project):
+                    continue
+                f.write(f"EXE_{mode.upper()} += {bin}/{prog}_{mode}\n")
+                f.write(f"OBJ_{mode.upper()} += {build}/{prog}_{mode}.o\n")
+                f.write(f"DEP_{mode.upper()} += {build}/{prog}_{mode}.d\n")
         f.write("\n")
         for mode in modes:
             f.write(f"EXE += $(EXE_{mode.upper()})")
@@ -220,6 +219,8 @@ def main():
         f.write("\n")
         for program in programs:
             for mode in modes:
+                if skip_target(prog, mode, project):
+                    continue
                 lib = get_lib(mode, **project["programs"][program], libs=system["libs"], lomp=system["lomp"])
                 cxx = get_cxx(mode, **project["programs"][program])
                 f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
