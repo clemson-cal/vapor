@@ -190,7 +190,7 @@ array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, 
 template<uint D, class F>
 auto cache_unwrap(const array_t<D, F>& a)
 {
-    return cache_unwrap(a,  Runtime::executor(), Runtime::allocator());
+    return cache_unwrap(a, Runtime::executor(), Runtime::allocator());
 }
 
 

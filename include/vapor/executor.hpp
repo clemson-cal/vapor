@@ -318,7 +318,7 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
-    __device__ static void atomic_add(int* counter, int delta) const
+    __device__ static void atomic_add(int* counter, int delta)
     {
         atomicAdd(counter, delta);
     }
