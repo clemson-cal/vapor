@@ -119,7 +119,7 @@ struct hdf5_repr<memory_backed_array_t<D, U, P>>
         auto start = zeros_ivec<D>();
         auto stride = strides_row_major(shape);
         auto buffer = allocator.allocate(product(shape) * sizeof(U));
-        auto data = (U*) buffer->data();
+        auto data = buffer->template data<U>();
         auto table = lookup(start, stride, data, buffer);
         val = array(table, index_space(start, shape), buffer.get());
     }

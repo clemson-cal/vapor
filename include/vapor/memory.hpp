@@ -111,21 +111,25 @@ public:
             #endif
         }
     }
-    auto *data() const
-    {
-        return _data;
-    }
-    auto *data()
-    {
-        return _data;
-    }
-    size_t size() const
-    {
-        return _bytes;
-    }
     int device() const
     {
         return _device;
+    }
+    size_t bytes() const
+    {
+        return _bytes;
+    }
+    template <typename T> size_t size() const
+    {
+        return _bytes / sizeof(T);
+    }
+    template <typename T> auto *data() const
+    {
+        return (const T*)_data;
+    }
+    template <typename T> auto *data()
+    {
+        return (T*)_data;
     }
     template <typename T> T read(size_t i) const
     {
@@ -194,7 +198,7 @@ public:
     managed_memory_ptr_t(T val)
     {
         mem.allocate(sizeof(T));
-        _data = (T*) mem.data();
+        _data = mem.template data<T>();
         _data[0] = val;
     }
     const T* get() const
@@ -337,7 +341,7 @@ public:
     {
         for (size_t n = 0; n < num_allocations; ++n)
         {
-            if (use_counts[n] == 0 && (allocations[n].size() == 0 || allocations[n].device() == device))
+            if (use_counts[n] == 0 && (allocations[n].bytes() == 0 || allocations[n].device() == device))
             {
                 allocations[n].allocate(bytes, device);
                 return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);

@@ -60,7 +60,7 @@ template<uint D, class F, class E, class A,
 array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator, int device=-1)
 {
     auto buffer = allocator.allocate(a.size() * sizeof(T), device);
-    auto data = (T*) buffer->data();
+    auto data = buffer->template data<T>();
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, buffer);
@@ -169,11 +169,11 @@ struct array_t
     }
     auto data() const
     {
-        return _buffer ? (const value_type*)_buffer->data() : nullptr;
+        return _buffer ? _buffer->template data<value_type>() : nullptr;
     }
     auto data()
     {
-        return _buffer ? (value_type*)_buffer->data() : nullptr;
+        return _buffer ? _buffer->template data<value_type>() : nullptr;
     }
     auto buffer() const
     {
@@ -397,11 +397,13 @@ template<uint D, class F, class R, class E, class A,
     typename B = typename A::allocation_t>
 T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
-    if (! executor.has_async_reduction()) {
+    if (! executor.has_async_reduction())
+    {
         auto b = a.cache(executor, allocator);
         return executor.reduce(*b.buffer(), reducer, start, allocator);
     }
-    else {
+    else
+    {
         auto num_devices = executor.num_devices();
         auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
         auto subresult = vec_t<B, VAPOR_MAX_DEVICES>{};
