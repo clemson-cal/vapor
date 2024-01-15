@@ -271,7 +271,7 @@ struct gpu_executor_t
         for (int device = 0; device < _num_devices; ++device)
         {
             auto subspace = space.subspace(_num_devices, device);
-            loop_async(subspace, function, device);
+            loop_async(subspace, device, function);
         }
         for (int device = 0; device < _num_devices; ++device)
         {
@@ -313,7 +313,7 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
-    void atomic_add(int* counter, int delta) const
+    __device__ void atomic_add(int* counter, int delta) const
     {
         atomicAdd(counter, delta);
     }

@@ -148,14 +148,21 @@ array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, 
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, buffer);
-    executor.loop(a.space(), [&executor, start, stride, data, a, failure_count_ptr] HD (ivec_t<D> i)
+    executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] HD (ivec_t<D> i)
     {
         auto maybe = a[i];
         if (maybe.has_value()) {
             data[dot(stride, i - start)] = maybe.get();
         }
         else {
-            executor.atomic_add(failure_count_ptr, 1);
+            #ifdef __CUDA_ARCH__
+            atomicAdd(failure_count_ptr, 1);
+            #elif _OPENMP
+            #pragma omp atomic update
+            *failure_count_ptr += 1;
+            #else
+            *failure_count_ptr += 1;
+            #endif
         }
     });
     if (*failure_count_ptr > 0) {
