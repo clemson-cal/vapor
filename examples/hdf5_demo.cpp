@@ -58,21 +58,19 @@ VISITABLE_STRUCT(config_t, a, b, c, d, e, f, g);
 
 int main(int argc, const char **argv)
 {
-    auto exec = vapor::cpu_executor_t();
-    auto alloc = vapor::shared_ptr_allocator_t();
     auto conf1 = config_t{
         5,
         2.3,
         true,
         "hey",
         {2.3, 3.1, 1.0},
-        vapor::range(6).map([] HD (int i) { return float(i); }).cache(exec, alloc),
+        vapor::range(6).map([] HD (int i) { return float(i); }).cache(),
         {0, 1, 2, 3, 4}
     };
     auto conf2 = config_t();
 
     vapor::hdf5_write_file("hdf5_demo.h5", conf1);
-    vapor::hdf5_read_file("hdf5_demo.h5", conf2, alloc);
+    vapor::hdf5_read_file("hdf5_demo.h5", conf2);
     vapor::print(conf1);
     vapor::print("\n");
     vapor::print(conf2);
@@ -82,7 +80,7 @@ int main(int argc, const char **argv)
     dict1["a"] = 1.0;
     dict1["b"] = 2.0;
     vapor::hdf5_write_file("hdf5_demo_map.h5", dict1);
-    vapor::hdf5_read_file("hdf5_demo_map.h5", dict2, alloc);
+    vapor::hdf5_read_file("hdf5_demo_map.h5", dict2);
 
     vapor::print(dict1);
     vapor::print("\n");

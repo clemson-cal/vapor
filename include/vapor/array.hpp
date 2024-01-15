@@ -57,40 +57,54 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<buffer_t>>>;
 template<uint D, class F, class E, class A,
     class T = typename array_t<D, F>::value_type,
     class R = typename A::allocation_t>
-array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator, int device=-1)
+array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    auto buffer = allocator.allocate(a.size() * sizeof(T), device);
+    auto buffer = allocator.allocate(a.size() * sizeof(T));
     auto data = buffer->template data<T>();
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, buffer);
-
-    auto f = [start, stride, data, a] HD (ivec_t<D> i)
+    executor.loop(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
     {
         data[dot(stride, i - start)] = a[i];
-    };
-    if (device == -1) {
-        executor.loop(a.space(), f);
-    }
-    else {
-        executor.loop_async(a.space(), f, device);
-    }
+    });
     return array(table, a.space(), buffer.get());
+}
+
+template<uint D, class F>
+auto cache(const array_t<D, F>& a)
+{
+    return cache(a, Runtime::executor(), Runtime::allocator());
 }
 
 
 
 
 /**
- * Convenience cache function using the global executor and allocator
- * 
+ * Execute an array using the given executor and allocator
+ *
  */
-template<uint D, class F,
+template<uint D, class F, class E, class A,
     class T = typename array_t<D, F>::value_type,
-    class R = typename default_allocator_t::allocation_t>
-array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a)
+    class R = typename A::allocation_t>
+array_t<D, lookup_t<D, T, R>> cache_async(const array_t<D, F>& a, int device, E& executor, A& allocator)
 {
-    return cache(a, Runtime::executor(), Runtime::allocator());
+    auto buffer = allocator.allocate(a.size() * sizeof(T), device);
+    auto data = buffer->template data<T>();
+    auto start = a.start();
+    auto stride = strides_row_major(a.shape());
+    auto table = lookup(start, stride, data, buffer);
+    executor.loop_async(a.space(), device, [start, stride, data, a] HD (ivec_t<D> i)
+    {
+        data[dot(stride, i - start)] = a[i];
+    });
+    return array(table, a.space(), buffer.get());
+}
+
+template<uint D, class F>
+auto cache_async(const array_t<D, F>& a, int device)
+{
+    return cache_async(a, device, Runtime::executor(), Runtime::allocator());
 }
 
 
@@ -188,22 +202,13 @@ struct array_t
     {
         return select(in(b.space(), space()), b, *this);
     }
-    template<class E, class A>
-	auto cache(E& executor, A& allocator, int device=-1) const
-	{
-        return vapor::cache(*this, executor, allocator, device);
-    }
 	auto cache() const
     {
         return vapor::cache(*this);
 	}
-    template<bool C, class E, class A>
-    auto cache_if(E& executor, A& allocator) const
+    auto cache_async(int device) const
     {
-        if constexpr (C)
-            return vapor::cache(*this, executor, allocator);
-        else 
-            return *this;
+        return vapor::cache_async(*this, device);
     }
     template<bool C>
     auto cache_if() const
@@ -399,7 +404,7 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
     if (! executor.has_async_reduction())
     {
-        auto b = a.cache(executor, allocator);
+        auto b = cache(a, executor, allocator);
         return executor.reduce(*b.buffer(), reducer, start, allocator);
     }
     else
@@ -411,7 +416,7 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
         for (int device = 0; device < num_devices; ++device)
         {
             auto subspace = a.space().subspace(num_devices, device);
-            subarrays[device] = a[subspace].cache(executor, allocator, device);
+            subarrays[device] = cache_async(a[subspace], device, executor, allocator);
         }
         for (int device = 0; device < num_devices; ++device)
         {

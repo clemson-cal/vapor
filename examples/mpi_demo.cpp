@@ -39,7 +39,7 @@ void exchange_boundary_data()
     auto is_loc = comm.subspace(is_glb);     // local index space
     auto is_exp = is_loc.expand(1);          // local index space, expanded to include guard zones
     auto ic_loc = indices(is_loc);
-    auto data_loc = ic_loc.cache(exec, alloc);
+    auto data_loc = cache(ic_loc, exec, alloc);
     auto data_exp = comm.expand(data_loc, uvec(1), exec, alloc);
 
     for (int rank = 0; rank < comm.size(); ++rank)

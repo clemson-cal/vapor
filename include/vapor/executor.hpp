@@ -81,7 +81,7 @@ struct cpu_executor_t
     }
 
     template<uint D, typename F>
-    void loop_async(index_space_t<D> space, F function, int) const
+    void loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
     }
@@ -157,7 +157,7 @@ struct omp_executor_t
     }
 
     template<uint D, typename F>
-    void loop_async(index_space_t<D> space, F function, int) const
+    void loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
     }
@@ -270,7 +270,7 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_async(index_space_t<1> space, F function, int device) const
+    void loop_async(index_space_t<1> space, int device, F function) const
     {
         cudaSetDevice(device);
         auto ni = space.di[0];
@@ -280,7 +280,7 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_async(index_space_t<2> space, F function, int device) const
+    void loop_async(index_space_t<2> space, int device, F function) const
     {
         cudaSetDevice(device);
         auto ni = space.di[0];
@@ -291,7 +291,7 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_async(index_space_t<3> space, F function, int device) const
+    void loop_async(index_space_t<3> space, int device, F function) const
     {
         cudaSetDevice(device);
         auto ni = space.di[0];

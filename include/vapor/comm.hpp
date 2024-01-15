@@ -296,7 +296,7 @@ public:
     auto expand(const array_t<D, F>& a, uvec_t<D> count, E& executor, A& allocator)
     {
         using T = typename array_t<D, F>::value_type;
-        auto result = zeros<T>(a.space().expand(count)).insert(a).cache(executor, allocator);
+        auto result = cache(zeros<T>(a.space().expand(count)).insert(a), executor, allocator);
         fill_halo(result, count);
         return result;
     }
@@ -323,7 +323,7 @@ public:
         assert(subspace(global_space) == a.space());
         using T = typename array_t<D, F>::value_type;
         auto gs = global_space;
-        auto result = zeros<T>(gs).insert(a).cache(executor, allocator);
+        auto result = cache(zeros<T>(gs).insert(a), executor, allocator);
 
         if (rank() == root)
         {

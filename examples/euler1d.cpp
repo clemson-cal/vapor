@@ -123,7 +123,7 @@ int main()
     auto ic = range(N);
     auto xc = (ic + 0.5) * dx;
     auto dt = dx * 0.3;
-    auto u = xc.map(initial_primitive).map(prim_to_cons).cache(exec, pool);
+    auto u = cache(xc.map(initial_primitive).map(prim_to_cons), exec, pool);
 
     auto interior_faces = index_space(ivec(1), uvec(N - 1));
     auto interior_cells = index_space(ivec(1), uvec(N - 2));
@@ -137,12 +137,12 @@ int main()
 
         for (int m = 0; m < fold; ++m)
         {
-            auto fhat = iv[interior_faces].map([u, riemann_hlle] HD (int i)
+            auto fhat = cache(iv[interior_faces].map([u, riemann_hlle] HD (int i)
             {
                 auto ul = u[i - 1];
                 auto ur = u[i];
                 return riemann_hlle(ul, ur);
-            }).cache(exec, pool);
+            }), exec, pool);
 
             auto du = ic[interior_cells].map([fhat, dt, dx] HD (int i)
             {
@@ -151,7 +151,7 @@ int main()
                 return (fp - fm) * (-dt / dx);
             });
 
-            u = (u.at(interior_cells) + du).cache(exec, pool);
+            u = cache(u.at(interior_cells) + du, exec, pool);
 
             t += dt;
             n += 1;
