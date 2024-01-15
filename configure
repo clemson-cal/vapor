@@ -213,21 +213,21 @@ def main():
         f.write(f"all: " + " ".join(modes))
         f.write("\n")
         f.write("\n")
-        for program in programs:
-            f.write(f"{program}: " + " ".join(f"{bin}/{program}_{mode}" for mode in modes))
+        for prog in programs:
+            f.write(f"{prog}: " + " ".join(f"{bin}/{prog}_{mode}" for mode in modes))
             f.write("\n")
         f.write("\n")
-        for program in programs:
+        for prog in programs:
             for mode in modes:
                 if skip_target(prog, mode, project):
                     continue
-                lib = get_lib(mode, **project["programs"][program], libs=system["libs"], lomp=system["lomp"])
-                cxx = get_cxx(mode, **project["programs"][program])
-                f.write(f"{bin}/{program}_{mode}: {build}/{program}_{mode}.o")
+                lib = get_lib(mode, **project["programs"][prog], libs=system["libs"], lomp=system["lomp"])
+                cxx = get_cxx(mode, **project["programs"][prog])
+                f.write(f"{bin}/{prog}_{mode}: {build}/{prog}_{mode}.o")
                 f.write("\n")
                 f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< {lib}")
                 f.write("\n")
-                f.write(f"{build}/{program}_{mode}.o: {src}/{program}.cpp")
+                f.write(f"{build}/{prog}_{mode}.o: {src}/{prog}.cpp")
                 f.write("\n")
                 f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< $(CXXFLAGS) $(CXXFLAGS_{mode.upper()}) -c")
                 f.write("\n")
