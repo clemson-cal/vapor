@@ -105,7 +105,6 @@ struct cpu_executor_t
     }
 
     auto has_async_reduction() const { return false; }
-    auto sync_devices(int device=-1) const { }
     auto num_devices() const { return 1; }
 };
 
@@ -182,7 +181,6 @@ struct omp_executor_t
     }
 
     auto has_async_reduction() const { return false; }
-    auto sync_devices(int device=-1) const { }
     auto num_devices() const { return 1; }
 };
 #endif // _OPENMP
@@ -323,7 +321,7 @@ struct gpu_executor_t
         auto results = allocator.allocate(sizeof(T));
         cub::DeviceReduce::Reduce(
             scratch->template data<T>(),
-            scratch->bytes(),
+            scratch_bytes,
             data,
             results->template data<T>(),
             size,
@@ -354,7 +352,7 @@ struct gpu_executor_t
         auto results = allocator.allocate(sizeof(T), buffer.device());
         cub::DeviceReduce::Reduce(
             scratch->template data<T>(),
-            scratch->bytes(),
+            scratch_bytes,
             data,
             results->template data<T>(),
             size,
@@ -362,22 +360,6 @@ struct gpu_executor_t
             start
         );
         return results;
-    }
-
-    void sync_devices(int device=-1) const
-    {
-        if (device == -1)
-        {
-            for (uint d = 0; d < _num_devices; ++d)
-            {
-                sync_devices(d);
-            }
-        }
-        else
-        {
-            cudaSetDevice(device);
-            cudaDeviceSynchronize();
-        }
     }
 
     auto has_async_reduction() const { return true; }
