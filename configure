@@ -116,7 +116,7 @@ clean:
 """.replace('    ', '\t').strip()
 
 
-def get_lib(mode, deps=list(), libs=list(), lomp="-lomp"):
+def get_lib(mode, deps=list(), libs=list(), lomp="-lomp", **kwargs):
     lib = [l for l in libs]
     if mode == "omp":
         lib.append(lomp)
@@ -125,7 +125,7 @@ def get_lib(mode, deps=list(), libs=list(), lomp="-lomp"):
     return ' '.join(lib)
 
 
-def get_cxx(mode, deps=list()):
+def get_cxx(mode, deps=list(), **kwargs):
     if "mpi" in deps:
         return "mpi"
     else:
@@ -133,7 +133,7 @@ def get_cxx(mode, deps=list()):
 
 
 def skip_target(prog, mode, project):
-    return mode == "gpu" and "mpi" in project["programs"][prog].get("deps", list())
+    return mode in project["programs"][prog].get("skip", list())
 
 
 def main():
@@ -143,6 +143,7 @@ def main():
     import io
 
     system = {
+        "modes": ["dbg", "cpu"],
         "libs": [],
         "omp_flags": "-Xpreprocessor -fopenmp",
         "lomp": "-lomp",
@@ -153,7 +154,6 @@ def main():
         "build": "build",
         "vapor": "vapor",
         "programs": {},
-        "default_modes": ["dbg", "cpu", "omp"]
     }
 
     try:
@@ -168,8 +168,8 @@ def main():
         exit()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--modes", nargs="*", choices=["dbg", "cpu", "omp", "gpu"], default=project["default_modes"])
     parser.add_argument("--stdout", action="store_true")
+    parser.add_argument("--modes", nargs="*", choices=["dbg", "cpu", "omp", "gpu"], default=system["modes"])
     args = parser.parse_args()
 
     modes = args.modes

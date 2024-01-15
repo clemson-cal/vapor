@@ -1,5 +1,6 @@
 {
 	"libs": ["-lstdc++fs"],
 	"omp_flags": "-fopenmp",
-	"lomp": "-lgomp"
+	"lomp": "-lgomp",
+	"modes": ["dbg", "cpu", "omp", "gpu"]
 }

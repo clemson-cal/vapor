@@ -14,13 +14,14 @@
 			"deps": ["hdf5"]
 		},
 		"mpi_demo": {
-			"deps": ["mpi"]
+			"deps": ["mpi"],
+			"skip": ["gpu"]
 		},
 		"sim_demo": {
 			"deps": ["hdf5"]
 		},
 		"srhd1d": {
+			"skip": ["gpu"]
 		}
-	},
-	"default_modes": ["dbg", "cpu", "omp"]
+	}
 }
