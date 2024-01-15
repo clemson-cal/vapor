@@ -39,6 +39,8 @@ namespace vapor {
 template <typename T>
 struct optional_t
 {
+    using value_type = T;
+
     HD bool has_value() const
     {
         return _has_value;

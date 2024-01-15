@@ -53,6 +53,16 @@ void use_optional()
     auto b = a.map([] HD (int a) { return a + 1; });
     printf("this optional should have a value: %d\n", b.has_value());
     printf("this optional should not: %d\n", none<int>().has_value());
+
+    try {
+        auto c = range(100).map([] HD (int i)
+        {
+            return i >= 90 ? none<int>() : some(i);
+        }).cache_unwrap();
+    }
+    catch (cache_unwrap_exception e) {
+        printf("%s (%d) -- [expect 10 failures]\n", e.what(), e.num_failures());
+    }
 }
 
 void make_cached_1d_array()

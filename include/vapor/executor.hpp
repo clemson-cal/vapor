@@ -86,6 +86,11 @@ struct cpu_executor_t
         assert(false);
     }
 
+    void atomic_add(int* counter, int delta) const
+    {
+        *counter += delta;
+    }
+
     template<typename T, class R, class A>
     auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
@@ -160,6 +165,12 @@ struct omp_executor_t
     void loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
+    }
+
+    void atomic_add(int* counter, int delta) const
+    {
+        #pragma omp atomic update
+        *counter += delta;
     }
 
     template<typename T, class R, class A>
@@ -302,6 +313,11 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
+    void atomic_add(int* counter, int delta) const
+    {
+        atomicAdd(counter, delta);
+    }
+
     template<typename T, class R, class A>
     auto _reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
@@ -337,26 +353,6 @@ struct gpu_executor_t
         auto results = _reduce(buffer, reducer, start, allocator);
         cudaDeviceSynchronize();
         return results->template read<T>(0);
-
-        // assert(buffer.managed());
-        // cudaSetDevice(0);
-        // auto scratch_bytes = size_t(0);
-        // auto data = buffer.template data<T>();
-        // auto size = buffer.template size<T>();
-        // cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
-        // auto scratch = allocator.allocate(scratch_bytes);
-        // auto results = allocator.allocate(sizeof(T));
-        // cub::DeviceReduce::Reduce(
-        //     scratch->template data<T>(),
-        //     scratch_bytes,
-        //     data,
-        //     results->template data<T>(),
-        //     size,
-        //     reducer,
-        //     start
-        // );
-        // cudaDeviceSynchronize();
-        // return results->template read<T>(0);
     }
 
     /**
@@ -372,25 +368,6 @@ struct gpu_executor_t
         assert(! buffer.managed());
         cudaSetDevice(buffer.device());
         return _reduce(buffer, reducer, start, allocator);
-
-        // assert(! buffer.managed());
-        // cudaSetDevice(buffer.device());
-        // auto scratch_bytes = size_t(0);
-        // auto data = buffer.template data<T>();
-        // auto size = buffer.template size<T>();
-        // cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
-        // auto scratch = allocator.allocate(scratch_bytes, buffer.device());
-        // auto results = allocator.allocate(sizeof(T), buffer.device());
-        // cub::DeviceReduce::Reduce(
-        //     scratch->template data<T>(),
-        //     scratch_bytes,
-        //     data,
-        //     results->template data<T>(),
-        //     size,
-        //     reducer,
-        //     start
-        // );
-        // return results;
     }
 
     auto has_async_reduction() const { return true; }

@@ -28,6 +28,7 @@ SOFTWARE.
 #pragma once
 #include <cstdlib>
 #include <cassert>
+#include <exception>
 #include <limits>
 #include "compat.hpp"
 #include "functional.hpp"
@@ -80,6 +81,27 @@ auto cache(const array_t<D, F>& a)
 
 
 
+class cache_unwrap_exception : public std::exception
+{
+public:
+    cache_unwrap_exception(int num_failures) : _num_failures(num_failures)
+    {
+    }
+    const char* what() const throw()
+    {
+        return "cache_unwrap encountered none array elements";
+    }
+    int num_failures() const
+    {
+        return _num_failures;
+    }
+private:
+    int _num_failures;
+};
+
+
+
+
 /**
  * Execute an array using the given executor and allocator
  *
@@ -105,6 +127,47 @@ template<uint D, class F>
 auto cache_async(const array_t<D, F>& a, int device)
 {
     return cache_async(a, device, Runtime::executor(), Runtime::allocator());
+}
+
+
+
+
+/**
+ * Execute an array using the given executor and allocator
+ *
+ */
+template<uint D, class F, class E, class A,
+    class T = typename array_t<D, F>::value_type::value_type,
+    class R = typename A::allocation_t>
+array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, A& allocator)
+{
+    auto failure_count_buf = allocator.allocate(sizeof(int));
+    auto failure_count_ptr = failure_count_buf->template data<int>();
+    auto buffer = allocator.allocate(a.size() * sizeof(T));
+    auto data = buffer->template data<T>();
+    auto start = a.start();
+    auto stride = strides_row_major(a.shape());
+    auto table = lookup(start, stride, data, buffer);
+    executor.loop(a.space(), [&executor, start, stride, data, a, failure_count_ptr] HD (ivec_t<D> i)
+    {
+        auto maybe = a[i];
+        if (maybe.has_value()) {
+            data[dot(stride, i - start)] = maybe.get();
+        }
+        else {
+            executor.atomic_add(failure_count_ptr, 1);
+        }
+    });
+    if (*failure_count_ptr > 0) {
+        throw cache_unwrap_exception(*failure_count_ptr);
+    }
+    return array(table, a.space(), buffer.get());
+}
+
+template<uint D, class F>
+auto cache_unwrap(const array_t<D, F>& a)
+{
+    return cache_unwrap(a,  Runtime::executor(), Runtime::allocator());
 }
 
 
@@ -209,6 +272,10 @@ struct array_t
     auto cache_async(int device) const
     {
         return vapor::cache_async(*this, device);
+    }
+    auto cache_unwrap() const
+    {
+        return vapor::cache_unwrap(*this);
     }
     template<bool C>
     auto cache_if() const
