@@ -172,7 +172,7 @@ struct omp_executor_t
         assert(false);
     }
 
-    static void atomic_add(int* counter, int delta) const
+    static void atomic_add(int* counter, int delta)
     {
         #pragma omp atomic update
         *counter += delta;
@@ -361,7 +361,7 @@ struct gpu_executor_t
     }
 
     /**
-     * This reduce operator returns immediately and returns a buffer
+     * This reduce operator returns a buffer, immediately
      * 
      * The buffer must be a device allocation, i.e. it cannot be managed.
      * Reading from the buffer via buffer_t::read will block until the

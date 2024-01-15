@@ -156,8 +156,7 @@ array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, 
     auto table = lookup(start, stride, data, buffer);
 
     if constexpr (is_device_executor<E>::value) {
-        #ifdef __CUDACC__
-        executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] __device__ (ivec_t<D> i)
+        executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] DEVICE (ivec_t<D> i)
         {
             auto maybe = a[i];
             if (maybe.has_value()) {
@@ -167,7 +166,6 @@ array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, 
                 E::atomic_add(failure_count_ptr, 1);
             }
         });
-        #endif
     }
     else {
         executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] (ivec_t<D> i)
