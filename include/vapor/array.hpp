@@ -81,27 +81,6 @@ auto cache(const array_t<D, F>& a)
 
 
 
-class cache_unwrap_exception : public std::exception
-{
-public:
-    cache_unwrap_exception(int num_failures) : _num_failures(num_failures)
-    {
-    }
-    const char* what() const throw()
-    {
-        return "cache_unwrap encountered none array elements";
-    }
-    int num_failures() const
-    {
-        return _num_failures;
-    }
-private:
-    int _num_failures;
-};
-
-
-
-
 /**
  * Execute an array using the given executor and allocator
  *
@@ -133,8 +112,35 @@ auto cache_async(const array_t<D, F>& a, int device)
 
 
 /**
- * Execute an array using the given executor and allocator
+ * An exception class indicating that an array of optionals contained a none
+ * 
+ */
+class cache_unwrap_exception : public std::exception
+{
+public:
+    cache_unwrap_exception(int num_failures) : _num_failures(num_failures)
+    {
+    }
+    const char* what() const throw()
+    {
+        return "cache_unwrap encountered none array elements";
+    }
+    int num_failures() const
+    {
+        return _num_failures;
+    }
+private:
+    int _num_failures;
+};
+
+
+
+
+/**
+ * Cache and unwrap the values in an array of optional value type
  *
+ * If any of the elements are none, this function throws
+ * cache_unwrap_exception, which will indicate the number of none elements.
  */
 template<uint D, class F, class E, class A,
     class T = typename array_t<D, F>::value_type::value_type,
@@ -148,23 +154,33 @@ array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, 
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, buffer);
-    executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] HD (ivec_t<D> i)
-    {
-        auto maybe = a[i];
-        if (maybe.has_value()) {
-            data[dot(stride, i - start)] = maybe.get();
-        }
-        else {
-            #ifdef __CUDA_ARCH__
-            atomicAdd(failure_count_ptr, 1);
-            #elif _OPENMP
-            #pragma omp atomic update
-            *failure_count_ptr += 1;
-            #else
-            *failure_count_ptr += 1;
-            #endif
-        }
-    });
+
+    if constexpr (is_device_executor<E>::value) {
+        #ifdef __CUDACC__
+        executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] __device__ (ivec_t<D> i)
+        {
+            auto maybe = a[i];
+            if (maybe.has_value()) {
+                data[dot(stride, i - start)] = maybe.get();
+            }
+            else {
+                E::atomic_add(failure_count_ptr, 1);
+            }
+        });
+        #endif
+    }
+    else {
+        executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] (ivec_t<D> i)
+        {
+            auto maybe = a[i];
+            if (maybe.has_value()) {
+                data[dot(stride, i - start)] = maybe.get();
+            }
+            else {
+                E::atomic_add(failure_count_ptr, 1);
+            }
+        });
+    }
     if (*failure_count_ptr > 0) {
         throw cache_unwrap_exception(*failure_count_ptr);
     }

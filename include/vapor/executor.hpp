@@ -28,6 +28,7 @@ SOFTWARE.
 #pragma once
 #include <cstdlib>
 #include <stdexcept>
+#include <type_traits>
 #ifdef __CUDACC__
 #include <cub/cub.cuh>
 #endif
@@ -35,6 +36,10 @@ SOFTWARE.
 #include "memory.hpp"
 
 namespace vapor {
+
+
+template <typename>
+struct is_device_executor : std::false_type {};
 
 
 
@@ -86,7 +91,7 @@ struct cpu_executor_t
         assert(false);
     }
 
-    void atomic_add(int* counter, int delta) const
+    static void atomic_add(int* counter, int delta)
     {
         *counter += delta;
     }
@@ -167,7 +172,7 @@ struct omp_executor_t
         assert(false);
     }
 
-    void atomic_add(int* counter, int delta) const
+    static void atomic_add(int* counter, int delta) const
     {
         #pragma omp atomic update
         *counter += delta;
@@ -313,7 +318,7 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
-    __device__ void atomic_add(int* counter, int delta) const
+    __device__ static void atomic_add(int* counter, int delta) const
     {
         atomicAdd(counter, delta);
     }
@@ -375,6 +380,11 @@ struct gpu_executor_t
 
     int _num_devices;
 };
+
+template<>
+struct is_device_executor<gpu_executor_t> : std::true_type {};
+
+
 #endif // __CUDACC__
 
 
