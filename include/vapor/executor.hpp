@@ -302,48 +302,9 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
-    /**
-     * This reduce operator blocks and returns an item of type T
-     * 
-     * The data pointer can be managed memory or device memory. The reduction
-     * is carried out on device zero.
-     */
     template<typename T, class R, class A>
-    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
+    auto _reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
-        assert(buffer.managed());
-        cudaSetDevice(0);
-        auto scratch_bytes = size_t(0);
-        auto data = buffer.template data<T>();
-        auto size = buffer.template size<T>();
-        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
-        auto scratch = allocator.allocate(scratch_bytes);
-        auto results = allocator.allocate(sizeof(T));
-        cub::DeviceReduce::Reduce(
-            scratch->template data<T>(),
-            scratch_bytes,
-            data,
-            results->template data<T>(),
-            size,
-            reducer,
-            start
-        );
-        cudaDeviceSynchronize();
-        return results->template read<T>(0);
-    }
-
-    /**
-     * This reduce operator returns immediately and returns a buffer
-     * 
-     * The buffer must be a device allocation, i.e. it cannot be managed.
-     * Reading from the buffer via buffer_t::read will block until the
-     * reduction is completed.
-     */
-    template<typename T, class R, class A>
-    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        assert(! buffer.managed());
-        cudaSetDevice(buffer.device());
         auto scratch_bytes = size_t(0);
         auto data = buffer.template data<T>();
         auto size = buffer.template size<T>();
@@ -360,6 +321,76 @@ struct gpu_executor_t
             start
         );
         return results;
+    }
+
+    /**
+     * This reduce operator blocks and returns an item of type T
+     * 
+     * The data pointer can be managed memory or device memory. The reduction
+     * is carried out on device zero.
+     */
+    template<typename T, class R, class A>
+    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
+    {
+        assert(buffer.managed());
+        cudaSetDevice(0);
+        auto results = _reduce(buffer, reducer, start, allocator);
+        cudaDeviceSynchronize();
+        return results->template read<T>(0);
+
+        // assert(buffer.managed());
+        // cudaSetDevice(0);
+        // auto scratch_bytes = size_t(0);
+        // auto data = buffer.template data<T>();
+        // auto size = buffer.template size<T>();
+        // cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        // auto scratch = allocator.allocate(scratch_bytes);
+        // auto results = allocator.allocate(sizeof(T));
+        // cub::DeviceReduce::Reduce(
+        //     scratch->template data<T>(),
+        //     scratch_bytes,
+        //     data,
+        //     results->template data<T>(),
+        //     size,
+        //     reducer,
+        //     start
+        // );
+        // cudaDeviceSynchronize();
+        // return results->template read<T>(0);
+    }
+
+    /**
+     * This reduce operator returns immediately and returns a buffer
+     * 
+     * The buffer must be a device allocation, i.e. it cannot be managed.
+     * Reading from the buffer via buffer_t::read will block until the
+     * reduction is completed.
+     */
+    template<typename T, class R, class A>
+    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
+    {
+        assert(! buffer.managed());
+        cudaSetDevice(buffer.device());
+        return _reduce(buffer, reducer, start, allocator);
+
+        // assert(! buffer.managed());
+        // cudaSetDevice(buffer.device());
+        // auto scratch_bytes = size_t(0);
+        // auto data = buffer.template data<T>();
+        // auto size = buffer.template size<T>();
+        // cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
+        // auto scratch = allocator.allocate(scratch_bytes, buffer.device());
+        // auto results = allocator.allocate(sizeof(T), buffer.device());
+        // cub::DeviceReduce::Reduce(
+        //     scratch->template data<T>(),
+        //     scratch_bytes,
+        //     data,
+        //     results->template data<T>(),
+        //     size,
+        //     reducer,
+        //     start
+        // );
+        // return results;
     }
 
     auto has_async_reduction() const { return true; }

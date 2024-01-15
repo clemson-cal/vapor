@@ -92,6 +92,14 @@ public:
     {
         return _device == -1;
     }
+    /**
+     * Allocate or re-allocate this buffer
+     * 
+     * The device argument is used to indicate whether the buffer is to be
+     * managed (device = -1, the default) or explicitly allocated on a
+     * device.
+     * 
+     */
     void allocate(size_t bytes, int device=-1)
     {
         if (bytes > _bytes || device != _device) {
@@ -107,6 +115,7 @@ public:
                 cudaMalloc(&_data, _bytes);
             }
             #else
+            assert(device == -1);
             _data = malloc(_bytes);
             #endif
         }
@@ -131,6 +140,19 @@ public:
     {
         return (T*)_data;
     }
+    /**
+     * Read a value of a concrete type from the buffer
+     * 
+     * Important: this function is blocking when the buffer is explicitly
+     * allocated on a device, as it calls the cudaMemcpy, which waits for
+     * the completion of kernel launches on the current stream.
+     * 
+     * When the buffer is managed, this function directly dereferencing a
+     * pointer, and returns immediately. When the buffer is managed, it is
+     * therefore the responsibility of calling code to ensure the completion
+     * of any preceding kernel launch which could write to the memory.
+     * 
+     */
     template <typename T> T read(size_t i) const
     {
         #ifdef __CUDACC__
