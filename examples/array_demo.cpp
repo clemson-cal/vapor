@@ -60,7 +60,7 @@ void use_optional()
             return i >= 90 ? none<int>() : some(i);
         }).cache_unwrap();
     }
-    catch (cache_unwrap_exception e) {
+    catch (const cache_unwrap_exception& e) {
         printf("%s (%d) -- [expect 10 failures]\n", e.what(), e.num_failures());
     }
 }
