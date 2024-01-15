@@ -103,7 +103,7 @@ struct cpu_executor_t
         auto size = buffer.template size<T>();
         auto result = start;
         for (size_t i = 0; i < size; ++i)
-            result = reducer(result, ((T*)data)[i]);
+            result = reducer(result, data[i]);
         return result;
     }
 
@@ -185,7 +185,7 @@ struct omp_executor_t
         auto size = buffer.template size<T>();
         auto result = start;
         for (size_t i = 0; i < size; ++i)
-            result = reducer(result, ((T*)data)[i]);
+            result = reducer(result, data[i]);
         return result;
     }
 
