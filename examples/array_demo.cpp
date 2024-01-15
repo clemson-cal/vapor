@@ -33,6 +33,7 @@ SOFTWARE.
 #include "vapor/memory.hpp"
 #include "vapor/print.hpp"
 #include "vapor/vec.hpp"
+#include "vapor/optional.hpp"
 
 using namespace vapor;
 
@@ -44,6 +45,14 @@ void type_constructors()
     printf("construct some basic types...\n");
     auto v = vec(0.0, 1.0, 2.0);
     printf("v = %f %f %f\n", v[0], v[1], v[2]);
+}
+
+void use_optional()
+{
+    auto a = some(10);
+    auto b = a.map([] HD (int a) { return a + 1; });
+    printf("this optional should have a value: %d\n", b.has_value());
+    printf("this optional should not: %d\n", none<int>().has_value());
 }
 
 void make_cached_1d_array()
@@ -160,6 +169,7 @@ void decompose_index_space()
 int main()
 {
     type_constructors();
+    use_optional();
     make_cached_1d_array();
     map_subset();
     array_reductions();
