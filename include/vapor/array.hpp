@@ -147,40 +147,24 @@ template<uint D, class F, class E, class A,
     class R = typename A::allocation_t>
 array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    auto failure_count_buf = allocator.allocate(sizeof(int));
-    auto failure_count_ptr = failure_count_buf->template data<int>();
     auto buffer = allocator.allocate(a.size() * sizeof(T));
     auto data = buffer->template data<T>();
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, buffer);
-
-    if constexpr (is_device_executor<E>::value) {
-        executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] DEVICE (ivec_t<D> i)
-        {
-            auto maybe = a[i];
-            if (maybe.has_value()) {
-                data[dot(stride, i - start)] = maybe.get();
-            }
-            else {
-                E::atomic_add(failure_count_ptr, 1);
-            }
-        });
-    }
-    else {
-        executor.loop(a.space(), [start, stride, data, a, failure_count_ptr] (ivec_t<D> i)
-        {
-            auto maybe = a[i];
-            if (maybe.has_value()) {
-                data[dot(stride, i - start)] = maybe.get();
-            }
-            else {
-                E::atomic_add(failure_count_ptr, 1);
-            }
-        });
-    }
-    if (*failure_count_ptr > 0) {
-        throw cache_unwrap_exception(*failure_count_ptr);
+    auto result = executor.loop_accumulate(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
+    {
+        auto maybe = a[i];
+        if (maybe.has_value()) {
+            data[dot(stride, i - start)] = maybe.get();
+            return 0;
+        }
+        else {
+            return 1;
+        }
+    }, allocator);
+    if (result > 0) {
+        throw cache_unwrap_exception(result);
     }
     return array(table, a.space(), buffer.get());
 }

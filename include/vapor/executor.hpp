@@ -85,15 +85,22 @@ struct cpu_executor_t
                     function(vec(i, j, k));
     }
 
+    template<uint D, typename F, class A>
+    int loop_accumulate(index_space_t<D> space, F function, A&) const
+    {
+        auto c = int();
+        auto g = [function, &c] (ivec_t<D> i)
+        {
+            c += function(i);
+        };
+        loop(space, g);
+        return c;
+    }
+
     template<uint D, typename F>
     void loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
-    }
-
-    static void atomic_add(int* counter, int delta)
-    {
-        *counter += delta;
     }
 
     template<typename T, class R, class A>
@@ -166,16 +173,23 @@ struct omp_executor_t
                     function(vec(i, j, k));
     }
 
+    template<uint D, typename F, class A>
+    int loop_accumulate(index_space_t<D> space, F function, A&) const
+    {
+        auto c = int();
+        auto g = [function, &c] (ivec_t<D> i)
+        {
+            #pragma omp atomic update
+            c += function(i);
+        };
+        loop(space, g);
+        return c;
+    }
+
     template<uint D, typename F>
     void loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
-    }
-
-    static void atomic_add(int* counter, int delta)
-    {
-        #pragma omp atomic update
-        *counter += delta;
     }
 
     template<typename T, class R, class A>
@@ -318,9 +332,19 @@ struct gpu_executor_t
         gpu_loop<<<nb, bs>>>(space, function);
     }
 
-    __device__ static void atomic_add(int* counter, int delta)
+    template<uint D, typename F, class A>
+    int loop_accumulate(index_space_t<D> space, F function, A& allocator) const
     {
-        atomicAdd(counter, delta);
+        auto c_buf = allocator.allocate(sizeof(int));
+        auto c_ptr = c_buf->data();
+        auto g = [function, c_ptr] HD (ivec_t<D> i)
+        {
+            // TODO: check if it's faster to branch and call the atomic update
+            // only if function returns non-zero.
+            atomicAdd(counter, function(i));
+        };
+        loop(space, g);
+        return *c_ptr;
     }
 
     template<typename T, class R, class A>
