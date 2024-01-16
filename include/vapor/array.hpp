@@ -59,8 +59,8 @@ struct lookup_t
     {
         return data[dot(stride, i - start)];
     }
-    template<class F, class E>
-    auto load(const array_t<D, F>& a, E& executor)
+    template<class F, class E, typename Future = typename E::loop_future_t>
+    Future load(const array_t<D, F>& a, E& executor)
     {
         return executor.loop(a.space(), [*this, a] HD (ivec_t<D> i)
         {

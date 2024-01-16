@@ -61,9 +61,16 @@ auto future(F f)
     return future_t<F>{f};
 }
 
+struct ready_t
+{
+    void operator()() const
+    {
+    }
+};
+
 static inline auto ready()
 {
-    return future([] {});
+    return future(ready_t{});
 }
 
 template <typename T>
@@ -73,41 +80,21 @@ auto just(T val)
 }
 
 #ifdef __CUDACC__
-static inline auto device_synchronize(int device)
+struct device_synchronize_t
 {
-    return future([device] () {
+    void operator() const
+    {
         cudaSetDevice(device);
         cudaDeviceSynchronize();
-    });
+    }
+    int device;
+};
+
+static inline auto device_synchronize(int device)
+{
+    return future(device_synchronize_t{device});
 }
 #endif
-
-
-
-// template<typename T>
-// struct read_from_device_buffer_future_t
-// {
-//     using value_type = T;
-//     value_type get() const
-//     {
-//         return buffer_ptr->template read<T>();
-//     }
-//     ref_counted_ptr_t<buffer_t> buffer_ptr;
-//     int device;
-// };
-
-
-// template<class F, class G>
-// struct mapped_future_t
-// {
-//     using value_type = std::invoke_result_t<G, typename F::value_type>;
-//     value_type get() const
-//     {
-//         return function(upstream.get());
-//     }
-//     F upstream;
-//     G function;
-// };
 
 } // namespace future
 } // namespace vapor

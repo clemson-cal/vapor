@@ -43,6 +43,8 @@ namespace vapor {
 
 struct cpu_executor_t
 {
+    using loop_future_t = future::future_t<future::ready_t>;
+
     template<typename F>
     auto loop(index_space_t<1> space, F function) const
     {
@@ -131,6 +133,8 @@ struct cpu_executor_t
 #ifdef _OPENMP
 struct omp_executor_t
 {
+    using loop_future_t = future::future_t<future::ready_t>;
+
     template<typename F>
     auto loop(index_space_t<1> space, F function) const
     {
@@ -265,6 +269,8 @@ static const dim3 THREAD_BLOCK_SIZE_3D(4, 4, 4);
 
 struct gpu_executor_t
 {
+    using loop_future_t = future::future_t<future::device_synchronize_t>;
+
     gpu_executor_t()
     {
         int num_devices_available;
