@@ -34,10 +34,9 @@ SOFTWARE.
 #endif
 #include "index_space.hpp"
 #include "memory.hpp"
+#include "future.hpp"
 
 namespace vapor {
-
-
 
 
 
@@ -45,17 +44,18 @@ namespace vapor {
 struct cpu_executor_t
 {
     template<typename F>
-    void loop(index_space_t<1> space, F function) const
+    auto loop(index_space_t<1> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
 
         for (int i = i0; i < i1; ++i)
             function(vec(i));
+        return future::ready();
     }
 
     template<typename F>
-    void loop(index_space_t<2> space, F function) const
+    auto loop(index_space_t<2> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -65,10 +65,11 @@ struct cpu_executor_t
         for (int i = i0; i < i1; ++i)
             for (int j = j0; j < j1; ++j)
                 function(vec(i, j));
+        return future::ready();
     }
 
     template<typename F>
-    void loop(index_space_t<3> space, F function) const
+    auto loop(index_space_t<3> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -81,6 +82,7 @@ struct cpu_executor_t
             for (int j = j0; j < j1; ++j)
                 for (int k = k0; k < k1; ++k)
                     function(vec(i, j, k));
+        return future::ready();
     }
 
     template<uint D, typename F, class A>
@@ -96,7 +98,7 @@ struct cpu_executor_t
     }
 
     template<uint D, typename F>
-    void loop_async(index_space_t<D> space, int, F function) const
+    auto loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
     }
@@ -130,7 +132,7 @@ struct cpu_executor_t
 struct omp_executor_t
 {
     template<typename F>
-    void loop(index_space_t<1> space, F function) const
+    auto loop(index_space_t<1> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -138,10 +140,11 @@ struct omp_executor_t
         #pragma omp parallel for
         for (int i = i0; i < i1; ++i)
             function(vec(i));
+        return future::ready();
     }
 
     template<typename F>
-    void loop(index_space_t<2> space, F function) const
+    auto loop(index_space_t<2> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -152,10 +155,11 @@ struct omp_executor_t
         for (int i = i0; i < i1; ++i)
             for (int j = j0; j < j1; ++j)
                 function(vec(i, j));
+        return future::ready();
     }
 
     template<typename F>
-    void loop(index_space_t<3> space, F function) const
+    auto loop(index_space_t<3> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -169,6 +173,7 @@ struct omp_executor_t
             for (int j = j0; j < j1; ++j)
                 for (int k = k0; k < k1; ++k)
                     function(vec(i, j, k));
+        return future::ready();
     }
 
     template<uint D, typename F, class A>
@@ -298,17 +303,18 @@ struct gpu_executor_t
     }
 
     template<typename F>
-    void loop_async(index_space_t<1> space, int device, F function) const
+    auto loop_async(index_space_t<1> space, int device, F function) const
     {
         cudaSetDevice(device);
         auto ni = space.di[0];
         auto bs = THREAD_BLOCK_SIZE_1D;
         auto nb = dim3((ni + bs.x - 1) / bs.x);
         gpu_loop<<<nb, bs>>>(space, function);
+        return device_synchronize_future_t{device};
     }
 
     template<typename F>
-    void loop_async(index_space_t<2> space, int device, F function) const
+    auto loop_async(index_space_t<2> space, int device, F function) const
     {
         cudaSetDevice(device);
         auto ni = space.di[0];
@@ -316,10 +322,11 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_2D;
         auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
         gpu_loop<<<nb, bs>>>(space, function);
+        return device_synchronize_future_t{device};
     }
 
     template<typename F>
-    void loop_async(index_space_t<3> space, int device, F function) const
+    auto loop_async(index_space_t<3> space, int device, F function) const
     {
         cudaSetDevice(device);
         auto ni = space.di[0];
@@ -328,6 +335,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_3D;
         auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
         gpu_loop<<<nb, bs>>>(space, function);
+        return device_synchronize_future_t{device};
     }
 
     template<uint D, typename F, class A>
@@ -337,8 +345,6 @@ struct gpu_executor_t
         auto c_ptr = c_buf->template data<int>();
         auto g = [function, c_ptr] HD (ivec_t<D> i)
         {
-            // TODO: check if it's faster to branch and call the atomic update
-            // only if function returns non-zero.
             atomicAdd(c_ptr, function(i));
         };
         loop(space, g);
