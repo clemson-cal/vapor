@@ -87,27 +87,6 @@ struct take_nth_t
 /**
  * 
  */
-template<uint D, typename T, class R>
-struct lookup_t
-{
-    HD auto operator()(ivec_t<D> i) const { return data[dot(stride, i - start)]; }
-    ivec_t<D> start;
-    uvec_t<D> stride;
-    T* data;
-    R resource;
-};
-template<uint D, typename T, class R>
-auto lookup(ivec_t<D> start, uvec_t<D> stride, T* data, R resource)
-{
-    return lookup_t<D, T, R>{start, stride, data, resource};
-}
-
-
-
-
-/**
- * 
- */
 template<uint D, class F, class G>
 struct compose_t
 {

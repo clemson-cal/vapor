@@ -25,24 +25,40 @@ SOFTWARE.
 #include "compat.hpp"
 
 namespace vapor {
-
-template <class G>
-struct future_t
-{
-    using value_type = std::invoke_result_t<G>;
-    value_type get() const
-    {
-        return g();
-    }
-    G g;
-};
-
 namespace future {
 
-template <class G>
-auto future(G g)
+
+
+
+template <class F> auto future(F);
+
+
+
+
+template <class F>
+struct future_t
 {
-    return future_t<G>{g};
+    using value_type = std::invoke_result_t<F>;
+    auto get() const
+    {
+        return f();
+    }
+    template <class G>
+    auto map(G g) const
+    {
+        if constexpr (std::is_void_v<value_type>) {
+            return future([*this, g] () { f(); return g(); });            
+        } else {
+            return future([*this, g] () { return g(f()); });
+        }
+    }
+    F f;
+};
+
+template <class F>
+auto future(F f)
+{
+    return future_t<F>{f};
 }
 
 static inline auto ready()
@@ -57,7 +73,7 @@ auto just(T val)
 }
 
 #ifdef __CUDACC__
-auto device_synchronize(int device)
+static inline auto device_synchronize(int device)
 {
     return future([device] () {
         cudaSetDevice(device);
@@ -66,17 +82,6 @@ auto device_synchronize(int device)
 }
 #endif
 
-
-// template<typename T>
-// struct immediate_future_t
-// {
-//     using value_type = T;
-//     value_type get() const
-//     {
-//         return val;
-//     }
-//     T val;
-// };
 
 
 // template<typename T>

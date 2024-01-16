@@ -75,6 +75,9 @@ template<typename U, uint S> struct hdf5_repr<vapor::vec_t<U, S>>
 /**
  * HDF5 representation of vapor::memory_backed_array_t
  * 
+ * WARNING: Arrays with index spaces not starting at the origin should not be
+ * written to HDF5, because the start index is not (yet) written to the HDF5
+ * file.
  */
 template<uint D, typename U, template<typename> typename P>
 struct hdf5_repr<memory_backed_array_t<D, U, P>>
@@ -102,26 +105,24 @@ struct hdf5_repr<memory_backed_array_t<D, U, P>>
     {
         return hdf5_repr<U>::type(U());
     }
-    template<class A> static void allocate(T& val, hid_t space, hid_t type, A& allocator)
+    template<class A> static void allocate(T& val, hid_t dspace, hid_t type, A& allocator)
     {
-        if (H5Sget_simple_extent_ndims(space) != D)
+        if (H5Sget_simple_extent_ndims(dspace) != D)
         {
             throw std::runtime_error("array in file has wrong number of dimensions");
         }
         hsize_t hdims[D];
-        H5Sget_simple_extent_dims(space, hdims, nullptr);
+        H5Sget_simple_extent_dims(dspace, hdims, nullptr);
         auto shape = uvec_t<D>{};
 
         for (uint n = 0; n < D; ++n)
         {
             shape[n] = hdims[n];
         }
-        auto start = zeros_ivec<D>();
-        auto stride = strides_row_major(shape);
-        auto buffer = allocator.allocate(product(shape) * sizeof(U));
-        auto data = buffer->template data<U>();
-        auto table = lookup(start, stride, data, buffer);
-        val = array(table, index_space(start, shape), buffer.get());
+        auto space = index_space(shape);
+        auto buffer = allocator.allocate(space.size() * sizeof(U));
+        auto table = lookup<U>(space, buffer);
+        val = array(table, space, buffer.get());
     }
 };
 
