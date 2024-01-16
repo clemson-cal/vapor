@@ -336,12 +336,12 @@ struct gpu_executor_t
     int loop_accumulate(index_space_t<D> space, F function, A& allocator) const
     {
         auto c_buf = allocator.allocate(sizeof(int));
-        auto c_ptr = c_buf->data();
+        auto c_ptr = c_buf->template data<int>();
         auto g = [function, c_ptr] HD (ivec_t<D> i)
         {
             // TODO: check if it's faster to branch and call the atomic update
             // only if function returns non-zero.
-            atomicAdd(counter, function(i));
+            atomicAdd(c_ptr, function(i));
         };
         loop(space, g);
         return *c_ptr;
