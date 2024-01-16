@@ -152,6 +152,10 @@ public:
      * therefore the responsibility of calling code to ensure the completion
      * of any preceding kernel launch which could write to the memory.
      * 
+     * The reason this function works this way, is that if the buffer is
+     * managed, multiple devices could have in-flight kernels writing to this
+     * memory, so it's not clear which subset of the devices might need to be
+     * sync'd before the pointer is dereferenced.
      */
     template <typename T> T read(size_t i) const
     {

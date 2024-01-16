@@ -38,8 +38,6 @@ SOFTWARE.
 namespace vapor {
 
 
-template <typename>
-struct is_device_executor : std::false_type {};
 
 
 
