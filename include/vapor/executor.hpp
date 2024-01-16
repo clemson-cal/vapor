@@ -294,7 +294,7 @@ struct gpu_executor_t
     }
 
     template<uint D, typename F>
-    void loop(index_space_t<D> space, F function) const
+    auto loop(index_space_t<D> space, F function) const
     {
         for (int device = 0; device < _num_devices; ++device)
         {
@@ -306,6 +306,7 @@ struct gpu_executor_t
             cudaSetDevice(device);
             cudaDeviceSynchronize();
         }
+        return future::device_synchronize(0);
     }
 
     template<typename F>

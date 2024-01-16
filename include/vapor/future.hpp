@@ -82,7 +82,7 @@ auto just(T val)
 #ifdef __CUDACC__
 struct device_synchronize_t
 {
-    void operator() const
+    void operator()() const
     {
         cudaSetDevice(device);
         cudaDeviceSynchronize();
