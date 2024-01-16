@@ -51,6 +51,22 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<buffer_t>>>;
 
 
 
+template<uint D, class F, class E, class T, class R>
+void execute(const array_t<D, F>& a, E& executor, lookup_t<D, T, R>& table)
+{
+    auto buffer = table.resource;
+    auto data = buffer->template data<T>();
+    auto start = a.start();
+    auto stride = strides_row_major(a.shape());
+    executor.loop(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
+    {
+        data[dot(stride, i - start)] = a[i];
+    });
+}
+
+
+
+
 /**
  * Execute an array using the given executor and allocator
  *
@@ -58,17 +74,15 @@ using memory_backed_array_t = array_t<D, lookup_t<D, T, P<buffer_t>>>;
 template<uint D, class F, class E, class A,
     class T = typename array_t<D, F>::value_type,
     class R = typename A::allocation_t>
-array_t<D, lookup_t<D, T, R>> cache(const array_t<D, F>& a, E& executor, A& allocator)
+//array_t<D, lookup_t<D, T, R>>
+auto cache(const array_t<D, F>& a, E& executor, A& allocator)
 {
     auto buffer = allocator.allocate(a.size() * sizeof(T));
     auto data = buffer->template data<T>();
     auto start = a.start();
     auto stride = strides_row_major(a.shape());
     auto table = lookup(start, stride, data, buffer);
-    executor.loop(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
-    {
-        data[dot(stride, i - start)] = a[i];
-    });
+    execute(a, executor, table);
     return array(table, a.space(), buffer.get());
 }
 

@@ -310,7 +310,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_1D;
         auto nb = dim3((ni + bs.x - 1) / bs.x);
         gpu_loop<<<nb, bs>>>(space, function);
-        return device_synchronize_future_t{device};
+        return future::device_synchronize(device);
     }
 
     template<typename F>
@@ -322,7 +322,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_2D;
         auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
         gpu_loop<<<nb, bs>>>(space, function);
-        return device_synchronize_future_t{device};
+        return future::device_synchronize(device);
     }
 
     template<typename F>
@@ -335,7 +335,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_3D;
         auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
         gpu_loop<<<nb, bs>>>(space, function);
-        return device_synchronize_future_t{device};
+        return future::device_synchronize(device);
     }
 
     template<uint D, typename F, class A>
@@ -408,11 +408,6 @@ struct gpu_executor_t
 
     int _num_devices;
 };
-
-template<>
-struct is_device_executor<gpu_executor_t> : std::true_type {};
-
-
 #endif // __CUDACC__
 
 
