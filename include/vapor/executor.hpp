@@ -282,8 +282,29 @@ static const dim3 THREAD_BLOCK_SIZE_3D(4, 4, 4);
 
 
 
+template<typename T, class A>
+struct read_from_buffer_t
+{
+    using BufferHolder = typename A::allocation_t;
+    auto operator()() const
+    {
+        return buffer_holder->template read<T>(0);
+    }
+    BufferHolder buffer_holder;
+};
+
+
+
+
+
 struct gpu_executor_t
 {
+    template <typename T, class A>
+    using reduce_future_t = future::future_t<read_from_buffer_t<T, A>>;
+
+    template <class A>
+    using loop_accumulate_future_t = future::future_t<read_from_buffer_t<int , A>>;
+
     gpu_executor_t()
     {
         int num_devices_available;
@@ -359,7 +380,7 @@ struct gpu_executor_t
     }
 
     template<uint D, typename F, class A>
-    int loop_accumulate(index_space_t<D> space, F function, A& allocator) const
+    loop_accumulate_future_t<A> loop_accumulate(index_space_t<D> space, F function, A& allocator) const
     {
         auto c_buf = allocator.allocate(sizeof(int));
         auto c_ptr = c_buf->template data<int>();
@@ -368,7 +389,7 @@ struct gpu_executor_t
             atomicAdd(c_ptr, function(i));
         };
         loop(space, g);
-        return *c_ptr;
+        return future::future(read_from_buffer_t<int, A>{c_buf});
     }
 
     template<typename T, class R, class A>
@@ -404,8 +425,7 @@ struct gpu_executor_t
         assert(buffer.managed());
         cudaSetDevice(0);
         auto results = _reduce(buffer, reducer, start, allocator);
-        cudaDeviceSynchronize();
-        return results->template read<T>(0);
+        return future::future(read_from_buffer_t<T, A>{results});
     }
 
     /**
@@ -420,7 +440,8 @@ struct gpu_executor_t
     {
         assert(! buffer.managed());
         cudaSetDevice(buffer.device());
-        return _reduce(buffer, reducer, start, allocator);
+        auto results = _reduce(buffer, reducer, start, allocator);
+        return future::future(read_from_buffer_t<T, A>{results});
     }
 
     auto num_devices() const { return _num_devices; }

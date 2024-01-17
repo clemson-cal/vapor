@@ -97,7 +97,7 @@ CXXFLAGS = -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
 CXXFLAGS_DBG = -Wall -O0 -g -D VAPOR_DEBUG
 CXXFLAGS_CPU = -Ofast
 CXXFLAGS_OMP = -Ofast {omp_flags}
-CXXFLAGS_GPU = -O3 -x cu --extended-lambda
+CXXFLAGS_GPU = -O3 -x cu --extended-lambda -ccbin={nvcc_ccbin}
 """.strip()
 
 
@@ -147,6 +147,7 @@ def main():
         "libs": [],
         "omp_flags": "-Xpreprocessor -fopenmp",
         "lomp": "-lomp",
+        "nvcc_ccbin": "c++"
     }
     project = {
         "src": "src",
@@ -169,10 +170,9 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--stdout", action="store_true")
-    parser.add_argument("--modes", nargs="*", choices=["dbg", "cpu", "omp", "gpu"], default=system["modes"])
     args = parser.parse_args()
 
-    modes = args.modes
+    modes = system["modes"]
     vapor = project["vapor"]
     src = project["src"]
     bin = project["bin"]

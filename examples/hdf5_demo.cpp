@@ -28,9 +28,9 @@ SOFTWARE.
 #define VAPOR_STD_STRING
 #define VAPOR_STD_VECTOR
 #define VAPOR_STD_MAP
-#define VAPOR_USE_SHARED_PTR_ALLOCATOR
 #include "vapor/print.hpp"
 #include "vapor/executor.hpp"
+#include "vapor/memory.hpp"
 #include "hdf5/hdf5_array.hpp"
 #include "hdf5/hdf5_map.hpp"
 #include "hdf5/hdf5_native.hpp"
@@ -48,7 +48,7 @@ struct config_t
     bool c;
     std::string d;
     vapor::dvec_t<3> e;
-    vapor::memory_backed_array_t<1, float, std::shared_ptr> f;
+    vapor::memory_backed_array_t<1, float, vapor::ref_counted_ptr_t> f;
     std::vector<int> g;
 };
 VISITABLE_STRUCT(config_t, a, b, c, d, e, f, g);
