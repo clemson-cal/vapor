@@ -20,6 +20,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ================================================================================
+
+
+
+
+Executors provide four functions:
+
+loop:       (index_space, function) -> future<void>
+loop_async: (index_space, function, device) -> none
+loop_accum: (index_space, function, allocator) -> future<int>
+reduce:     (buffer, reducer: (T, T) -> T, start: T, allocator) -> future<T>
+
+The reason that loop_async returns nothing, is that the buffer is either ready
+immediately (CPU executor), or it was allocated on a device, and any
+subsequent kernel launches to the same device would be ordered by the CUDA
+runtime.
 */
 
 
@@ -43,11 +58,11 @@ namespace vapor {
 
 struct cpu_executor_t
 {
-    using loop_future_t = future::future_t<future::ready_t>;
-    using loop_accumulate_future_t = future::future_t<future::just_t<int>>;
+    template <typename T, class A>
+    using reduce_future_t = future::future_t<future::just_t<T>>;
 
     template<typename F>
-    loop_future_t loop(index_space_t<1> space, F function) const
+    auto loop(index_space_t<1> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -58,7 +73,7 @@ struct cpu_executor_t
     }
 
     template<typename F>
-    loop_future_t loop(index_space_t<2> space, F function) const
+    auto loop(index_space_t<2> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -72,7 +87,7 @@ struct cpu_executor_t
     }
 
     template<typename F>
-    loop_future_t loop(index_space_t<3> space, F function) const
+    auto loop(index_space_t<3> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -89,7 +104,7 @@ struct cpu_executor_t
     }
 
     template<uint D, typename F, class A>
-    loop_accumulate_future_t loop_accumulate(index_space_t<D> space, F function, A&) const
+    auto loop_accumulate(index_space_t<D> space, F function, A&) const
     {
         auto c = int();
         auto g = [function, &c] (ivec_t<D> i)
@@ -101,9 +116,10 @@ struct cpu_executor_t
     }
 
     template<uint D, typename F>
-    loop_future_t loop_async(index_space_t<D> space, int, F function) const
+    void loop_async(index_space_t<D> space, int device, F function) const
     {
-        assert(false);
+        assert(device == -1);
+        return loop(space, function).get();
     }
 
     template<typename T, class R, class A>
@@ -118,10 +134,9 @@ struct cpu_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
+    reduce_future_t<T, A> reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
-        assert(false);
-        return allocator.allocate(0, buffer.device());
+        return future::just(reduce(buffer, reducer, start, allocator));
     }
 
     auto has_async_reduction() const { return false; }
@@ -134,11 +149,11 @@ struct cpu_executor_t
 #ifdef _OPENMP
 struct omp_executor_t
 {
-    using loop_future_t = future::future_t<future::ready_t>;
-    using loop_accumulate_future_t = future::future_t<future::just_t<int>>;
+    template <typename T, class A>
+    using reduce_future_t = future::future_t<future::just_t<T>>;
 
     template<typename F>
-    loop_future_t loop(index_space_t<1> space, F function) const
+    auto loop(index_space_t<1> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -150,7 +165,7 @@ struct omp_executor_t
     }
 
     template<typename F>
-    loop_future_t loop(index_space_t<2> space, F function) const
+    auto loop(index_space_t<2> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -165,7 +180,7 @@ struct omp_executor_t
     }
 
     template<typename F>
-    loop_future_t loop(index_space_t<3> space, F function) const
+    auto loop(index_space_t<3> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -183,7 +198,7 @@ struct omp_executor_t
     }
 
     template<uint D, typename F, class A>
-    loop_accumulate_future_t loop_accumulate(index_space_t<D> space, F function, A&) const
+    auto loop_accumulate(index_space_t<D> space, F function, A&) const
     {
         auto c = int();
         auto g = [function, &c] (ivec_t<D> i)
@@ -196,9 +211,10 @@ struct omp_executor_t
     }
 
     template<uint D, typename F>
-    void loop_async(index_space_t<D> space, int, F function) const
+    void loop_async(index_space_t<D> space, int device, F function) const
     {
-        assert(false);
+        assert(device == -1);
+        return loop(space, function).get();
     }
 
     template<typename T, class R, class A>
@@ -213,10 +229,9 @@ struct omp_executor_t
     }
 
     template<typename T, class R, class A>
-    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
+    reduce_future_t<T, A> reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
-        assert(false);
-        return allocator.allocate(0, buffer.device());
+        return future::just(reduce(buffer, reducer, start, allocator));
     }
 
     auto has_async_reduction() const { return false; }
@@ -271,8 +286,6 @@ static const dim3 THREAD_BLOCK_SIZE_3D(4, 4, 4);
 
 struct gpu_executor_t
 {
-    using loop_future_t = future::future_t<future::device_synchronize_t>;
-
     gpu_executor_t()
     {
         int num_devices_available;

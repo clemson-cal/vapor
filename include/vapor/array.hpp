@@ -93,9 +93,9 @@ struct lookup_t
         }).get();
     }
     template<class F, class E>
-    void load_async(const array_t<D, F>& a, E& executor)
+    void load_async(const array_t<D, F>& a, int device, E& executor)
     {
-        return executor.loop_async(a.space(), [*this, a] HD (ivec_t<D> i)
+        executor.loop_async(a.space(), device, [*this, a] HD (ivec_t<D> i)
         {
             data[dot(stride, i - start)] = a[i];
         });
@@ -155,7 +155,7 @@ auto cache_async(const array_t<D, F>& a, int device, E& executor, A& allocator)
     auto buffer = buffer_holder.get();
     auto space = a.space();
     auto table = lookup<T>(space, buffer_holder);
-    table.load_async(a, executor);
+    table.load_async(a, device, executor);
     return array(table, space, buffer);
 }
 template<uint D, class F>
@@ -493,6 +493,8 @@ template<uint D, class F, class R, class E, class A,
     typename B = typename A::allocation_t>
 T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
+    using reduce_future_t = typename E::template reduce_future_t<T, A>;
+
     if (! executor.has_async_reduction())
     {
         auto b = cache(a, executor, allocator);
@@ -502,13 +504,12 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
     {
         auto num_devices = executor.num_devices();
         auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
-        auto subresult = vec_t<B, VAPOR_MAX_DEVICES>{};
+        auto subresult = vec_t<reduce_future_t, VAPOR_MAX_DEVICES>{};
 
         for (int device = 0; device < num_devices; ++device)
         {
-            // TODO
-            // auto subspace = a.space().subspace(num_devices, device);
-            // subarrays[device] = cache_async(a[subspace], device, executor, allocator);
+            auto subspace = a.space().subspace(num_devices, device);
+            subarrays[device] = cache_async(a[subspace], device, executor, allocator);
         }
         for (int device = 0; device < num_devices; ++device)
         {
@@ -519,7 +520,7 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 
         for (int device = 0; device < num_devices; ++device)
         {
-            result = reducer(result, subresult[device]->template read<T>(0));
+            result = reducer(result, subresult[device].get());
         }
         return result;
     }
