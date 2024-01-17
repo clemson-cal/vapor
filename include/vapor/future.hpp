@@ -96,22 +96,5 @@ auto just(T val)
     return future(just_t<T>{val});
 }
 
-#ifdef __CUDACC__
-struct device_synchronize_t
-{
-    void operator()() const
-    {
-        cudaSetDevice(device);
-        cudaDeviceSynchronize();
-    }
-    int device;
-};
-
-static inline auto device_synchronize(int device)
-{
-    return future(device_synchronize_t{device});
-}
-#endif
-
 } // namespace future
 } // namespace vapor

@@ -118,7 +118,6 @@ struct cpu_executor_t
     template<uint D, typename F>
     void loop_async(index_space_t<D> space, int device, F function) const
     {
-        // assert(device == -1);
         return loop(space, function).get();
     }
 
@@ -130,13 +129,7 @@ struct cpu_executor_t
         auto result = start;
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
-        return result;
-    }
-
-    template<typename T, class R, class A>
-    reduce_future_t<T, A> reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        return future::just(reduce(buffer, reducer, start, allocator));
+        return future::just(result);
     }
 
     auto num_devices() const { return 1; }
@@ -212,7 +205,6 @@ struct omp_executor_t
     template<uint D, typename F>
     void loop_async(index_space_t<D> space, int device, F function) const
     {
-        // assert(device == -1);
         return loop(space, function).get();
     }
 
@@ -224,13 +216,7 @@ struct omp_executor_t
         auto result = start;
         for (size_t i = 0; i < size; ++i)
             result = reducer(result, data[i]);
-        return result;
-    }
-
-    template<typename T, class R, class A>
-    reduce_future_t<T, A> reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        return future::just(reduce(buffer, reducer, start, allocator));
+        return future::just(result);
     }
 
     auto num_devices() const { return 1; }
@@ -293,6 +279,15 @@ struct read_from_buffer_t
     BufferHolder buffer_holder;
 };
 
+struct device_synchronize_t
+{
+    void operator()() const
+    {
+        cudaSetDevice(device);
+        cudaDeviceSynchronize();
+    }
+    int device;
+};
 
 
 
@@ -340,7 +335,7 @@ struct gpu_executor_t
             cudaSetDevice(device);
             cudaDeviceSynchronize();
         }
-        return future::device_synchronize(0);
+        return future::future(device_synchronize_t{0});
     }
 
     template<typename F>
@@ -351,7 +346,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_1D;
         auto nb = dim3((ni + bs.x - 1) / bs.x);
         gpu_loop<<<nb, bs>>>(space, function);
-        return future::device_synchronize(device);
+        return future::future(device_synchronize_t{device});
     }
 
     template<typename F>
@@ -363,7 +358,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_2D;
         auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
         gpu_loop<<<nb, bs>>>(space, function);
-        return future::device_synchronize(device);
+        return future::future(device_synchronize_t{device});
     }
 
     template<typename F>
@@ -376,7 +371,7 @@ struct gpu_executor_t
         auto bs = THREAD_BLOCK_SIZE_3D;
         auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
         gpu_loop<<<nb, bs>>>(space, function);
-        return future::device_synchronize(device);
+        return future::future(device_synchronize_t{device});
     }
 
     template<uint D, typename F, class A>
@@ -392,9 +387,18 @@ struct gpu_executor_t
         return future::future(read_from_buffer_t<int, A>{c_buf});
     }
 
+    /**
+     * This reduce operator returns a buffer, immediately
+     * 
+     * The buffer must be a device allocation, i.e. it cannot be managed.
+     * Reading from the buffer via buffer_t::read will block until the
+     * reduction is completed.
+     */
     template<typename T, class R, class A>
-    auto _reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
+    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
     {
+        assert(! buffer.managed());
+        cudaSetDevice(buffer.device());
         auto scratch_bytes = size_t(0);
         auto data = buffer.template data<T>();
         auto size = buffer.template size<T>();
@@ -410,37 +414,6 @@ struct gpu_executor_t
             reducer,
             start
         );
-        return results;
-    }
-
-    /**
-     * This reduce operator blocks and returns an item of type T
-     * 
-     * The data pointer can be managed memory or device memory. The reduction
-     * is carried out on device zero.
-     */
-    template<typename T, class R, class A>
-    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        assert(buffer.managed());
-        cudaSetDevice(0);
-        auto results = _reduce(buffer, reducer, start, allocator);
-        return future::future(read_from_buffer_t<T, A>{results});
-    }
-
-    /**
-     * This reduce operator returns a buffer, immediately
-     * 
-     * The buffer must be a device allocation, i.e. it cannot be managed.
-     * Reading from the buffer via buffer_t::read will block until the
-     * reduction is completed.
-     */
-    template<typename T, class R, class A>
-    auto reduce_async(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        assert(! buffer.managed());
-        cudaSetDevice(buffer.device());
-        auto results = _reduce(buffer, reducer, start, allocator);
         return future::future(read_from_buffer_t<T, A>{results});
     }
 

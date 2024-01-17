@@ -507,7 +507,7 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
     for (int device = 0; device < num_devices; ++device)
     {
         const auto& b = subarrays[device];
-        subresult[device] = executor.reduce_async(*b.buffer(), reducer, start, allocator);
+        subresult[device] = executor.reduce(*b.buffer(), reducer, start, allocator);
     }
     auto result = start;
 
