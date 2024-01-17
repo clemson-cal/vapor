@@ -495,35 +495,27 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
     using reduce_future_t = typename E::template reduce_future_t<T, A>;
 
-    if (! executor.has_async_reduction())
-    {
-        auto b = cache(a, executor, allocator);
-        return executor.reduce(*b.buffer(), reducer, start, allocator);
-    }
-    else
-    {
-        auto num_devices = executor.num_devices();
-        auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
-        auto subresult = vec_t<reduce_future_t, VAPOR_MAX_DEVICES>{};
+    auto num_devices = executor.num_devices();
+    auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
+    auto subresult = vec_t<reduce_future_t, VAPOR_MAX_DEVICES>{};
 
-        for (int device = 0; device < num_devices; ++device)
-        {
-            auto subspace = a.space().subspace(num_devices, device);
-            subarrays[device] = cache_async(a[subspace], device, executor, allocator);
-        }
-        for (int device = 0; device < num_devices; ++device)
-        {
-            const auto& b = subarrays[device];
-            subresult[device] = executor.reduce_async(*b.buffer(), reducer, start, allocator);
-        }
-        auto result = start;
-
-        for (int device = 0; device < num_devices; ++device)
-        {
-            result = reducer(result, subresult[device].get());
-        }
-        return result;
+    for (int device = 0; device < num_devices; ++device)
+    {
+        auto subspace = a.space().subspace(num_devices, device);
+        subarrays[device] = cache_async(a[subspace], device, executor, allocator);
     }
+    for (int device = 0; device < num_devices; ++device)
+    {
+        const auto& b = subarrays[device];
+        subresult[device] = executor.reduce_async(*b.buffer(), reducer, start, allocator);
+    }
+    auto result = start;
+
+    for (int device = 0; device < num_devices; ++device)
+    {
+        result = reducer(result, subresult[device].get());
+    }
+    return result;
 }
 
 

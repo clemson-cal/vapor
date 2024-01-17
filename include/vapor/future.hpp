@@ -27,11 +27,9 @@ Use cases for executors:
 - Load data for a device buffer: returns immediately, with the array itself
 - Load data for a managed buffer: returns immediately, with a future
 - Load data for a managed buffer, and accumulate a counter
-
-
 */
 
-#include "compat.hpp"
+#pragma once
 
 namespace vapor {
 namespace future {

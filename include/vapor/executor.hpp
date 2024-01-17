@@ -118,7 +118,7 @@ struct cpu_executor_t
     template<uint D, typename F>
     void loop_async(index_space_t<D> space, int device, F function) const
     {
-        assert(device == -1);
+        // assert(device == -1);
         return loop(space, function).get();
     }
 
@@ -139,7 +139,6 @@ struct cpu_executor_t
         return future::just(reduce(buffer, reducer, start, allocator));
     }
 
-    auto has_async_reduction() const { return false; }
     auto num_devices() const { return 1; }
 };
 
@@ -213,7 +212,7 @@ struct omp_executor_t
     template<uint D, typename F>
     void loop_async(index_space_t<D> space, int device, F function) const
     {
-        assert(device == -1);
+        // assert(device == -1);
         return loop(space, function).get();
     }
 
@@ -234,7 +233,6 @@ struct omp_executor_t
         return future::just(reduce(buffer, reducer, start, allocator));
     }
 
-    auto has_async_reduction() const { return false; }
     auto num_devices() const { return 1; }
 };
 #endif // _OPENMP
@@ -425,7 +423,6 @@ struct gpu_executor_t
         return _reduce(buffer, reducer, start, allocator);
     }
 
-    auto has_async_reduction() const { return true; }
     auto num_devices() const { return _num_devices; }
 
     int _num_devices;

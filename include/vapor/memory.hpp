@@ -115,7 +115,7 @@ public:
                 cudaMalloc(&_data, _bytes);
             }
             #else
-            assert(device == -1);
+            // assert(device == -1);
             _data = malloc(_bytes);
             #endif
         }
