@@ -50,6 +50,31 @@ template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
 
 
 /**
+ * An exception class indicating that an array of optionals contained a none
+ * 
+ */
+class cache_unwrap_exception : public std::exception
+{
+public:
+    cache_unwrap_exception(int num_failures) : _num_failures(num_failures)
+    {
+    }
+    const char* what() const throw()
+    {
+        return "cache_unwrap encountered none array elements";
+    }
+    int num_failures() const
+    {
+        return _num_failures;
+    }
+private:
+    int _num_failures;
+};
+
+
+
+
+/**
  * 
  */
 template<uint D, typename T, class B>
@@ -59,13 +84,39 @@ struct lookup_t
     {
         return data[dot(stride, i - start)];
     }
-    template<class F, class E, typename Future = typename E::loop_future_t>
-    Future load(const array_t<D, F>& a, E& executor)
+    template<class F, class E>
+    void load(const array_t<D, F>& a, E& executor)
     {
-        return executor.loop(a.space(), [*this, a] HD (ivec_t<D> i)
+        executor.loop(a.space(), [*this, a] HD (ivec_t<D> i)
+        {
+            data[dot(stride, i - start)] = a[i];
+        }).get();
+    }
+    template<class F, class E>
+    void load_async(const array_t<D, F>& a, E& executor)
+    {
+        return executor.loop_async(a.space(), [*this, a] HD (ivec_t<D> i)
         {
             data[dot(stride, i - start)] = a[i];
         });
+    }
+    template<class F, class E, class A>
+    void load_unwrap(const array_t<D, F>& a, E& executor, A& allocator)
+    {
+        auto result = executor.loop_accumulate(a.space(), [*this, a] HD (ivec_t<D> i)
+        {
+            auto maybe = a[i];
+            if (maybe.has_value()) {
+                data[dot(stride, i - start)] = maybe.get();
+                return 0;
+            }
+            else {
+                return 1;
+            }
+        }, allocator).get();
+        if (result > 0) {
+            throw cache_unwrap_exception(result);
+        }
     }
     ivec_t<D> start;
     uvec_t<D> stride;
@@ -97,117 +148,46 @@ auto lookup(index_space_t<D> space, B buffer_holder)
  * Execute an array using the given executor and allocator
  *
  */
-template<uint D, class F, class E, class A,
-    class T = typename array_t<D, F>::value_type,
-    class R = typename A::allocation_t>
+template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
+auto cache_async(const array_t<D, F>& a, int device, E& executor, A& allocator)
+{
+    auto buffer_holder = allocator.allocate(a.size() * sizeof(T), device);
+    auto buffer = buffer_holder.get();
+    auto space = a.space();
+    auto table = lookup<T>(space, buffer_holder);
+    table.load_async(a, executor);
+    return array(table, space, buffer);
+}
+template<uint D, class F>
+auto cache_async(const array_t<D, F>& a)
+{
+    return cache_async(a, Runtime::executor(), Runtime::allocator());
+}
+template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
 auto cache(const array_t<D, F>& a, E& executor, A& allocator)
 {
     auto buffer_holder = allocator.allocate(a.size() * sizeof(T));
     auto buffer = buffer_holder.get();
     auto space = a.space();
     auto table = lookup<T>(space, buffer_holder);
-    return table.load(a, executor).map([table, space, buffer] {
-        return array(table, space, buffer);
-    }).get();
+    table.load(a, executor);
+    return array(table, space, buffer);
 }
-
 template<uint D, class F>
 auto cache(const array_t<D, F>& a)
 {
     return cache(a, Runtime::executor(), Runtime::allocator());
 }
-
-
-
-
-/**
- * Execute an array using the given executor and allocator
- *
- */
-template<uint D, class F, class E, class A,
-    class T = typename array_t<D, F>::value_type,
-    class R = typename A::allocation_t>
-array_t<D, lookup_t<D, T, R>> cache_async(const array_t<D, F>& a, int device, E& executor, A& allocator)
+template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type::value_type>
+auto cache_unwrap(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    auto buffer = allocator.allocate(a.size() * sizeof(T), device);
-    auto data = buffer->template data<T>();
-    auto start = a.start();
-    auto stride = strides_row_major(a.shape());
-    auto table = lookup<T>(a.space(), buffer);
-    executor.loop_async(a.space(), device, [start, stride, data, a] HD (ivec_t<D> i)
-    {
-        data[dot(stride, i - start)] = a[i];
-    });
-    return array(table, a.space(), buffer.get());
+    auto buffer_holder = allocator.allocate(a.size() * sizeof(T));
+    auto buffer = buffer_holder.get();
+    auto space = a.space();
+    auto table = lookup<T>(space, buffer_holder);
+    table.load_unwrap(a, executor, allocator);
+    return array(table, space, buffer);
 }
-
-template<uint D, class F>
-auto cache_async(const array_t<D, F>& a, int device)
-{
-    return cache_async(a, device, Runtime::executor(), Runtime::allocator());
-}
-
-
-
-
-/**
- * An exception class indicating that an array of optionals contained a none
- * 
- */
-class cache_unwrap_exception : public std::exception
-{
-public:
-    cache_unwrap_exception(int num_failures) : _num_failures(num_failures)
-    {
-    }
-    const char* what() const throw()
-    {
-        return "cache_unwrap encountered none array elements";
-    }
-    int num_failures() const
-    {
-        return _num_failures;
-    }
-private:
-    int _num_failures;
-};
-
-
-
-
-/**
- * Cache and unwrap the values in an array of optional value type
- *
- * If any of the elements are none, this function throws
- * cache_unwrap_exception, which will indicate the number of none elements.
- */
-template<uint D, class F, class E, class A,
-    class T = typename array_t<D, F>::value_type::value_type,
-    class R = typename A::allocation_t>
-array_t<D, lookup_t<D, T, R>> cache_unwrap(const array_t<D, F>& a, E& executor, A& allocator)
-{
-    auto buffer = allocator.allocate(a.size() * sizeof(T));
-    auto data = buffer->template data<T>();
-    auto start = a.start();
-    auto stride = strides_row_major(a.shape());
-    auto table = lookup<T>(a.space(), buffer);
-    auto result = executor.loop_accumulate(a.space(), [start, stride, data, a] HD (ivec_t<D> i)
-    {
-        auto maybe = a[i];
-        if (maybe.has_value()) {
-            data[dot(stride, i - start)] = maybe.get();
-            return 0;
-        }
-        else {
-            return 1;
-        }
-    }, allocator);
-    if (result > 0) {
-        throw cache_unwrap_exception(result);
-    }
-    return array(table, a.space(), buffer.get());
-}
-
 template<uint D, class F>
 auto cache_unwrap(const array_t<D, F>& a)
 {
@@ -526,8 +506,9 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 
         for (int device = 0; device < num_devices; ++device)
         {
-            auto subspace = a.space().subspace(num_devices, device);
-            subarrays[device] = cache_async(a[subspace], device, executor, allocator);
+            // TODO
+            // auto subspace = a.space().subspace(num_devices, device);
+            // subarrays[device] = cache_async(a[subspace], device, executor, allocator);
         }
         for (int device = 0; device < num_devices; ++device)
         {

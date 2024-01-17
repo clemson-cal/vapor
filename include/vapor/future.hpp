@@ -20,6 +20,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ================================================================================
+
+
+Use cases for executors:
+
+- Load data for a device buffer: returns immediately, with the array itself
+- Load data for a managed buffer: returns immediately, with a future
+- Load data for a managed buffer, and accumulate a counter
+
+
 */
 
 #include "compat.hpp"
@@ -73,10 +82,20 @@ static inline auto ready()
     return future(ready_t{});
 }
 
+template<typename T>
+struct just_t
+{
+    auto operator()() const
+    {
+        return val;
+    }
+    T val;
+};
+
 template <typename T>
 auto just(T val)
 {
-    return future([val] () { return val; });
+    return future(just_t<T>{val});
 }
 
 #ifdef __CUDACC__

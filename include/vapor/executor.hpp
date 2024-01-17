@@ -44,9 +44,10 @@ namespace vapor {
 struct cpu_executor_t
 {
     using loop_future_t = future::future_t<future::ready_t>;
+    using loop_accumulate_future_t = future::future_t<future::just_t<int>>;
 
     template<typename F>
-    auto loop(index_space_t<1> space, F function) const
+    loop_future_t loop(index_space_t<1> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -57,7 +58,7 @@ struct cpu_executor_t
     }
 
     template<typename F>
-    auto loop(index_space_t<2> space, F function) const
+    loop_future_t loop(index_space_t<2> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -71,7 +72,7 @@ struct cpu_executor_t
     }
 
     template<typename F>
-    auto loop(index_space_t<3> space, F function) const
+    loop_future_t loop(index_space_t<3> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -88,7 +89,7 @@ struct cpu_executor_t
     }
 
     template<uint D, typename F, class A>
-    int loop_accumulate(index_space_t<D> space, F function, A&) const
+    loop_accumulate_future_t loop_accumulate(index_space_t<D> space, F function, A&) const
     {
         auto c = int();
         auto g = [function, &c] (ivec_t<D> i)
@@ -96,11 +97,11 @@ struct cpu_executor_t
             c += function(i);
         };
         loop(space, g);
-        return c;
+        return future::just(c);
     }
 
     template<uint D, typename F>
-    auto loop_async(index_space_t<D> space, int, F function) const
+    loop_future_t loop_async(index_space_t<D> space, int, F function) const
     {
         assert(false);
     }
@@ -134,9 +135,10 @@ struct cpu_executor_t
 struct omp_executor_t
 {
     using loop_future_t = future::future_t<future::ready_t>;
+    using loop_accumulate_future_t = future::future_t<future::just_t<int>>;
 
     template<typename F>
-    auto loop(index_space_t<1> space, F function) const
+    loop_future_t loop(index_space_t<1> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -148,7 +150,7 @@ struct omp_executor_t
     }
 
     template<typename F>
-    auto loop(index_space_t<2> space, F function) const
+    loop_future_t loop(index_space_t<2> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -163,7 +165,7 @@ struct omp_executor_t
     }
 
     template<typename F>
-    auto loop(index_space_t<3> space, F function) const
+    loop_future_t loop(index_space_t<3> space, F function) const
     {
         int i0 = space.i0[0];
         int i1 = space.i0[0] + space.di[0];
@@ -181,7 +183,7 @@ struct omp_executor_t
     }
 
     template<uint D, typename F, class A>
-    int loop_accumulate(index_space_t<D> space, F function, A&) const
+    loop_accumulate_future_t loop_accumulate(index_space_t<D> space, F function, A&) const
     {
         auto c = int();
         auto g = [function, &c] (ivec_t<D> i)
@@ -190,7 +192,7 @@ struct omp_executor_t
             c += function(i);
         };
         loop(space, g);
-        return c;
+        return future::just(c);
     }
 
     template<uint D, typename F>
