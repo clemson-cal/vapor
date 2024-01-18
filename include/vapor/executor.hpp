@@ -23,18 +23,13 @@ SOFTWARE.
 
 
 
-
-Executors provide four functions:
+================================================================================
+Executors provide three functions:
 
 loop:       (index_space, function) -> future<void>
-loop_async: (index_space, function, device) -> none
 loop_accum: (index_space, function, allocator) -> future<int>
 reduce:     (buffer, reducer: (T, T) -> T, start: T, allocator) -> future<T>
-
-The reason that loop_async returns nothing, is that the buffer is either ready
-immediately (CPU executor), or it was allocated on a device, and any
-subsequent kernel launches to the same device would be ordered by the CUDA
-runtime.
+================================================================================
 */
 
 
@@ -58,9 +53,6 @@ namespace vapor {
 
 struct cpu_executor_t
 {
-    template <typename T, class A>
-    using reduce_future_t = future::future_t<future::just_t<T>>;
-
     template<typename F>
     auto loop(index_space_t<1> space, F function) const
     {
@@ -115,12 +107,6 @@ struct cpu_executor_t
         return future::just(c);
     }
 
-    template<uint D, typename F>
-    void loop_async(index_space_t<D> space, int device, F function) const
-    {
-        return loop(space, function).get();
-    }
-
     template<typename T, class R, class A>
     auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
@@ -131,8 +117,6 @@ struct cpu_executor_t
             result = reducer(result, data[i]);
         return future::just(result);
     }
-
-    auto num_devices() const { return 1; }
 };
 
 
@@ -141,9 +125,6 @@ struct cpu_executor_t
 #ifdef _OPENMP
 struct omp_executor_t
 {
-    template <typename T, class A>
-    using reduce_future_t = future::future_t<future::just_t<T>>;
-
     template<typename F>
     auto loop(index_space_t<1> space, F function) const
     {
@@ -202,12 +183,6 @@ struct omp_executor_t
         return future::just(c);
     }
 
-    template<uint D, typename F>
-    void loop_async(index_space_t<D> space, int device, F function) const
-    {
-        return loop(space, function).get();
-    }
-
     template<typename T, class R, class A>
     auto reduce(const buffer_t& buffer, R reducer, T start, A&) const
     {
@@ -218,8 +193,6 @@ struct omp_executor_t
             result = reducer(result, data[i]);
         return future::just(result);
     }
-
-    auto num_devices() const { return 1; }
 };
 #endif // _OPENMP
 
@@ -292,153 +265,20 @@ struct device_synchronize_t
 template<uint D, typename F>
 struct loop_accumulate_t
 {
-    int operator()(ivec_t<D> i)
+    __device__ void operator()(ivec_t<D> i)
     {
         atomicAdd(c_ptr, function(i));
     }
-    F function;
     int *c_ptr;
-}
+    F function;
+};
 
 
 
 
 struct gpu_executor_t
 {
-    template <typename T, class A>
-    using reduce_future_t = future::future_t<read_from_buffer_t<T, A>>;
-
-    gpu_executor_t()
-    {
-        int num_devices_available;
-        cudaGetDeviceCount(&num_devices_available);
-
-        if (auto str = std::getenv("VAPOR_NUM_DEVICES")) {
-            _num_devices = atoi(str);
-            if (_num_devices > num_devices_available) {
-                throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
-            }
-            if (_num_devices <= 0) {
-                throw std::runtime_error("VAPOR_NUM_DEVICES must be greater than zero");
-            }
-        }
-        else {
-            _num_devices = num_devices_available;
-        }
-        if (_num_devices > VAPOR_MAX_DEVICES) {
-            throw std::runtime_error("VAPOR_MAX_DEVICES needs to be increased");
-        }
-    }
-
-    template<uint D, typename F>
-    auto loop(index_space_t<D> space, F function) const
-    {
-        for (int device = 0; device < _num_devices; ++device)
-        {
-            auto subspace = space.subspace(_num_devices, device);
-            loop_async(subspace, device, function);
-        }
-        for (int device = 0; device < _num_devices; ++device)
-        {
-            cudaSetDevice(device);
-            cudaDeviceSynchronize();
-        }
-        return future::future(device_synchronize_t{0});
-    }
-
-    template<typename F>
-    auto loop_async(index_space_t<1> space, int device, F function) const
-    {
-        cudaSetDevice(device);
-        auto ni = space.di[0];
-        auto bs = THREAD_BLOCK_SIZE_1D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x);
-        gpu_loop<<<nb, bs>>>(space, function);
-        return future::future(device_synchronize_t{device});
-    }
-
-    template<typename F>
-    auto loop_async(index_space_t<2> space, int device, F function) const
-    {
-        cudaSetDevice(device);
-        auto ni = space.di[0];
-        auto nj = space.di[1];
-        auto bs = THREAD_BLOCK_SIZE_2D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
-        gpu_loop<<<nb, bs>>>(space, function);
-        return future::future(device_synchronize_t{device});
-    }
-
-    template<typename F>
-    auto loop_async(index_space_t<3> space, int device, F function) const
-    {
-        cudaSetDevice(device);
-        auto ni = space.di[0];
-        auto nj = space.di[1];
-        auto nk = space.di[2];
-        auto bs = THREAD_BLOCK_SIZE_3D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
-        gpu_loop<<<nb, bs>>>(space, function);
-        return future::future(device_synchronize_t{device});
-    }
-
-    template<uint D, typename F, class A>
-    future::future_t<read_from_buffer_t<int , A>> loop_accumulate(index_space_t<D> space, F function, A& allocator) const
-    {
-        auto c_buf = allocator.allocate(sizeof(int));
-        auto c_ptr = c_buf->template data<int>();
-        auto g = [function, c_ptr] HD (ivec_t<D> i)
-        {
-            atomicAdd(c_ptr, function(i));
-        };
-        loop(space, g);
-        return future::future(read_from_buffer_t<int, A>{c_buf});
-    }
-
-    /**
-     * This reduce operator returns a buffer, immediately
-     * 
-     * The buffer must be a device allocation, i.e. it cannot be managed.
-     * Reading from the buffer via buffer_t::read will block until the
-     * reduction is completed.
-     */
-    template<typename T, class R, class A>
-    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        assert(! buffer.managed());
-        cudaSetDevice(buffer.device());
-        auto scratch_bytes = size_t(0);
-        auto data = buffer.template data<T>();
-        auto size = buffer.template size<T>();
-        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
-        auto scratch = allocator.allocate(scratch_bytes, buffer.device());
-        auto results = allocator.allocate(sizeof(T), buffer.device());
-        cub::DeviceReduce::Reduce(
-            scratch->template data<T>(),
-            scratch_bytes,
-            data,
-            results->template data<T>(),
-            size,
-            reducer,
-            start
-        );
-        return future::future(read_from_buffer_t<T, A>{results});
-    }
-
-    auto num_devices() const { return _num_devices; }
-
-    int _num_devices;
-};
-
-
-
-
-struct single_gpu_executor_t
-{
-    template <typename T, class A>
-    using reduce_future_t = future::future_t<read_from_buffer_t<T, A>>;
-
-    single_gpu_executor_t(int device) : _device(device) { }
+    gpu_executor_t(int device=0) : _device(device) { }
 
     template<typename F>
     auto loop(index_space_t<1> space, F function) const

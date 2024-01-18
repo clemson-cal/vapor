@@ -90,15 +90,15 @@ struct lookup_t
         executor.loop(a.space(), [*this, a] HD (ivec_t<D> i)
         {
             data[dot(stride, i - start)] = a[i];
-        }).get();
+        });
     }
     template<class F, class E>
-    void load_async(const array_t<D, F>& a, int device, E& executor)
+    void load_and_await(const array_t<D, F>& a, E& executor)
     {
-        executor.loop_async(a.space(), device, [*this, a] HD (ivec_t<D> i)
+        executor.loop(a.space(), [*this, a] HD (ivec_t<D> i)
         {
             data[dot(stride, i - start)] = a[i];
-        });
+        }).get();
     }
     template<class F, class E, class A>
     void load_unwrap(const array_t<D, F>& a, E& executor, A& allocator)
@@ -147,30 +147,24 @@ auto lookup(index_space_t<D> space, B buffer_holder)
 /**
  * Execute an array using the given executor and allocator
  *
+ * If the final argument, device, is not equal to -1, then the
+ * array is cached to a non-managed buffer, exclusive to that
+ * device.
  */
 template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
-auto cache_async(const array_t<D, F>& a, int device, E& executor, A& allocator)
+auto cache(const array_t<D, F>& a, E& executor, A& allocator, int device=-1)
 {
     auto buffer_holder = allocator.allocate(a.size() * sizeof(T), device);
     auto buffer = buffer_holder.get();
     auto space = a.space();
     auto table = lookup<T>(space, buffer_holder);
-    table.load_async(a, device, executor);
-    return array(table, space, buffer);
-}
-template<uint D, class F>
-auto cache_async(const array_t<D, F>& a)
-{
-    return cache_async(a, Runtime::executor(), Runtime::allocator());
-}
-template<uint D, class F, class E, class A, class T = typename array_t<D, F>::value_type>
-auto cache(const array_t<D, F>& a, E& executor, A& allocator)
-{
-    auto buffer_holder = allocator.allocate(a.size() * sizeof(T));
-    auto buffer = buffer_holder.get();
-    auto space = a.space();
-    auto table = lookup<T>(space, buffer_holder);
-    table.load(a, executor);
+    
+    if (device == -1) {
+        table.load_and_await(a, executor);
+    }
+    else {
+        table.load(a, executor);
+    }
     return array(table, space, buffer);
 }
 template<uint D, class F>
@@ -293,10 +287,6 @@ struct array_t
     {
         return vapor::cache(*this);
 	}
-    auto cache_async(int device) const
-    {
-        return vapor::cache_async(*this, device);
-    }
     auto cache_unwrap() const
     {
         return vapor::cache_unwrap(*this);
@@ -488,34 +478,35 @@ auto in(index_space_t<D> sel, index_space_t<D> space)
  * Array reductions
  *
  */
-template<uint D, class F, class R, class E, class A,
-    typename T = typename array_t<D, F>::value_type,
-    typename B = typename A::allocation_t>
+template<uint D, class F, class R, class E, class A, typename T = typename array_t<D, F>::value_type>
 T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
 {
-    using reduce_future_t = typename E::template reduce_future_t<T, A>;
+    auto b = cache(a, executor, allocator, 0);
+    return executor.reduce(*b.buffer(), reducer, start, allocator).get();
 
-    auto num_devices = executor.num_devices();
-    auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
-    auto subresult = vec_t<reduce_future_t, VAPOR_MAX_DEVICES>{};
+    // using reduce_future_t = typename E::template reduce_future_t<T, A>;
 
-    for (int device = 0; device < num_devices; ++device)
-    {
-        auto subspace = a.space().subspace(num_devices, device);
-        subarrays[device] = cache_async(a[subspace], device, executor, allocator);
-    }
-    for (int device = 0; device < num_devices; ++device)
-    {
-        const auto& b = subarrays[device];
-        subresult[device] = executor.reduce(*b.buffer(), reducer, start, allocator);
-    }
-    auto result = start;
+    // auto num_devices = executor.num_devices();
+    // auto subarrays = vec_t<array_t<D, lookup_t<D, T, B>>, VAPOR_MAX_DEVICES>{};
+    // auto subresult = vec_t<reduce_future_t, VAPOR_MAX_DEVICES>{};
 
-    for (int device = 0; device < num_devices; ++device)
-    {
-        result = reducer(result, subresult[device].get());
-    }
-    return result;
+    // for (int device = 0; device < num_devices; ++device)
+    // {
+    //     auto subspace = a.space().subspace(num_devices, device);
+    //     subarrays[device] = cache_async(a[subspace], device, executor, allocator);
+    // }
+    // for (int device = 0; device < num_devices; ++device)
+    // {
+    //     const auto& b = subarrays[device];
+    //     subresult[device] = executor.reduce(*b.buffer(), reducer, start, allocator);
+    // }
+    // auto result = start;
+
+    // for (int device = 0; device < num_devices; ++device)
+    // {
+    //     result = reducer(result, subresult[device].get());
+    // }
+    // return result;
 }
 
 
