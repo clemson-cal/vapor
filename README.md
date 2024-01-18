@@ -1,10 +1,40 @@
-# VAPOR: Versatile Accelerated Physics Optimization Routines
+# VAPOR: __Versatile Accelerated Physics Optimization Routines__
 
 ## Description
 
-Vapor is a lightweight application framework to ease the development of
-GPU-accelerated and massively parallel scientific simulation codes. Its
-objectives are to:
+Vapor aims to define a minimal set of C++ programming primitives, needed to model
+PDE solvers. Vapor encourages a functional programming style, and facilitates concise
+and expressive C++ code:
+
+```c++
+auto i = vapor::indices(vec(N, N));
+auto h = 1.0 / N; /* grid spacing */
+auto x = i.map([] (vec_t<int, 2> ij) { return vec(-0.5, -0.5) + ij * h; });
+auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(r,r)); };
+auto del_squared = i.contract(1).map([u] (vec_t<int, 2> ij) {
+    auto i = ij[0];
+    auto j = ij[1];
+    return (u[vec(i + 1, j))] +
+            u[vec(i, j + 1))] +
+            u[vec(i - 1, j))] +
+            u[vec(i, j, -1))] - 4 * u[ij] / (h * h)); /* Laplacian, Del^2(u) */
+auto du = del_squared * dt;
+auto u_next = (u.at(i.contract(1)) + du).cache(executor, allocator);
+```
+
+This is a naive method to solve the heat equation. Vapor provides execution backends
+(called executors), to execute this same code on multi-core or multi-node GPU systems.
+
+Vapor programs have essentially zero runtime overhead. and short compile times.
+
+Vapor includes high-quality execution strategies, which can utilize compute
+resources on multi-core, multi-GPU, and multi-node architectures. It can be extended
+with custom execution strategies.
+
+Vapor is also a lightweight application framework that can ease the development
+of GPU-accelerated and massively parallel scientific simulation codes.
+
+### Objectives
 
 - Provide lightweight, idiomatic C++ abstractions for high-performance array
   transformations and PDE solvers
@@ -15,10 +45,6 @@ objectives are to:
 - Be header-only and dependency-free, requires only a C++17 compiler is
   (optional dependencies include CUDA, MPI, and HDF5)
 
-Vapor aims to define a minimal set of programming primitives, needed to model
-PDE solvers. It includes high-quality example execution strategies, which can
-utilize compute resources on multi-core, multi-GPU, and multi-node
-architectures.
 
 ## Table of Contents
 
