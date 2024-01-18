@@ -15,6 +15,11 @@ objectives are to:
 - Be header-only and dependency-free, requires only a C++17 compiler is
   (optional dependencies include CUDA, MPI, and HDF5)
 
+Vapor aims to define a minimal set of programming primitives, needed to model
+PDE solvers. It includes high-quality example execution strategies, which can
+utilize compute resources on multi-core, multi-GPU, and multi-node
+architectures.
+
 ## Table of Contents
 
 - [Installation](#installation)
