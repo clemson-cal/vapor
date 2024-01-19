@@ -289,17 +289,6 @@ struct device_synchronize_t
     int device;
 };
 
-template<uint D, typename F>
-struct loop_accumulate_t
-{
-    int operator()(ivec_t<D> i)
-    {
-        atomicAdd(c_ptr, function(i));
-    }
-    F function;
-    int *c_ptr;
-}
-
 
 
 
@@ -307,6 +296,9 @@ struct gpu_executor_t
 {
     template <typename T, class A>
     using reduce_future_t = future::future_t<read_from_buffer_t<T, A>>;
+
+    template <class A>
+    using loop_accumulate_future_t = future::future_t<read_from_buffer_t<int , A>>;
 
     gpu_executor_t()
     {
@@ -383,7 +375,7 @@ struct gpu_executor_t
     }
 
     template<uint D, typename F, class A>
-    future::future_t<read_from_buffer_t<int , A>> loop_accumulate(index_space_t<D> space, F function, A& allocator) const
+    loop_accumulate_future_t<A> loop_accumulate(index_space_t<D> space, F function, A& allocator) const
     {
         auto c_buf = allocator.allocate(sizeof(int));
         auto c_ptr = c_buf->template data<int>();
@@ -428,92 +420,6 @@ struct gpu_executor_t
     auto num_devices() const { return _num_devices; }
 
     int _num_devices;
-};
-
-
-
-
-struct single_gpu_executor_t
-{
-    template <typename T, class A>
-    using reduce_future_t = future::future_t<read_from_buffer_t<T, A>>;
-
-    single_gpu_executor_t(int device) : _device(device) { }
-
-    template<typename F>
-    auto loop(index_space_t<1> space, F function) const
-    {
-        cudaSetDevice(_device);
-        auto ni = space.di[0];
-        auto bs = THREAD_BLOCK_SIZE_1D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x);
-        gpu_loop<<<nb, bs>>>(space, function);
-        return future::future(device_synchronize_t{_device});
-    }
-
-    template<typename F>
-    auto loop(index_space_t<2> space, F function) const
-    {
-        cudaSetDevice(_device);
-        auto ni = space.di[0];
-        auto nj = space.di[1];
-        auto bs = THREAD_BLOCK_SIZE_2D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y);
-        gpu_loop<<<nb, bs>>>(space, function);
-        return future::future(device_synchronize_t{_device});
-    }
-
-    template<typename F>
-    auto loop(index_space_t<3> space, F function) const
-    {
-        cudaSetDevice(_device);
-        auto ni = space.di[0];
-        auto nj = space.di[1];
-        auto nk = space.di[2];
-        auto bs = THREAD_BLOCK_SIZE_3D;
-        auto nb = dim3((ni + bs.x - 1) / bs.x, (nj + bs.y - 1) / bs.y, (nk + bs.z - 1) / bs.z);
-        gpu_loop<<<nb, bs>>>(space, function);
-        return future::future(device_synchronize_t{_device});
-    }
-
-    template<uint D, typename F, class A>
-    auto loop_accumulate(index_space_t<D> space, F function, A& allocator) const
-    {
-        auto c_buf = allocator.allocate(sizeof(int));
-        auto c_ptr = c_buf->template data<int>();
-        return loop(space, loop_accumulate_t<D, F>{c_ptr, function}).then(read_from_buffer_t<int, A>{c_buf});
-    }
-
-    /**
-     * This reduce operator returns a buffer, immediately
-     * 
-     * The buffer must be a device allocation, i.e. it cannot be managed.
-     * Reading from the buffer via buffer_t::read will block until the
-     * reduction is completed.
-     */
-    template<typename T, class R, class A>
-    auto reduce(const buffer_t& buffer, R reducer, T start, A& allocator) const
-    {
-        assert(! buffer.managed());
-        cudaSetDevice(buffer.device());
-        auto scratch_bytes = size_t(0);
-        auto data = buffer.template data<T>();
-        auto size = buffer.template size<T>();
-        cub::DeviceReduce::Reduce(nullptr, scratch_bytes, data, (T*)nullptr, size, reducer, start);
-        auto scratch = allocator.allocate(scratch_bytes, buffer.device());
-        auto results = allocator.allocate(sizeof(T), buffer.device());
-        cub::DeviceReduce::Reduce(
-            scratch->template data<T>(),
-            scratch_bytes,
-            data,
-            results->template data<T>(),
-            size,
-            reducer,
-            start
-        );
-        return future::future(read_from_buffer_t<T, A>{results});
-    }
-    int _device;
 };
 #endif // __CUDACC__
 

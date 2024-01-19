@@ -51,7 +51,7 @@ struct future_t
         return f();
     }
     template <class G>
-    auto then(G g) const
+    auto map(G g) const
     {
         if constexpr (std::is_void_v<value_type>) {
             return future([*this, g] () { f(); return g(); });            
