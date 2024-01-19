@@ -25,18 +25,15 @@ auto du = del_squared * dt;
 auto u_next = (u.at(i.contract(1)) + du).cache(executor, allocator);
 ```
 
-This code is "deploy-anywhere", in the sense that it can be executed on
-a CPU or a GPU, if available. Vapor can parallelize the above code, on
-multi-core and multi-GPU hardware platforms, and with minor changes it
-can even map the above calculation over distrited compute nodes.
+This code is "deploy-anywhere", in the sense that it can be compiled for execution
+on a CPU or a GPU, if one is available. Vapor will take advantage of as many CPU
+cores, or GPU devices, are available on your system. With minor changes, it can
+also utilize CPU or GPU resources on distributed compute nodes.
 
-Vapor applications may use the built-in executors, or can be easily extended
-with custom executors.
-
-Separation of the algorithm (e.g. the above code=), from the hardware execution
-strategy, enables fast and robust development of numerical code.
-
-Vapor programs have essentially zero runtime overhead. and short compile times.
+Separation of the algorithm (e.g. the above code), from the details of how it is
+parallelized, enables fast and robust development of high-performance numerical
+code. Vapor programs have essentially zero runtime overhead. and generally have
+short compile times.
 
 Vapor is also a lightweight application framework that can ease the development
 of GPU-accelerated and massively parallel scientific simulation codes.
