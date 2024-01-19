@@ -24,7 +24,6 @@ auto del_squared = i.contract(1).map([u] (vec_t<int, 2> ij) {
 auto du = del_squared * dt;
 auto u_next = (u.at(i.contract(1)) + du).cache(executor, allocator);
 ```
-
 This code is "deploy-anywhere", in the sense that it can be compiled for execution
 on a CPU or a GPU, if one is available. Vapor will take advantage of as many CPU
 cores, or GPU devices, are available on your system. With minor changes, it can
