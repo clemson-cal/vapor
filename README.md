@@ -177,9 +177,10 @@ by default.
 ### Examples
 
 `./configure`: Generates a Makefile with rules to build targets using a
-default set of modes
+default set of modes, or otherwise the modes named in the `system.json`
+file.
 
-`./configure --modes omp gpu`: Creates targets in omp and gpu modes
+`./configure --enable-cuda`: Creates targets also with gpu modes
 
 `./configure --stdout`: Dumps the Makefile to the terminal
 
