@@ -113,7 +113,9 @@ clean:
     $(RM) $(DEP) $(OBJ) $(EXE)
 
 -include $(DEP)
-""".replace('    ', '\t').strip()
+""".replace(
+    "    ", "\t"
+).strip()
 
 
 def get_lib(mode, deps=list(), libs=list(), lomp="-lomp", **kwargs):
@@ -122,7 +124,7 @@ def get_lib(mode, deps=list(), libs=list(), lomp="-lomp", **kwargs):
         lib.append(lomp)
     if "hdf5" in deps:
         lib.append("-lhdf5")
-    return ' '.join(lib)
+    return " ".join(lib)
 
 
 def get_cxx(mode, deps=list(), **kwargs):
@@ -147,7 +149,7 @@ def main():
         "libs": [],
         "omp_flags": "-Xpreprocessor -fopenmp",
         "lomp": "-lomp",
-        "nvcc_ccbin": "c++"
+        "nvcc_ccbin": "c++",
     }
     project = {
         "src": "src",
@@ -169,8 +171,12 @@ def main():
         exit()
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--enable-cuda", action="store_true")
     parser.add_argument("--stdout", action="store_true")
     args = parser.parse_args()
+
+    if args.enable_cuda and "gpu" not in system["modes"]:
+        system["modes"].append("gpu")
 
     modes = system["modes"]
     vapor = project["vapor"]
@@ -221,7 +227,12 @@ def main():
             for mode in modes:
                 if skip_target(prog, mode, project):
                     continue
-                lib = get_lib(mode, **project["programs"][prog], libs=system["libs"], lomp=system["lomp"])
+                lib = get_lib(
+                    mode,
+                    **project["programs"][prog],
+                    libs=system["libs"],
+                    lomp=system["lomp"],
+                )
                 cxx = get_cxx(mode, **project["programs"][prog])
                 f.write(f"{bin}/{prog}_{mode}: {build}/{prog}_{mode}.o")
                 f.write("\n")
@@ -229,13 +240,16 @@ def main():
                 f.write("\n")
                 f.write(f"{build}/{prog}_{mode}.o: {src}/{prog}.cpp")
                 f.write("\n")
-                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< $(CXXFLAGS) $(CXXFLAGS_{mode.upper()}) -c")
+                f.write(
+                    f"\t$(CXX_{cxx.upper()}) -o $@ $< $(CXXFLAGS) $(CXXFLAGS_{mode.upper()}) -c"
+                )
                 f.write("\n")
             f.write("\n")
         f.write(footer.format(**project))
-        f.write('\n')
+        f.write("\n")
         if args.stdout:
             print(f.getvalue())
+
 
 if __name__ == "__main__":
     main()

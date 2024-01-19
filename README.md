@@ -2,9 +2,12 @@
 
 ## Description
 
-Vapor aims to define a minimal set of C++ programming primitives, needed to model
-PDE solvers. Vapor encourages a functional programming style, and facilitates concise
-and expressive C++ code:
+Vapor aims to define a minimal set of C++ programming primitives needed to model
+PDE solvers, and execute them on massively parallel compute hardware.
+
+Vapor encourages a functional programming style, and facilitates concise
+and expressive C++ code. For example, the following code implements a naive
+method to solve a 2d heat equation:
 
 ```c++
 auto i = vapor::indices(vec(N, N));
@@ -22,14 +25,18 @@ auto du = del_squared * dt;
 auto u_next = (u.at(i.contract(1)) + du).cache(executor, allocator);
 ```
 
-This is a naive method to solve the heat equation. Vapor provides execution backends
-(called executors), to execute this same code on multi-core or multi-node GPU systems.
+This code is "deploy-anywhere", in the sense that it can be executed on
+a CPU or a GPU, if available. Vapor can parallelize the above code, on
+multi-core and multi-GPU hardware platforms, and with minor changes it
+can even map the above calculation over distrited compute nodes.
+
+Vapor applications may use the built-in executors, or can be easily extended
+with custom executors.
+
+Separation of the algorithm (e.g. the above code=), from the hardware execution
+strategy, enables fast and robust development of numerical code.
 
 Vapor programs have essentially zero runtime overhead. and short compile times.
-
-Vapor includes high-quality execution strategies, which can utilize compute
-resources on multi-core, multi-GPU, and multi-node architectures. It can be extended
-with custom execution strategies.
 
 Vapor is also a lightweight application framework that can ease the development
 of GPU-accelerated and massively parallel scientific simulation codes.
@@ -64,15 +71,17 @@ git clone https://github.com/clemson-cal/vapor
 cd vapor
 ./configure
 make
+bin/array_demo_cpu # runs the single-core CPU version of the array demo program
 ```
 
-To compile the CUDA examples, you can run `make gpu`. Note that the
-`hdf5_demo` and `sim_demo` examples require the HDF5 library and header files
-to be visible in your system path. To build a particular demo program, you can
-type `make examples/euler1d`.
+The following will build and run the array demo, this time enablged for GPU
+execution.
 
-Vapor does not yet provide a robust build system. Small changes to the
-Makefile might be needed to get things running on your system.
+```bash
+./configure --enable-cuda
+make bin/array_demo_gpu
+bin/array_demo_gpu
+```
 
 ## Library Usage
 
