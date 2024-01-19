@@ -68,7 +68,7 @@ git clone https://github.com/clemson-cal/vapor
 cd vapor
 ./configure
 make
-bin/array_demo_cpu # runs the single-core CPU version of the array demo program
+bin/array_demo_dbg # runs a single-core CPU debug version of the array demo program
 ```
 
 The following will build and run the array demo, this time enablged for GPU
