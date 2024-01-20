@@ -300,22 +300,25 @@ struct gpu_executor_t
     template <class A>
     using loop_accumulate_future_t = future::future_t<read_from_buffer_t<int , A>>;
 
-    gpu_executor_t()
+    gpu_executor_t(int num_devices=-1)
     {
         int num_devices_available;
         cudaGetDeviceCount(&num_devices_available);
 
-        if (auto str = std::getenv("VAPOR_NUM_DEVICES")) {
+        if (num_devices != -1) {
+            _num_devices = num_devices;
+        }
+        else if (auto str = std::getenv("VAPOR_NUM_DEVICES")) {
             _num_devices = atoi(str);
-            if (_num_devices > num_devices_available) {
-                throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
-            }
-            if (_num_devices <= 0) {
-                throw std::runtime_error("VAPOR_NUM_DEVICES must be greater than zero");
-            }
         }
         else {
             _num_devices = num_devices_available;
+        }
+        if (_num_devices > num_devices_available) {
+            throw std::runtime_error("VAPOR_NUM_DEVICES is greater than the number of devices");
+        }
+        if (_num_devices <= 0) {
+            throw std::runtime_error("VAPOR_NUM_DEVICES must be greater than zero");
         }
         if (_num_devices > VAPOR_MAX_DEVICES) {
             throw std::runtime_error("VAPOR_MAX_DEVICES needs to be increased");
