@@ -13,15 +13,15 @@ method to solve a 2d heat equation:
 auto i = vapor::indices(vec(N, N));
 auto h = 1.0 / N; /* grid spacing */
 auto x = i.map([] (vec_t<int, 2> ij) { return vec(-0.5, -0.5) + ij * h; });
-auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(r,r)); };
-auto del_squared = i.contract(1).map([u] (vec_t<int, 2> ij) {
+auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(r,r)); });
+auto del_squared_u = i.contract(1).map([u, h] (vec_t<int, 2> ij) {
     auto i = ij[0];
     auto j = ij[1];
     return (u[vec(i + 1, j))] +
             u[vec(i, j + 1))] +
             u[vec(i - 1, j))] +
-            u[vec(i, j, -1))] - 4 * u[ij] / (h * h)); /* Laplacian, Del^2(u) */
-auto du = del_squared * dt;
+            u[vec(i, j, -1))] - 4 * u[ij]) / (h * h); /* Laplacian, Del^2(u) */
+auto du = del_squared_u * dt;
 auto u_next = (u.at(i.contract(1)) + du).cache(executor, allocator);
 ```
 This code is "deploy-anywhere", in the sense that it can be compiled for execution
@@ -29,10 +29,10 @@ on a CPU or a GPU, if one is available. Vapor will take advantage of as many CPU
 cores, or GPU devices, are available on your system. With minor changes, it can
 also utilize CPU or GPU resources on distributed compute nodes.
 
-Separation of the algorithm (e.g. the above code), from the details of how it is
-parallelized, enables fast and robust development of high-performance numerical
-code. Vapor programs have essentially zero runtime overhead. and generally have
-short compile times.
+Separation of the algorithm (e.g. the above code), from the details of how it
+is parallelized, enables rapid, robust development of high-performance
+numerical code. Compiler-optimized Vapor programs have zero runtime overhead,
+and short compile times.
 
 Vapor is also a lightweight application framework that can ease the development
 of GPU-accelerated and massively parallel scientific simulation codes.
@@ -129,11 +129,21 @@ values unchanged.
 #### Executors
 
 Hardware-agnostic accelerated array transformations in Vapor are accomplished
-by use of an "executor" construct. The execution of a lazily evaluated array,
-to a memory-backed one, is done by parallelizing the traveral of the array,
-either to multiple CPU cores, or to a "device" kernel in the case of GPU
-executions. There is also a bare-bones sequential executor which sequentially
-traverses arrays.
+by use of an "executor" pattern. The executor is used to convert a
+lazily-evaluated array to a memory-backed one. Vapor provides three basic
+executor types, isllustrated below, but can be easily extended with custom
+executors.
+
+```c++
+auto pool = pool_allocator_t();
+auto cpu = cpu_executor_t(); // single-core executor
+auto omp = omp_executor_t(); // multi-core executor
+auto gpu = gpu_executor_t(); // multi-GPU executor
+auto a = my_array.cache(cpu_executor_t(), pool);
+auto b = my_array.cache(omp_executor_t(), pool);
+auto c = my_array.cache(gpu_executor_t(), pool);
+assert(all(a == b) && all(b == c));
+```
 
 #### Allocators
 

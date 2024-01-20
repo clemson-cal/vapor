@@ -119,6 +119,11 @@ void array_reductions()
     auto b = cache(array([] HD (ivec_t<1>) { return vec(1.0, 1.0); }, uvec(N)), exec, alloc);
     auto s = sum(b, exec, alloc);
     printf("the sum of %d elements of vec(1.0, 1.0) is (%.1lf %.1lf)\n", N, s[0], s[1]);
+
+    printf("any of range(20) is >= 10? %d\n", any(range(20) >= 10));
+    printf("all of range(20) is >= 10? %d\n", all(range(20) >= 10));
+    printf("any of range(20) is == 10? %d\n", any(range(20) == 10));
+    printf("any of range(20) is == 20? %d\n", any(range(20) == 20));
 }
 
 void generator_arrays()

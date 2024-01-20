@@ -44,6 +44,7 @@ namespace vapor {
 
 template<uint D, class F> struct array_t;
 template<uint D, class F> struct array_selection_t;
+template<uint D, typename T> auto uniform(T val, uvec_t<D> shape);
 template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
 
 
@@ -319,6 +320,18 @@ struct array_t
     template<typename T> auto operator-(T b) const { return *this - uniform<T>(b, space()); }
     template<typename T> auto operator*(T b) const { return *this * uniform<T>(b, space()); }
     template<typename T> auto operator/(T b) const { return *this / uniform<T>(b, space()); }
+    template<class G> auto operator==(array_t<D, G> b) const { return array(eq<D>(f, b.f), space()); }
+    template<class G> auto operator!=(array_t<D, G> b) const { return array(ne<D>(f, b.f), space()); }
+    template<class G> auto operator<=(array_t<D, G> b) const { return array(le<D>(f, b.f), space()); }
+    template<class G> auto operator>=(array_t<D, G> b) const { return array(ge<D>(f, b.f), space()); }
+    template<class G> auto operator<(array_t<D, G> b) const { return array(lt<D>(f, b.f), space()); }
+    template<class G> auto operator>(array_t<D, G> b) const { return array(gt<D>(f, b.f), space()); }
+    template<typename T> auto operator==(T b) const { return *this == uniform<T>(b, space()); }
+    template<typename T> auto operator!=(T b) const { return *this != uniform<T>(b, space()); }
+    template<typename T> auto operator<=(T b) const { return *this <= uniform<T>(b, space()); }
+    template<typename T> auto operator>=(T b) const { return *this >= uniform<T>(b, space()); }
+    template<typename T> auto operator<(T b) const { return *this < uniform<T>(b, space()); }
+    template<typename T> auto operator>(T b) const { return *this > uniform<T>(b, space()); }
 
     F f;
     uvec_t<D> _shape;
@@ -557,6 +570,26 @@ template<uint D, class F>
 auto sum(const array_t<D, F>& a)
 {
     return sum(a, Runtime::executor(), Runtime::allocator());
+}
+template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
+bool any(const array_t<D, F>& a, E& executor, A& allocator)
+{
+    return sum(a.map([] HD (T a) { return a ? 1 : 0; })) > 0;
+}
+template<uint D, class F>
+auto any(const array_t<D, F>& a)
+{
+    return any(a, Runtime::executor(), Runtime::allocator());
+}
+template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
+bool all(const array_t<D, F>& a, E& executor, A& allocator)
+{
+    return sum(a.map([] HD (T a) { return a ? 1 : 0; })) == a.size();
+}
+template<uint D, class F>
+auto all(const array_t<D, F>& a)
+{
+    return all(a, Runtime::executor(), Runtime::allocator());
 }
 
 } // namespace vapor

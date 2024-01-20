@@ -151,7 +151,6 @@ struct add_t
     F f;
     G g;
 };
-
 template<uint D, class F, class G>
 struct sub_t
 {
@@ -159,7 +158,6 @@ struct sub_t
     F f;
     G g;
 };
-
 template<uint D, class F, class G>
 struct mul_t
 {
@@ -167,11 +165,52 @@ struct mul_t
     F f;
     G g;
 };
-
 template<uint D, class F, class G>
 struct div_t
 {
     HD auto operator()(ivec_t<D> i) const { return f(i) / g(i); }
+    F f;
+    G g;
+};
+template<uint D, class F, class G>
+struct eq_t
+{
+    HD auto operator()(ivec_t<D> i) const { return f(i) == g(i); }
+    F f;
+    G g;
+};
+template<uint D, class F, class G>
+struct ne_t
+{
+    HD auto operator()(ivec_t<D> i) const { return f(i) != g(i); }
+    F f;
+    G g;
+};
+template<uint D, class F, class G>
+struct ge_t
+{
+    HD auto operator()(ivec_t<D> i) const { return f(i) >= g(i); }
+    F f;
+    G g;
+};
+template<uint D, class F, class G>
+struct gt_t
+{
+    HD auto operator()(ivec_t<D> i) const { return f(i) > g(i); }
+    F f;
+    G g;
+};
+template<uint D, class F, class G>
+struct le_t
+{
+    HD auto operator()(ivec_t<D> i) const { return f(i) <= g(i); }
+    F f;
+    G g;
+};
+template<uint D, class F, class G>
+struct lt_t
+{
+    HD auto operator()(ivec_t<D> i) const { return f(i) < g(i); }
     F f;
     G g;
 };
@@ -180,5 +219,11 @@ template<uint D, class F, class G> auto add(F f, G g) { return add_t<D, F, G>{f,
 template<uint D, class F, class G> auto sub(F f, G g) { return sub_t<D, F, G>{f, g}; }
 template<uint D, class F, class G> auto mul(F f, G g) { return mul_t<D, F, G>{f, g}; }
 template<uint D, class F, class G> auto div(F f, G g) { return div_t<D, F, G>{f, g}; }
+template<uint D, class F, class G> auto eq(F f, G g) { return eq_t<D, F, G>{f, g}; }
+template<uint D, class F, class G> auto ne(F f, G g) { return ne_t<D, F, G>{f, g}; }
+template<uint D, class F, class G> auto ge(F f, G g) { return ge_t<D, F, G>{f, g}; }
+template<uint D, class F, class G> auto gt(F f, G g) { return gt_t<D, F, G>{f, g}; }
+template<uint D, class F, class G> auto le(F f, G g) { return le_t<D, F, G>{f, g}; }
+template<uint D, class F, class G> auto lt(F f, G g) { return lt_t<D, F, G>{f, g}; }
 
 } // namespace vapor
