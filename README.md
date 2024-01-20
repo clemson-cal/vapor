@@ -140,12 +140,12 @@ executors.
 
 ```c++
 auto pool = pool_allocator_t();
-auto cpu = cpu_executor_t(); // single-core executor
-auto omp = omp_executor_t(); // multi-core executor
-auto gpu = gpu_executor_t(); // multi-GPU executor
-auto a = my_array.cache(cpu_executor_t(), pool);
-auto b = my_array.cache(omp_executor_t(), pool);
-auto c = my_array.cache(gpu_executor_t(), pool);
+auto cpu = cpu_executor_t(); /* single-core executor */
+auto omp = omp_executor_t(); /* multi-core executor */
+auto gpu = gpu_executor_t(4); /* multi-GPU executor (uses 4 devices) */
+auto a = my_array.cache(cpu, pool);
+auto b = my_array.cache(omp, pool);
+auto c = my_array.cache(gpu, pool);
 assert(all(a == b) && all(b == c));
 ```
 
