@@ -181,6 +181,27 @@ void decompose_index_space()
     print("\n");
 }
 
+void readme_example_code()
+{
+    auto N = uint(100);
+    auto s = index_space(vec(N, N));
+    auto i = indices(s);
+    auto h = 1.0 / N; /* grid spacing */
+    auto x = i.map([h] (vec_t<int, 2> ij) { return vec(-0.5 + ij[0] * h, -0.5 + ij[1] * h); });
+    auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(x, x)); });
+    auto del_squared_u = i[s.contract(1)].map([u, h] (vec_t<int, 2> ij) {
+        auto i = ij[0];
+        auto j = ij[1];
+        return (u[vec(i + 1, j)] +
+                u[vec(i, j + 1)] +
+                u[vec(i - 1, j)] +
+                u[vec(i, j - 1)] - 4 * u[ij]) / (h * h); /* Laplacian, Del^2(u) */
+    });
+    auto dt = h * 0.1;
+    auto du = del_squared_u * dt;
+    auto u_next = (u.at(s.contract(1)) + du).cache();
+}
+
 int main()
 {
     type_constructors();
@@ -191,5 +212,6 @@ int main()
     generator_arrays();
     construct_pointer_types();
     decompose_index_space();
+    readme_example_code();
     return 0;
 }
