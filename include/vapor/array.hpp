@@ -476,6 +476,11 @@ inline auto range(uint size)
     return indices(vec(size)).map(take_nth_t<ivec_t<1>>{0});
 }
 
+inline auto range(index_space_t<1> space)
+{
+    return indices(space).map(take_nth_t<ivec_t<1>>{0});
+}
+
 /**
  * 
  */
