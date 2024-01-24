@@ -187,9 +187,9 @@ void readme_example_code()
     auto s = index_space(vec(N, N));
     auto i = indices(s);
     auto h = 1.0 / N; /* grid spacing */
-    auto x = i.map([h] (vec_t<int, 2> ij) { return vec(-0.5 + ij[0] * h, -0.5 + ij[1] * h); });
-    auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(x, x)); });
-    auto del_squared_u = i[s.contract(1)].map([u, h] (vec_t<int, 2> ij) {
+    auto x = i.map([h] HD (vec_t<int, 2> ij) { return vec(-0.5 + ij[0] * h, -0.5 + ij[1] * h); });
+    auto u = x.map([] HD (vec_t<double, 2> x) { return exp(-dot(x, x)); });
+    auto del_squared_u = i[s.contract(1)].map([u, h] HD (vec_t<int, 2> ij) {
         auto i = ij[0];
         auto j = ij[1];
         return (u[vec(i + 1, j)] +

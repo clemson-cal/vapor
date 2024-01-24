@@ -289,6 +289,17 @@ struct device_synchronize_t
     int device;
 };
 
+template<uint D, typename F>
+struct loop_accumulate_t
+{
+    HD void operator()(ivec_t<D> i)
+    {
+        atomicAdd(c_ptr, function(i));
+    }
+    F function;
+    int *c_ptr;
+};
+
 
 
 
