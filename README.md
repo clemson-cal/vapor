@@ -118,17 +118,21 @@ resulting memory-backed array uses strided memory access to retrieve the value
 of a multi-dimensional index in the buffer.
 
 Unlike arrays from other numeric libraries, including numpy, arrays in
-Vapor can have a non-zero starting index. This changes the semantics of
-inserting the values of one array into another, often for the better, and
-is also favorable in dealing with global arrays and domain decomposition.
-For example, if `a` covers the 1d index space (0, 100) and `b` covers (1, 99),
-then the array `a.insert(b)` has the values of `a` at the endpoints, and the
-values of `b` on the interior.
+Vapor can have a non-zero starting index. This simplifies the semantics of
+inserting the values of one array into another, and is also favorable in
+dealing with global arrays and domain decomposition.  For example, if `a`
+covers the 1d index space (0, 100) and `b` covers (1, 99), then the array
+`a.insert(b)` has the values of `a` at the endpoints, and the values of
+`b` on the interior. Array subsets are created by indexing an array like this:
+`a[subspace]` where for example, `subspace = a.space().constract(2)`. If `a`
+had a starting index of 0, then the array `a[subspace]` would have a starting
+index of 2.
 
 In-place array modifications are modeled using a paradigm inspired by Jax. If
 a is an array, the construct `a = a.at(space).map(f)` will map only the
 elements inside the index space through the function `f`, leaving the other
-values unchanged.
+values unchanged. The array `a.at(space).map(f)` has the same index space
+as `a`.
 
 #### Executors
 
@@ -201,8 +205,8 @@ file.
 ### Project file
 
 The configure script looks in the current working directory for a JSON file
-called project.json. An example of this file can be found in the Vapor root
-directory.
+called `project.json`. An example project file can be found
+[here](project.json) in the Vapor root directory.
 
 
 ### System file
