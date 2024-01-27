@@ -186,190 +186,22 @@ HD auto uniform_vec(T val)
 
 
 /**
- * Helper functions
- *
- *
+ * Arithmetic operators, between vec and vec, and between vec and scalar
+ * 
  */
-template<typename U, typename T, uint S>
-HD vec_t<U, S> cast(const vec_t<T, S>& a)
-{
-    auto result = vec_t<U, S>();
+template<typename T, uint S> HD auto operator+(const vec_t<T, S>& x) { vec_t<T, S> r; for (uint m = 0; m < S; ++m) r[m] = +x[m]; return r; }
+template<typename T, uint S> HD auto operator-(const vec_t<T, S>& x) { vec_t<T, S> r; for (uint m = 0; m < S; ++m) r[m] = -x[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator+(const vec_t<T, S>& x, const vec_t<U, S>& y) { vec_t<decltype(T() + U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] + y[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator-(const vec_t<T, S>& x, const vec_t<U, S>& y) { vec_t<decltype(T() - U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] - y[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator*(const vec_t<T, S>& x, const vec_t<U, S>& y) { vec_t<decltype(T() * U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] * y[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator/(const vec_t<T, S>& x, const vec_t<U, S>& y) { vec_t<decltype(T() / U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] / y[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator+(const vec_t<T, S>& x, U b) { vec_t<decltype(T() + U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] + b; return r; }
+template<typename T, typename U, uint S> HD auto operator-(const vec_t<T, S>& x, U b) { vec_t<decltype(T() - U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] - b; return r; }
+template<typename T, typename U, uint S> HD auto operator*(const vec_t<T, S>& x, U b) { vec_t<decltype(T() * U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] * b; return r; }
+template<typename T, typename U, uint S> HD auto operator/(const vec_t<T, S>& x, U b) { vec_t<decltype(T() / U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] / b; return r; }
 
-    for (uint i = 0; i < S; ++i)
-    {
-        result[i] = a[i];
-    }
-    return result;
-}
-
-template<uint S>
-auto is_permutation(const vec_t<uint, S>& a)
-{
-    for (uint n = 0; n < S; ++n)
-    {
-        int count = 0;
-
-        for (uint m = 0; m < S; ++m)
-        {
-            if (a[m] == n)
-            {
-                count += 1;
-            }
-        }
-        if (count != 1)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-template<typename T, uint S>
-auto permute(const vec_t<T, S>& v, vec_t<uint, S> permutation)
-{
-    auto w = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        w[m] = v[permutation[m]];
-    }
-    return w;
-}
-
-template<typename T, uint S>
-auto reverse_permute(const vec_t<T, S>& v, vec_t<uint, S> permutation)
-{
-    auto w = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        w[permutation[m]] = v[m];
-    }
-    return w;
-}
-
-template<typename T, uint S>
-HD auto operator+(const vec_t<T, S>& x)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = +x[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator-(const vec_t<T, S>& x)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = -x[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator+(const vec_t<T, S>& x, const vec_t<T, S>& y)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] + y[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator-(const vec_t<T, S>& x, const vec_t<T, S>& y)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] - y[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator*(const vec_t<T, S>& x, const vec_t<T, S>& y)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] * y[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator/(const vec_t<T, S>& x, const vec_t<T, S>& y)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] / y[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator+(const vec_t<T, S>& x, T b)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] + b;
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator-(const vec_t<T, S>& x, T b)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] - b;
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator*(const vec_t<T, S>& x, T b)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] * b;
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator/(const vec_t<T, S>& x, T b)
-{
-    auto result = vec_t<T, S>{};
-
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] = x[m] / b;
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto operator==(const vec_t<T, S>& x, const vec_t<T, S>& y)
+template<typename T, typename U, uint S>
+HD auto operator==(const vec_t<T, S>& x, const vec_t<U, S>& y)
 {
     for (uint m = 0; m < S; ++m)
     {
@@ -381,8 +213,8 @@ HD auto operator==(const vec_t<T, S>& x, const vec_t<T, S>& y)
     return true;
 }
 
-template<typename T, uint S>
-HD auto operator!=(const vec_t<T, S>& x, const vec_t<T, S>& y)
+template<typename T, typename U, uint S>
+HD auto operator!=(const vec_t<T, S>& x, const vec_t<U, S>& y)
 {
     for (uint m = 0; m < S; ++m)
     {
@@ -394,46 +226,6 @@ HD auto operator!=(const vec_t<T, S>& x, const vec_t<T, S>& y)
     return false;
 }
 
-template<typename T, uint S>
-HD auto& operator+=(vec_t<T, S>& result, const vec_t<T, S>& y)
-{
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] += y[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto& operator-=(vec_t<T, S>& result, const vec_t<T, S>& y)
-{
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] -= y[m];
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto& operator*=(vec_t<T, S>& result, T a)
-{
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] *= a;
-    }
-    return result;
-}
-
-template<typename T, uint S>
-HD auto& operator/=(vec_t<T, S>& result, T a)
-{
-    for (uint m = 0; m < S; ++m)
-    {
-        result[m] /= a;
-    }
-    return result;
-}
-
 
 
 
@@ -442,7 +234,6 @@ HD auto& operator/=(vec_t<T, S>& result, T a)
  *
  * The inputs do not need to have the same length; missing values are treated
  * as zeros.
- *
  *
  */
 template<typename T1, typename T2, uint S1, uint S2>
@@ -458,12 +249,20 @@ HD auto dot(vec_t<T1, S1> t, vec_t<T2, S2> u)
     return n;
 }
 
+/**
+ * Return the cross product between two 2d vec's
+ *
+ */
 template<typename T>
 HD T cross(vec_t<T, 2> t, vec_t<T, 2> u)
 {
     return t[0] * u[1] - t[1] * u[0];
 }
 
+/**
+ * Return the cross product between two 3d vec's
+ *
+ */
 template<typename T>
 HD vec_t<T, 3> cross(vec_t<T, 3> t, vec_t<T, 3> u)
 {
@@ -475,12 +274,11 @@ HD vec_t<T, 3> cross(vec_t<T, 3> t, vec_t<T, 3> u)
 }
 
 /**
- * Return a vec, with the value appended (S is 1 greater)
- *
+ * Return a vec, with the value appended (size is 1 greater)
  *
  */
 template<typename T, uint S>
-HD vec_t<T, S + 1> append(vec_t<T, S> t, T val)
+HD auto append(vec_t<T, S> t, T val) -> vec_t<T, S + 1>
 {
     auto res = vec_t<T, S + 1>{};
 
@@ -533,8 +331,6 @@ HD uint product(uvec_t<S> t)
 /**
  * Return a uivec that is offset along one index by a certain amount
  *
- *
- *
  */
 template<uint S>
 HD uvec_t<S> delta(uvec_t<S> t, uint index, int change)
@@ -543,28 +339,82 @@ HD uvec_t<S> delta(uvec_t<S> t, uint index, int change)
     return t;
 }
 
-template<uint S>
-HD uvec_t<S> delta_clamp(uvec_t<S> t, uint index, int change, int axis_size)
+/**
+ * Type cast to a different type of vec
+ *
+ */
+template<typename U, typename T, uint S>
+HD vec_t<U, S> cast(const vec_t<T, S>& a)
 {
-    auto i = int(t[index]) + change;
+    auto result = vec_t<U, S>();
 
-    if (i < 0)
+    for (uint i = 0; i < S; ++i)
     {
-        i = 0;
+        result[i] = a[i];
     }
-    else if (i >= axis_size - 1)
-    {
-        i = axis_size - 1;
-    }
-    t[index] = i;
+    return result;
+}
 
-    return t;
+/**
+ * Return true if the vec is a permutation of S integers
+ *
+ */
+template<uint S>
+auto is_permutation(const vec_t<uint, S>& a)
+{
+    for (uint n = 0; n < S; ++n)
+    {
+        int count = 0;
+
+        for (uint m = 0; m < S; ++m)
+        {
+            if (a[m] == n)
+            {
+                count += 1;
+            }
+        }
+        if (count != 1)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Return a vec, permuted by the given permutation vec
+ *
+ */
+template<typename T, uint S>
+auto permute(const vec_t<T, S>& v, vec_t<uint, S> permutation)
+{
+    auto w = vec_t<T, S>{};
+
+    for (uint m = 0; m < S; ++m)
+    {
+        w[m] = v[permutation[m]];
+    }
+    return w;
+}
+
+/**
+ * Return a vec, inversely permuted by the given permutation vec
+ *
+ */
+template<typename T, uint S>
+auto reverse_permute(const vec_t<T, S>& v, vec_t<uint, S> permutation)
+{
+    auto w = vec_t<T, S>{};
+
+    for (uint m = 0; m < S; ++m)
+    {
+        w[permutation[m]] = v[m];
+    }
+    return w;
 }
 
 /**
  * Generate standard C-style array strides for a given array shape.
- *
- *
  *
  */
 template<uint S>
