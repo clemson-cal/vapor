@@ -59,7 +59,7 @@ struct vec_t
     {
         return data;
     }
-    T data[S];
+    T data[S] = {{}};
 };
 
 template<uint S> using uvec_t = vec_t<uint, S>;

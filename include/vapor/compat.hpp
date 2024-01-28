@@ -45,6 +45,9 @@ namespace vapor {
 // Enables bounds-checking on vapor vecs
 // #define VAPOR_VEC_BOUNDS_CHECK
 
+// Enables bounds-checking on vapor matrices
+// #define VAPOR_MAT_BOUNDS_CHECK
+
 // Enables utility functions on std::map
 // #define VAPOR_STD_MAP
 
@@ -73,4 +76,5 @@ namespace vapor {
 #ifdef VAPOR_DEBUG
 #define VAPOR_ARRAY_BOUNDS_CHECK
 #define VAPOR_VEC_BOUNDS_CHECK
+#define VAPOR_MAT_BOUNDS_CHECK
 #endif

@@ -30,6 +30,7 @@ SOFTWARE.
 #include "vapor/array.hpp"
 #include "vapor/executor.hpp"
 #include "vapor/index_space.hpp"
+#include "vapor/mat.hpp"
 #include "vapor/memory.hpp"
 #include "vapor/print.hpp"
 #include "vapor/vec.hpp"
@@ -45,6 +46,20 @@ void type_constructors()
     printf("construct some basic types...\n");
     auto v = vec(0.0, 1.0, 2.0);
     printf("v = %f %f %f\n", v[0], v[1], v[2]);
+
+    auto m = matrix_t<double, 3, 3>{{
+        {0.0, 1.0, 2.0},
+        {1.0, 1.0, 2.0},
+        {2.0, 1.0, 2.0},
+    }};
+    printf("m = %f %f %f\n", m(0, 0), m(0, 1), m(0, 2));
+    printf("    %f %f %f\n", m(1, 0), m(1, 1), m(1, 2));
+    printf("    %f %f %f\n", m(2, 0), m(2, 1), m(2, 2));
+
+    auto l = matmul(m, m);
+    printf("l = %f %f %f\n", l(0, 0), l(0, 1), l(0, 2));
+    printf("    %f %f %f\n", l(1, 0), l(1, 1), l(1, 2));
+    printf("    %f %f %f\n", l(2, 0), l(2, 1), l(2, 2));
 }
 
 void use_optional()
