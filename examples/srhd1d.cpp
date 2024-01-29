@@ -32,7 +32,7 @@ SOFTWARE.
 #include "vapor/executor.hpp"
 
 using namespace vapor;
-#define gamma (5.0 / 3.0)
+#define gamma (4.0 / 3.0)
 #define min2(a, b) ((a) < (b) ? (a) : (b))
 #define max2(a, b) ((a) > (b) ? (a) : (b))
 #define min3(a, b, c) min2(a, min2(b, c))
@@ -287,10 +287,10 @@ int main()
         printf("[%04d] t=%.3lf Mzps=%.3lf\n", state.iteration, state.time, Mzps);
     }
 
-    // p = u.map(cons_to_prim).cache(exec, alloc);
-    // for (int i = 0; i < N; ++i)
-    // {
-    //     printf("%+.4f %+.4f %+.4f %+.4f\n", xc[i], p[i][0], p[i][1], p[i][2]);
-    // }
+    p = state.conserved.map([] HD (cons_t u) { return cons_to_prim(u, 0.0); }).cache();
+    for (int i = 0; i < N; ++i)
+    {
+        printf("%+.4f %+.4f %+.4f %+.4f\n", xc[i], p[i][0], p[i][1], p[i][2]);
+    }
     return 0;
 }
