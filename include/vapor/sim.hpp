@@ -99,6 +99,13 @@ public:
     virtual const char* output_directory() const { return "."; }
 
     /**
+     * Whether to read from a persistent session.cfg file
+     * 
+     * A session.cfg file is written either way by the simulation driver
+     */
+    virtual bool use_persistent_session() const { return true; }
+
+    /**
      * Return a time for use by the simulation driver
      *
      * The returned value is used by the driver to check whether it is time to
@@ -439,7 +446,10 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
 
             vapor::print("\n");
             vapor::print("-h --help            show this help message\n");
-            vapor::print("-n --new-session     clear the session.cfg file\n");
+
+            if (sim.use_persistent_session()) {
+                vapor::print("-n --new-session     clear the session.cfg file\n");
+            }
 
             for (uint col = 0; ; ++col)
             {
@@ -469,7 +479,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
             vapor::print(sim.get_config());
             return 0;
         }
-        else if (strcmp(argv[n], "-n") == 0 || strcmp(argv[n], "--new-session") == 0)
+        else if (sim.use_persistent_session() && (strcmp(argv[n], "-n") == 0 || strcmp(argv[n], "--new-session") == 0))
         {
             vapor::print("new session, use default configuration\n");
             std::filesystem::remove("session.cfg");
@@ -491,7 +501,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     }
     else
     {
-        if (std::filesystem::exists("session.cfg")) {
+        if (sim.use_persistent_session() && std::filesystem::exists("session.cfg")) {
             vapor::print("load configuration from session.cfg\n");
         }
         vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
