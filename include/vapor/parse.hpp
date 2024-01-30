@@ -110,7 +110,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 lhs_final = str;
             }
             else if (c == '\0') {
-                throw std::runtime_error("parse error: ot line ended without '='");
+                throw std::runtime_error("parse error: line ended without '='");
             }
             break;
 
@@ -122,7 +122,7 @@ static void scan_key_val(const char *str, char sep, F parser)
                 // printf("expect_equals -> expect_rhs\n");
             }
             else {
-                throw std::runtime_error("parse error: ot line ended without '='");
+                throw std::runtime_error("parse error: line ended without '='");
             }
             break;
 
