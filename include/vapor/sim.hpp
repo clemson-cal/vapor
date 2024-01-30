@@ -426,7 +426,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
         }
     };
 
-    for (int n = 0; n < argc; ++n)
+    for (int n = 1; n < argc; ++n)
     {
         if (strcmp(argv[n], "-h") == 0 || strcmp(argv[n], "--help") == 0)
         {
@@ -495,7 +495,17 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
             vapor::print("load configuration from session.cfg\n");
         }
         vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
-        vapor::set_from_key_vals(sim.get_config(), argc, argv);
+
+        for (int n = 1; n < argc; ++n)
+        {
+            if (argv[n][0] == '-') {
+                // do nothing
+            } else if (strstr(argv[n], ".cfg")) {
+                set_from_key_vals(sim.get_config(), readfile(argv[n]).data());
+            } else {
+                set_from_key_vals(sim.get_config(), argv[n]);
+            }
+        }
         vapor::print_to_file(sim.get_config(), "session.cfg");
         sim.initial_state(state);
     }
