@@ -182,18 +182,10 @@ void decompose_index_space()
         print(space.subspace(4, n));
         print("\n");
     }
-    print("the index space front is ");
-    print(space.front());
-    print("\n");
-    print("the index space back is ");
-    print(space.back());
-    print("\n");
-    print("an index space contains itself? ");
-    print(space.contains(space));
-    print("\n");
-    print("an index space contains the empty space? ");
-    print(space.contains(index_space(zeros_uvec<2>())));
-    print("\n");
+    print("the index space front is ", space.front(), "\n");
+    print("the index space back is ", space.back(), "\n");
+    print("an index space contains itself? ", space.contains(space), "\n");
+    print("an index space contains the empty space? ", space.contains(index_space(zeros_uvec<2>())), "\n");
 }
 
 void readme_example_code()

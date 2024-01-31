@@ -83,11 +83,11 @@ static inline void print(unsigned long n, FILE* file=stdout)
 }
 static inline void print(float a, FILE* file=stdout)
 {
-    fprintf(file, "%f", a);
+    fprintf(file, "%g", a);
 }
 static inline void print(double a, FILE* file=stdout)
 {
-    fprintf(file, "%lf", a);
+    fprintf(file, "%g", a);
 }
 static inline void print(bool b, FILE* file=stdout)
 {
@@ -207,6 +207,15 @@ void print(const T& target, FILE* file=stdout)
         print("\n", file);
     });
 }
+
+template<typename... Args>
+void print(Args... args)
+{
+    (print(args),...);
+}
+
+
+
 
 template<typename T>
 void print_to_file(const T& target, const char* filename)
