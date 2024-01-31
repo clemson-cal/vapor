@@ -503,8 +503,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     {
         if (sim.use_persistent_session() && std::filesystem::exists("session.cfg")) {
             vapor::print("load configuration from session.cfg\n");
+            vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
         }
-        vapor::set_from_key_vals(sim.get_config(), readfile("session.cfg").data());
 
         for (int n = 1; n < argc; ++n)
         {
