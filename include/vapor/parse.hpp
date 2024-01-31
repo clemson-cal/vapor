@@ -191,6 +191,10 @@ static inline void scan(const char* str, uint size, bool& val)
         throw std::runtime_error(format("parse error: expected true|false, got %.*s", size, str));
     }
 }
+static inline void scan(const char* str, uint, char& val)
+{
+    sscanf(str, "%c", &val);
+}
 static inline void scan(const char* str, uint, uint& val)
 {
     sscanf(str, "%u", &val);
@@ -243,6 +247,38 @@ void scan(const char* str, uint size, vec_t<D, S>& val)
 
         case lexer_state::expect_end:
             if (str[n] == ',')
+                throw std::runtime_error(format("parse error: vec size must be %d", S));
+            break;
+        }
+    }
+    if (m < S) {
+        throw std::runtime_error(format("parse error: vec size must be %d", S));
+    }
+}
+
+template<uint S>
+void scan(const char* str, uint size, vec_t<char, S>& val)
+{
+    enum class lexer_state {
+        ready,
+        expect_end,
+    };
+
+    auto state = lexer_state::ready;
+    uint m = 0;
+
+    for (uint n = 0; n < size; ++n)
+    {
+        switch (state)
+        {
+        case lexer_state::ready:
+            scan(&str[n], size - n, val[m]);
+            m += 1;
+            if (m == S)
+                state = lexer_state::expect_end;
+            break;
+        case lexer_state::expect_end:
+            if (size > m)
                 throw std::runtime_error(format("parse error: vec size must be %d", S));
             break;
         }

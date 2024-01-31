@@ -168,7 +168,13 @@ template<typename T, uint S> void print(const vec_t<T, S>& v, FILE* file=stdout)
 }
 template<uint S> void print(vec_t<char, S> v, FILE* file=stdout)
 {
-    fprintf(file, "%s", v.data);
+    for (size_t i = 0; i < S; ++i)
+    {
+        if (v[i] == '\0') {
+            break;
+        }
+        fprintf(file, "%c", v[i]);
+    }
 }
 template<uint D> void print(const index_space_t<D>& space, FILE* file=stdout)
 {
