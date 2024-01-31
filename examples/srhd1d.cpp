@@ -216,7 +216,7 @@ namespace srhd
         auto u = state.conserved;
         auto p = state.primitive;
 
-        p = ic.map([p, u] (auto i)
+        p = ic.map([p, u] HD (int i)
         {
             return cons_to_prim(u[i], p[i][index_pressure]);
         }).cache();
