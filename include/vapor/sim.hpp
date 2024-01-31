@@ -428,6 +428,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
                 auto field = sim.compute_product(state, col);
                 vapor::hdf5_write(h5f, name, field);
             }
+            vapor::hdf5_write(h5f, "__config__", sim.get_config());
             H5Fclose(h5f);
             printf("write %s\n", fname.c_str());
         }
