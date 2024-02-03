@@ -235,14 +235,14 @@ struct array_t
 {
     using value_type = std::invoke_result_t<F, ivec_t<D>>;
 
-    HD auto operator[](ivec_t<D> index) const
+    HD value_type operator[](ivec_t<D> index) const
     {
         #ifdef VAPOR_ARRAY_BOUNDS_CHECK
         assert(space().contains(index));
         #endif
         return f(index);
     }
-    HD auto operator[](int i) const
+    HD value_type operator[](int i) const
     {
         return operator[](ivec(i));
     }
@@ -253,31 +253,31 @@ struct array_t
         #endif
         return array_t<D, F>{f, subspace.di, subspace.i0};
     }
-    auto start() const
+    ivec_t<D> start() const
     {
         return _start;
     }
-    auto shape() const
+    uvec_t<D> shape() const
     {
         return _shape;
     }
-    auto space() const
+    index_space_t<D> space() const
     {
         return index_space(start(), shape());
     }
-    auto size() const
+    uint size() const
     {
         return product(_shape);
     }
-    auto data() const
+    const value_type* data() const
     {
         return _buffer ? _buffer->template data<value_type>() : nullptr;
     }
-    auto data()
+    value_type* data()
     {
         return _buffer ? _buffer->template data<value_type>() : nullptr;
     }
-    auto buffer() const
+    const buffer_t* buffer() const
     {
         return _buffer;
     }
