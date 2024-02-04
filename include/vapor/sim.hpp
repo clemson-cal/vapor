@@ -429,6 +429,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
                 vapor::hdf5_write(h5f, name, field);
             }
             vapor::hdf5_write(h5f, "__config__", sim.get_config());
+            vapor::hdf5_write(h5f, "__time__", sim.get_time(state));
+            vapor::hdf5_write(h5f, "__iter__", sim.get_iteration(state));
             H5Fclose(h5f);
             printf("write %s\n", fname.c_str());
         }
