@@ -86,4 +86,129 @@ HD auto matmul(const matrix_t<T, M, N> &a, const vec_t<U, N> &b)
     return c;
 }
 
+
+
+
+/**
+ * Calculate the inverse of a square matrix
+ *
+ * This implementation is intended to be pedagogical, or for testing. It might
+ * not be performant or accurate enough for production settings.
+ *
+ * Based on an algorithm described here:
+ * 
+ * http://en.wikipedia.org/wiki/LU_decomposition
+ *
+ * adapted from C++ code by Mike Dinolfo.
+ */
+template<typename T, uint M>
+HD auto inverse(const matrix_t<T, M, M> &a)
+{
+    static const double eps = 1e-12;
+    auto b = matrix_t<T, M, M>{};
+
+    if constexpr (M == 1) {
+        b(0, 0) = 1.0 / a(0, 0);
+    }
+    else if constexpr (M == 2) {
+        auto d = a(0, 0) * a(1, 1) - a(1, 0) * a(0, 1);
+        b(0, 0) =  a(1, 1) / d;
+        b(1, 1) =  a(0, 0) / d;
+        b(0, 1) = -a(0, 1) / d;
+        b(1, 0) = -a(1, 0) / d;
+        return b;
+    }
+    else {
+        b = a; // copy the input matrix to output matrix
+
+        for (int i = 0; i < M; ++i)
+        {
+            if (b(i, i) < eps && b(i, i) > -eps)
+            {
+                b(i, i) = eps; // add eps value to diagonal if diagonal is zero
+            }
+        }
+        for (int i = 1; i < M; ++i)
+        {
+            b(i, 0) /= b(0, 0); // normalize row 0
+        }
+        for (int i = 1; i < M; ++i)
+        {
+            for (int j = i; j < M; ++j)
+            {
+                auto sum = 0.0;
+                for (int k = 0; k < i; ++k)
+                {
+                    sum += b(j, k) * b(k, i); // do a column of L
+                }
+                b(j, i) -= sum;
+            }
+            if (i == M - 1)
+            {
+                continue;
+            }
+            for (int j = i + 1; j < M; ++j)
+            {
+                auto sum = 0.0;
+                for (int k = 0; k < i; ++k)
+                {
+                    sum += b(i, k) * b(k, j);
+                }
+                b(i, j) = (b(i, j) - sum) / b(i, i); // do a row of U
+            }
+        }
+        auto d = 1.0; // compute the determinant, product of diag(U)
+
+        for (int i = 0; i < M; ++i)
+        {
+            d *= b(i, i);
+        }
+        for (int i = 0; i < M; ++i)
+        {
+            for (int j = i; j < M; ++j)
+            {
+                auto x = 1.0;
+                if (i != j)
+                {
+                    x = 0.0;
+                    for (int k = i; k < j; ++k)
+                    {
+                        x -= b(j, k) * b(k, i);
+                    }
+                }
+                b(j, i) = x / b(j, j); // invert L
+            }
+        }
+        for (int i = 0; i < M; ++i)
+        {
+            for (int j = i; j < M; ++j)
+            {
+                auto sum = 0.0;
+                if (i == j)
+                {
+                    continue;
+                }
+                for (int k = i; k < j; ++k)
+                {
+                    sum += b(k, j) * (i == k ? 1.0 : b(i, k));
+                }
+                b(i, j) = -sum; // invert U
+            }
+        }
+        for (int i = 0; i < M; ++i)
+        {
+            for (int j = 0; j < M; ++j)
+            {
+                auto sum = 0.0;
+                for (int k = i > j ? i : j; k < M; ++k)
+                {
+                    sum += (j == k ? 1.0 : b(j, k)) * b(k, i);
+                }
+                b(j, i) = sum; // final inversion
+            }
+        }
+        return b;
+    }
+}
+
 } // namespace vapor

@@ -47,19 +47,23 @@ void type_constructors()
     auto v = vec(0.0, 1.0, 2.0);
     printf("v = %f %f %f\n", v[0], v[1], v[2]);
 
-    auto m = matrix_t<double, 3, 3>{{
-        {0.0, 1.0, 2.0},
-        {1.0, 1.0, 2.0},
-        {2.0, 1.0, 2.0},
+    printf("test matrix inversion and multiplication...\n");
+    auto a = matrix_t<double, 3, 3>{{
+        {+1.0, +0.1, +0.0},
+        {-0.1, +1.0, +0.1},
+        {+0.2, +0.0, +2.0},
     }};
-    printf("m = %f %f %f\n", m(0, 0), m(0, 1), m(0, 2));
-    printf("    %f %f %f\n", m(1, 0), m(1, 1), m(1, 2));
-    printf("    %f %f %f\n", m(2, 0), m(2, 1), m(2, 2));
-
-    auto l = matmul(m, m);
-    printf("l = %f %f %f\n", l(0, 0), l(0, 1), l(0, 2));
-    printf("    %f %f %f\n", l(1, 0), l(1, 1), l(1, 2));
-    printf("    %f %f %f\n", l(2, 0), l(2, 1), l(2, 2));
+    auto b = inverse(a);
+    auto c = matmul(a, b);
+    printf("a      = %+.2f %+.2f %+.2f\n", a(0, 0), a(0, 1), a(0, 2));
+    printf("         %+.2f %+.2f %+.2f\n", a(1, 0), a(1, 1), a(1, 2));
+    printf("         %+.2f %+.2f %+.2f\n", a(2, 0), a(2, 1), a(2, 2));
+    printf("inv(a) = %+.2f %+.2f %+.2f\n", b(0, 0), b(0, 1), b(0, 2));
+    printf("         %+.2f %+.2f %+.2f\n", b(1, 0), b(1, 1), b(1, 2));
+    printf("         %+.2f %+.2f %+.2f\n", b(2, 0), b(2, 1), b(2, 2));
+    printf("I =      %+.6e %+.6e %+.6e\n", c(0, 0), c(0, 1), c(0, 2));
+    printf("         %+.6e %+.6e %+.6e\n", c(1, 0), c(1, 1), c(1, 2));
+    printf("         %+.6e %+.6e %+.6e\n", c(2, 0), c(2, 1), c(2, 2));
 }
 
 void use_optional()
