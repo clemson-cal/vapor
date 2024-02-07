@@ -199,6 +199,14 @@ template<typename T, typename U, uint S> HD auto operator+(const vec_t<T, S>& x,
 template<typename T, typename U, uint S> HD auto operator-(const vec_t<T, S>& x, U b) { vec_t<decltype(T() - U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] - b; return r; }
 template<typename T, typename U, uint S> HD auto operator*(const vec_t<T, S>& x, U b) { vec_t<decltype(T() * U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] * b; return r; }
 template<typename T, typename U, uint S> HD auto operator/(const vec_t<T, S>& x, U b) { vec_t<decltype(T() / U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] / b; return r; }
+template<typename T, typename U, uint S> HD auto& operator+=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] += y[m]; } return x; }
+template<typename T, typename U, uint S> HD auto& operator-=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] -= y[m]; } return x; }
+template<typename T, typename U, uint S> HD auto& operator*=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] *= y[m]; } return x; }
+template<typename T, typename U, uint S> HD auto& operator/=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] /= y[m]; } return x; }
+template<typename T, typename U, uint S> HD auto& operator+=(vec_t<T, S>& x, U b) { for (uint m = 0; m < S; ++m) { x[m] += b; } return x; }
+template<typename T, typename U, uint S> HD auto& operator-=(vec_t<T, S>& x, U b) { for (uint m = 0; m < S; ++m) { x[m] -= b; } return x; }
+template<typename T, typename U, uint S> HD auto& operator*=(vec_t<T, S>& x, U b) { for (uint m = 0; m < S; ++m) { x[m] *= b; } return x; }
+template<typename T, typename U, uint S> HD auto& operator/=(vec_t<T, S>& x, U b) { for (uint m = 0; m < S; ++m) { x[m] /= b; } return x; }
 
 template<typename T, typename U, uint S>
 HD auto operator==(const vec_t<T, S>& x, const vec_t<U, S>& y)
@@ -232,19 +240,14 @@ HD auto operator!=(const vec_t<T, S>& x, const vec_t<U, S>& y)
 /**
  * Return the dot product of two vec's
  *
- * The inputs do not need to have the same length; missing values are treated
- * as zeros.
- *
  */
-template<typename T1, typename T2, uint S1, uint S2>
-HD auto dot(vec_t<T1, S1> t, vec_t<T2, S2> u)
+template<typename A, typename B, uint S, typename C = decltype(A() * B())>
+HD auto dot(vec_t<A, S> a, vec_t<B, S> b) -> C
 {
-    static_assert(S1 <= S2);
-    std::common_type_t<T1, T2> n = 0;
-
-    for (uint i = 0; i < S1; ++i)
+    C n = {};
+    for (uint i = 0; i < S; ++i)
     {
-        n += t[i] * u[i];
+        n += a[i] * b[i];
     }
     return n;
 }

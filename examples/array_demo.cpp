@@ -43,9 +43,14 @@ using namespace vapor;
 
 void type_constructors()
 {
-    printf("construct some basic types...\n");
-    auto v = vec(0.0, 1.0, 2.0);
-    printf("v = %f %f %f\n", v[0], v[1], v[2]);
+    printf("construct simple vec's...\n");
+    auto u = vec(0.0, 1.0, 2.0);
+    auto v = u * 2.0;
+    printf("demo higher-order-dot products...\n");
+    auto id = vec(vec(1.0, 0.0, 0.0), vec(0.0, 1.0, 0.0), vec(0.0, 0.0, 1.0));
+    auto w = dot(id, v);
+    printf("w = 2 * u = %f %f %f\n", w[0], w[1], w[2]);
+    printf("v = id.w  = %f %f %f\n", v[0], v[1], v[2]);
 
     printf("test matrix inversion and multiplication...\n");
     auto a = matrix_t<double, 3, 3>{{
