@@ -481,6 +481,11 @@ inline auto range(index_space_t<1> space)
     return indices(space).map(take_nth_t<ivec_t<1>>{0});
 }
 
+inline auto range(int i0, int i1)
+{
+    return range(index_space(ivec(i0), uvec(i1 - i0)));
+}
+
 /**
  * 
  */
