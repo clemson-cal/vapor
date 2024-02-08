@@ -27,6 +27,7 @@ SOFTWARE.
 
 #pragma once
 #include <type_traits>
+#include <cmath>
 #include "compat.hpp"
 
 namespace vapor {
@@ -248,6 +249,28 @@ HD auto dot(vec_t<A, S> a, vec_t<B, S> b) -> C
     for (uint i = 0; i < S; ++i)
     {
         n += a[i] * b[i];
+    }
+    return n;
+}
+
+template<typename T, uint S>
+HD auto sum(vec_t<T, S> a) -> T
+{
+    T n = {};
+    for (uint i = 0; i < S; ++i)
+    {
+        n += a[i];
+    }
+    return n;
+}
+
+template<typename T, uint S>
+HD auto pow(vec_t<T, S> a, T x) -> vec_t<T, S>
+{
+    vec_t<T, S> n;
+    for (uint i = 0; i < S; ++i)
+    {
+        n[i] = std::pow(a[i], x);
     }
     return n;
 }
