@@ -1,7 +1,5 @@
 # VAPOR: __Versatile Accelerated Physics Optimization Routines__
-
 ## Description
-
 Vapor aims to define a minimal set of C++ programming primitives needed to model
 PDE solvers, and execute them on massively parallel compute hardware.
 
@@ -41,8 +39,8 @@ and short compile times.
 Vapor is also a lightweight application framework that can ease the development
 of GPU-accelerated and massively parallel scientific simulation codes.
 
-### Objectives
 
+### Objectives
 - Provide lightweight, idiomatic C++ abstractions for high-performance array
   transformations and PDE solvers
 - Adapt to hybrid parallel compute architectures (multi-core / multi-node /
@@ -54,15 +52,14 @@ of GPU-accelerated and massively parallel scientific simulation codes.
 
 
 ## Table of Contents
-
 - [Installation](#installation)
 - [Library Usage](#library-usage)
 - [Build System](#build-system)
 - [Credits](#credits)
 - [License](#license)
 
-## Installation
 
+## Installation
 The following will compile the programs in the examples directory, other than
 the ones which require CUDA.
 
@@ -83,10 +80,9 @@ make bin/array_demo_gpu
 bin/array_demo_gpu
 ```
 
+
 ## Library Usage
-
 ### Functional N-dimensional arrays
-
 Let's start with an example. The following code creates an array of integers
 `a`, and maps it to an array of doubles, `b`. Both of these arrays
 are _lazy_; they are not associated with a buffer of memory, but rather
@@ -108,7 +104,6 @@ passing an _executor_ instance to the `cache` function.
 
 
 #### Executors
-
 Hardware-agnostic accelerated array transformations in Vapor are accomplished
 by use of an "executor" pattern. The executor is used to convert a
 lazily-evaluated array to a memory-backed one. Vapor provides three basic
@@ -128,7 +123,6 @@ assert(all(a == b) && all(b == c));
 
 
 #### Arrays in Vapor
-
 Numeric arrays in Vapor are simply a pair of objects: a D-dimensional index
 space, and a function `f: ivec_t<D> -> T`. Arrays are logically immutable; `a
 [i]` returns by value an element of type `T`. This means that array
@@ -150,9 +144,9 @@ global arrays, domain decomposition, and stencil calculations. For example,
 if `a` covers the 1d index space (0, 100) and `b` covers (1, 99), then the
 array `a.insert(b)` has the values of `a` at the endpoints, and the values of
 `b` on the interior. Array subsets are created by indexing an array like
-this: `a[subspace]` where for example, `subspace = a.space().constract
-(2)`. If `a` had a starting index of 0, then the array `a[subspace]` would
-have a starting index of 2.
+this: `a[subspace]` where for example, `subspace = a.space().contract(2)`. If
+`a` had a starting index of 0, then the array `a[subspace]` would have a
+starting index of 2.
 
 In-place array modifications are modeled using a paradigm inspired by Jax. If
 a is an array, the construct `a = a.at(space).map(f)` will map only the
@@ -161,26 +155,65 @@ values unchanged. The array `a.at(space).map(f)` has the same index space
 as `a`.
 
 
-#### Index spaces
+#### Modeling exceptions
 
+In modeling of PDEs it's not uncommon for some calculations to be fallible.
+For example, if a root finder is applied to each element of an array, the
+root finder could fail to converge to a solution for some elements. In a
+sequential computing environment (single-core CPU), crash reporting and
+mitigation can be easily managed using exceptions, but exceptions are not
+supported in GPU kernels, and they must be handled with care in a
+multi-threaded environment.
+
+For this reason, Vapor provides a facility to catch errors in kernel
+executions, based on the use of an `optional` type. If the execution of a
+certain function might fail, then its return type should be wrapped in an
+optional type, for example,
+
+```c++
+vapor::optional_t<double> logarithm(double x)
+{
+    if (x > 0.0) {
+        return vapor::some(log(x));
+    } else {
+        return vapor::none<double>();
+    }
+}
+```
+
+When an array of optional type is cached, it can optionally be
+"unwrapped" at the same time, and a `std::runtime_error` exception will be
+thrown if any of the array elements were `none` rather than `some`:
+
+```c++
+try {
+    auto a = vapor::range(10).map([] (int i) { return 8.0 - i; }).map(logarithm);
+    auto b = a.cache_unwrap(); // b[i] has type double
+    // use result
+} catch (const std::exception& e) {
+    vapor::print(e.what());
+    // enter crash mitigation, or exit gracefully
+}
+```
+
+
+#### Index spaces
 Todo...
 
 
 #### Allocators
-
 Todo...
 
-### Stack-allocated vectors
 
+### Stack-allocated vectors
 Vapor provides a stack-allocated 1d vector type `vec_t<T, S>`. `S` is an
 unsigned integer which sets the compile-time size of the vector. The behavior
 is not too different from `std::array`, except that `vec_t` can be compiled in
 CUDA device code, and overloads the arithmetic operators.
 
+
 ## Build System
-
 ### Scheme
-
 Projects based on Vapor contains a collection of _programs_. A program refers
 to a single `.cpp` file, designed for a specfic type of calculation.
 That .cpp file includes the vapor header files, and should not have any
@@ -205,7 +238,6 @@ by default.
 
 
 ### Examples
-
 `./configure`: Generates a Makefile with rules to build targets using a
 default set of modes, or otherwise the modes named in the `system.json`
 file.
@@ -216,14 +248,12 @@ file.
 
 
 ### Project file
-
 The configure script looks in the current working directory for a JSON file
 called `project.json`. An example project file can be found
 [here](project.json) in the Vapor root directory.
 
 
 ### System file
-
 The configure script optionally loads a JSON file called `system.json` from the
 current directory. Allowed keys include:
 
@@ -233,13 +263,12 @@ current directory. Allowed keys include:
 
 
 ## Credits
-
 This library was authored by Jonathan Zrake over the 2023 - 2024 Winter break,
 with significant intellectual contributions from [Marcus DuPont](https://github.com/EigenDev),
 and Andrew MacFadyen.
 
-## License
 
+## License
 MIT License
 
 Copyright (c) 2023-2024 Clemson Computational Astrophysics Lab
