@@ -235,8 +235,8 @@ current directory. Allowed keys include:
 ## Credits
 
 This library was authored by Jonathan Zrake over the 2023 - 2024 Winter break,
-with significant intellectual contributions from [Marcus DuPont]
-(https://github.com/EigenDev), and Andrew MacFadyen.
+with significant intellectual contributions from [Marcus DuPont](https://github.com/EigenDev),
+and Andrew MacFadyen.
 
 ## License
 
