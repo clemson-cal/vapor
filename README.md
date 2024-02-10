@@ -101,49 +101,22 @@ auto b = a.map([] (int i) { return 2.0 * i; }); /* b[10] == 20.0 */
 auto c = b.cache();                             /* c[10] == 20.0 */
 ```
 
-#### Rationale
+All computations are carried out in the final step where the array is cached,
+and automatically parallelized either on CPU's or GPU's depending on the
+build configuration. Hybrid parallelism is also possible by explicitly
+passing an _executor_ instance to the `cache` function.
 
-Numeric arrays in Vapor comprise a D-dimensional index space, and a function
-`f: ivec_t<D> -> T`. Arrays are logically immutable; `a[i]` returns by value
-an element of type `T`. This means that array assignment by indexing is not
-possible, `a[i] = x` will not compile because the left-hand-side is not a
-reference type. Arrays are transformed mainly by mapping operatons. If `g: T
--> U` then `a.map(g)` is an array with value type of `U`, and has the same
-index space as `a`. Array elements are computed lazily, meaning that for the
-array `b = a.map(f).map(g).map(h)`, each time `b[i]` appears in the code, the
-function composition `h(g(f(i))` is executed.
-
-An array can be cached to a "memory-backed array" by calling `a.cache()`. The
-resulting memory-backed array uses strided memory access to retrieve the value
-of a multi-dimensional index in the buffer.
-
-Unlike arrays from other numeric libraries, including numpy, arrays in
-Vapor can have a non-zero starting index. This simplifies the semantics of
-inserting the values of one array into another, and is also favorable in
-dealing with global arrays and domain decomposition.  For example, if `a`
-covers the 1d index space (0, 100) and `b` covers (1, 99), then the array
-`a.insert(b)` has the values of `a` at the endpoints, and the values of
-`b` on the interior. Array subsets are created by indexing an array like this:
-`a[subspace]` where for example, `subspace = a.space().constract(2)`. If `a`
-had a starting index of 0, then the array `a[subspace]` would have a starting
-index of 2.
-
-In-place array modifications are modeled using a paradigm inspired by Jax. If
-a is an array, the construct `a = a.at(space).map(f)` will map only the
-elements inside the index space through the function `f`, leaving the other
-values unchanged. The array `a.at(space).map(f)` has the same index space
-as `a`.
 
 #### Executors
 
 Hardware-agnostic accelerated array transformations in Vapor are accomplished
 by use of an "executor" pattern. The executor is used to convert a
 lazily-evaluated array to a memory-backed one. Vapor provides three basic
-executor types, isllustrated below, but can be easily extended with custom
+executor types, illustrated below, but can be easily extended with custom
 executors.
 
 ```c++
-auto pool = pool_allocator_t();
+auto pool = pool_allocator_t(); /* a memory pool, reuses buffer allocations */
 auto cpu = cpu_executor_t(); /* single-core executor */
 auto omp = omp_executor_t(); /* multi-core executor */
 auto gpu = gpu_executor_t(4); /* multi-GPU executor (uses 4 devices) */
@@ -152,6 +125,46 @@ auto b = my_array.cache(omp, pool);
 auto c = my_array.cache(gpu, pool);
 assert(all(a == b) && all(b == c));
 ```
+
+
+#### Arrays in Vapor
+
+Numeric arrays in Vapor are simply a pair of objects: a D-dimensional index
+space, and a function `f: ivec_t<D> -> T`. Arrays are logically immutable; `a
+[i]` returns by value an element of type `T`. This means that array
+assignment by indexing is not possible, `a[i] = x` will not compile because
+the left-hand-side is not a reference type. Arrays are transformed mainly by
+mapping operatons. If `g: T -> U` then `a.map(g)` is an array with value type
+of `U`, and has the same index space as `a`. Array elements are computed
+lazily, meaning that for the array `b = a.map(f).map(g).map(h)`, each time `b
+[i]` appears in the code, the function composition `h(g(f(i))` is executed.
+
+An array can be cached to a "memory-backed array" by calling `a.cache()`. The
+resulting memory-backed array uses strided memory access to retrieve the value
+of a multi-dimensional index in the buffer.
+
+Unlike arrays from other numeric libraries such as numpy, arrays in Vapor can
+have a non-zero starting index. This simplifies the semantics of inserting
+the values of one array into another, and is often favorable in dealing with
+global arrays, domain decomposition, and stencil calculations. For example,
+if `a` covers the 1d index space (0, 100) and `b` covers (1, 99), then the
+array `a.insert(b)` has the values of `a` at the endpoints, and the values of
+`b` on the interior. Array subsets are created by indexing an array like
+this: `a[subspace]` where for example, `subspace = a.space().constract
+(2)`. If `a` had a starting index of 0, then the array `a[subspace]` would
+have a starting index of 2.
+
+In-place array modifications are modeled using a paradigm inspired by Jax. If
+a is an array, the construct `a = a.at(space).map(f)` will map only the
+elements inside the index space through the function `f`, leaving the other
+values unchanged. The array `a.at(space).map(f)` has the same index space
+as `a`.
+
+
+#### Index spaces
+
+Todo...
+
 
 #### Allocators
 
@@ -222,8 +235,8 @@ current directory. Allowed keys include:
 ## Credits
 
 This library was authored by Jonathan Zrake over the 2023 - 2024 Winter break,
-with significant intellectual contributions from Marcus DuPont, and Andrew
-MacFadyen.
+with significant intellectual contributions from [Marcus DuPont]
+(https://github.com/EigenDev), and Andrew MacFadyen.
 
 ## License
 
