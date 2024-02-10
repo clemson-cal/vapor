@@ -13,8 +13,8 @@ method to solve a 2d heat equation:
 auto N = uint(100);
 auto s = index_space(vec(N, N));
 auto i = indices(s);
-auto h = 1.0 / N;
-auto x = i.map([h] (vec_t<int, 2> ij) { return vec(-0.5 + ij[0] * h, -0.5 + ij[1] * h); });
+auto dx = 1.0 / N;
+auto x = i.map([h] (vec_t<int, 2> ij) { return ij * h - 0.5; });
 auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(x, x)); });
 auto del_squared_u = i[s.contract(1)].map([u, h] (vec_t<int, 2> ij) {
     auto i = ij[0];
