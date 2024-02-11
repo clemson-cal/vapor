@@ -395,7 +395,9 @@ struct gpu_executor_t
         auto c_ptr = c_buf->template data<int>();
         auto g = [function, c_ptr] HD (ivec_t<D> i)
         {
-            atomicAdd(c_ptr, function(i));
+            if (auto res = function(i)) {
+                atomicAdd(c_ptr, res);
+            }
         };
         loop(space, g);
         return future::future(read_from_buffer_t<int, A>{c_buf});
