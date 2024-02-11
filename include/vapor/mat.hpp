@@ -121,23 +121,23 @@ HD auto inverse(const matrix_t<T, M, M> &a)
     else {
         b = a; // copy the input matrix to output matrix
 
-        for (int i = 0; i < M; ++i)
+        for (uint i = 0; i < M; ++i)
         {
             if (b(i, i) < eps && b(i, i) > -eps)
             {
                 b(i, i) = eps; // add eps value to diagonal if diagonal is zero
             }
         }
-        for (int i = 1; i < M; ++i)
+        for (uint i = 1; i < M; ++i)
         {
             b(i, 0) /= b(0, 0); // normalize row 0
         }
-        for (int i = 1; i < M; ++i)
+        for (uint i = 1; i < M; ++i)
         {
-            for (int j = i; j < M; ++j)
+            for (uint j = i; j < M; ++j)
             {
                 auto sum = 0.0;
-                for (int k = 0; k < i; ++k)
+                for (uint k = 0; k < i; ++k)
                 {
                     sum += b(j, k) * b(k, i); // do a column of L
                 }
@@ -147,10 +147,10 @@ HD auto inverse(const matrix_t<T, M, M> &a)
             {
                 continue;
             }
-            for (int j = i + 1; j < M; ++j)
+            for (uint j = i + 1; j < M; ++j)
             {
                 auto sum = 0.0;
-                for (int k = 0; k < i; ++k)
+                for (uint k = 0; k < i; ++k)
                 {
                     sum += b(i, k) * b(k, j);
                 }
@@ -159,19 +159,19 @@ HD auto inverse(const matrix_t<T, M, M> &a)
         }
         auto d = 1.0; // compute the determinant, product of diag(U)
 
-        for (int i = 0; i < M; ++i)
+        for (uint i = 0; i < M; ++i)
         {
             d *= b(i, i);
         }
-        for (int i = 0; i < M; ++i)
+        for (uint i = 0; i < M; ++i)
         {
-            for (int j = i; j < M; ++j)
+            for (uint j = i; j < M; ++j)
             {
                 auto x = 1.0;
                 if (i != j)
                 {
                     x = 0.0;
-                    for (int k = i; k < j; ++k)
+                    for (uint k = i; k < j; ++k)
                     {
                         x -= b(j, k) * b(k, i);
                     }
@@ -179,28 +179,28 @@ HD auto inverse(const matrix_t<T, M, M> &a)
                 b(j, i) = x / b(j, j); // invert L
             }
         }
-        for (int i = 0; i < M; ++i)
+        for (uint i = 0; i < M; ++i)
         {
-            for (int j = i; j < M; ++j)
+            for (uint j = i; j < M; ++j)
             {
                 auto sum = 0.0;
                 if (i == j)
                 {
                     continue;
                 }
-                for (int k = i; k < j; ++k)
+                for (uint k = i; k < j; ++k)
                 {
                     sum += b(k, j) * (i == k ? 1.0 : b(i, k));
                 }
                 b(i, j) = -sum; // invert U
             }
         }
-        for (int i = 0; i < M; ++i)
+        for (uint i = 0; i < M; ++i)
         {
-            for (int j = 0; j < M; ++j)
+            for (uint j = 0; j < M; ++j)
             {
                 auto sum = 0.0;
-                for (int k = i > j ? i : j; k < M; ++k)
+                for (uint k = i > j ? i : j; k < M; ++k)
                 {
                     sum += (j == k ? 1.0 : b(j, k)) * b(k, i);
                 }

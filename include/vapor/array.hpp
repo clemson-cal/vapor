@@ -594,7 +594,7 @@ auto any(const array_t<D, F>& a)
 template<uint D, class F, class E, class A, typename T = typename array_t<D, F>::value_type>
 bool all(const array_t<D, F>& a, E& executor, A& allocator)
 {
-    return sum(a.map([] HD (T a) { return a ? 1 : 0; })) == a.size();
+    return sum(a.map([] HD (T a) -> uint { return a ? 1 : 0; })) == a.size();
 }
 template<uint D, class F>
 auto all(const array_t<D, F>& a)
