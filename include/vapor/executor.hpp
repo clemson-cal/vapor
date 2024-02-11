@@ -349,7 +349,7 @@ struct gpu_executor_t
             cudaSetDevice(device);
             cudaDeviceSynchronize();
         }
-        return future::future(device_synchronize_t{0});
+        return future::ready();
     }
 
     template<typename F>
