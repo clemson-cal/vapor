@@ -63,6 +63,26 @@ struct matrix_t
     T data[M][N] = {{{}}};
 };
 
+template<typename T, typename U, uint M, uint N>
+HD auto operator*(const matrix_t<T, M, N>& a, U x)
+{
+    matrix_t<decltype(T() * U()), M, N> r;
+    for (uint i = 0; i < M; ++i)
+        for (uint j = 0; j < N; ++j)
+            r(i, j) = a(i, j) * x;
+    return r;
+}
+
+template<typename T, typename U, uint M, uint N>
+HD auto operator/(const matrix_t<T, M, N>& a, U x)
+{
+    matrix_t<decltype(T() * U()), M, N> r;
+    for (uint i = 0; i < M; ++i)
+        for (uint j = 0; j < N; ++j)
+            r(i, j) = a(i, j) / x;
+    return r;
+}
+
 template<typename T, typename U, uint M, uint N, uint K>
 HD auto matmul(const matrix_t<T, M, K> &a, const matrix_t<U, K, N> &b)
 {
