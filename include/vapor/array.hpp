@@ -312,20 +312,20 @@ struct array_t
     }
 
     template<class G> auto map(G g) const { return array(compose<D>(f, g), space()); }
-    template<class G> auto operator+(array_t<D, G> b) const { return array(add<D>(f, b.f), space()); }
-    template<class G> auto operator-(array_t<D, G> b) const { return array(sub<D>(f, b.f), space()); }
-    template<class G> auto operator*(array_t<D, G> b) const { return array(mul<D>(f, b.f), space()); }
-    template<class G> auto operator/(array_t<D, G> b) const { return array(div<D>(f, b.f), space()); }
+    template<class G> auto operator+(array_t<D, G> b) const { assert(b.space() == space()); return array(add<D>(f, b.f), space()); }
+    template<class G> auto operator-(array_t<D, G> b) const { assert(b.space() == space()); return array(sub<D>(f, b.f), space()); }
+    template<class G> auto operator*(array_t<D, G> b) const { assert(b.space() == space()); return array(mul<D>(f, b.f), space()); }
+    template<class G> auto operator/(array_t<D, G> b) const { assert(b.space() == space()); return array(div<D>(f, b.f), space()); }
     template<typename T> auto operator+(T b) const { return *this + uniform<T>(b, space()); }
     template<typename T> auto operator-(T b) const { return *this - uniform<T>(b, space()); }
     template<typename T> auto operator*(T b) const { return *this * uniform<T>(b, space()); }
     template<typename T> auto operator/(T b) const { return *this / uniform<T>(b, space()); }
-    template<class G> auto operator==(array_t<D, G> b) const { return array(eq<D>(f, b.f), space()); }
-    template<class G> auto operator!=(array_t<D, G> b) const { return array(ne<D>(f, b.f), space()); }
-    template<class G> auto operator<=(array_t<D, G> b) const { return array(le<D>(f, b.f), space()); }
-    template<class G> auto operator>=(array_t<D, G> b) const { return array(ge<D>(f, b.f), space()); }
-    template<class G> auto operator<(array_t<D, G> b) const { return array(lt<D>(f, b.f), space()); }
-    template<class G> auto operator>(array_t<D, G> b) const { return array(gt<D>(f, b.f), space()); }
+    template<class G> auto operator==(array_t<D, G> b) const { assert(b.space() == space()); return array(eq<D>(f, b.f), space()); }
+    template<class G> auto operator!=(array_t<D, G> b) const { assert(b.space() == space()); return array(ne<D>(f, b.f), space()); }
+    template<class G> auto operator<=(array_t<D, G> b) const { assert(b.space() == space()); return array(le<D>(f, b.f), space()); }
+    template<class G> auto operator>=(array_t<D, G> b) const { assert(b.space() == space()); return array(ge<D>(f, b.f), space()); }
+    template<class G> auto operator<(array_t<D, G> b) const { assert(b.space() == space()); return array(lt<D>(f, b.f), space()); }
+    template<class G> auto operator>(array_t<D, G> b) const { assert(b.space() == space()); return array(gt<D>(f, b.f), space()); }
     template<typename T> auto operator==(T b) const { return *this == uniform<T>(b, space()); }
     template<typename T> auto operator!=(T b) const { return *this != uniform<T>(b, space()); }
     template<typename T> auto operator<=(T b) const { return *this <= uniform<T>(b, space()); }
@@ -347,7 +347,7 @@ struct array_t
  *
  * The resulting object can be mapped over; the arrays
  * 
- * a.insert(a[subspace].map(f)) or a.insert(b)
+ * a.insert(a[subspace].map(f))
  * 
  * and
  * 
@@ -365,10 +365,10 @@ struct array_selection_t
     auto map(G g) { return select(in(sel, a.space()), a.map(g), a); }
     auto set(value_type v) { return this->map(constant(v)); }
 
-    template<class G> auto operator+(array_t<D, G> b) const { return select(in(sel, a.space()), a + b, a); }
-    template<class G> auto operator-(array_t<D, G> b) const { return select(in(sel, a.space()), a - b, a); }
-    template<class G> auto operator*(array_t<D, G> b) const { return select(in(sel, a.space()), a * b, a); }
-    template<class G> auto operator/(array_t<D, G> b) const { return select(in(sel, a.space()), a / b, a); }
+    template<class G> auto operator+(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] + b, a); }
+    template<class G> auto operator-(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] - b, a); }
+    template<class G> auto operator*(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] * b, a); }
+    template<class G> auto operator/(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] / b, a); }
     template<typename T> auto operator+(T b) const { return *this + uniform<T>(b, sel); }
     template<typename T> auto operator-(T b) const { return *this - uniform<T>(b, sel); }
     template<typename T> auto operator*(T b) const { return *this * uniform<T>(b, sel); }
