@@ -114,7 +114,7 @@ CXXFLAGS_GPU = -D VAPOR_GPU -O3 -x cu --extended-lambda -ccbin={nvcc_ccbin}
 
 header["gui"] = r"""
 GUI_HOME = {gui}
-CXX_GPU = c++
+CXX_GUI = c++
 CXXFLAGS_GUI += -D VAPOR_GUI
 CXXFLAGS_GUI += -Wall -O3 -ObjC++
 CXXFLAGS_GUI += -I$(GUI_HOME)/imgui
@@ -241,9 +241,10 @@ def main():
 
     with open_output() as f:
         f.write(header["all"].format(**project, **system))
+        f.write("\n")     
         for mode in modes:
-            f.write(header[mode].format(**project, **system))            
-        f.write("\n")
+            f.write(header[mode].format(**project, **system))
+            f.write("\n")     
         f.write("\n")
         for mode in modes:
             for prog in programs:
