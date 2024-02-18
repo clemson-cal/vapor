@@ -135,7 +135,7 @@ void array_reductions()
     auto exec = default_executor_t();
     auto alloc = pool_allocator_t();
     #endif
-    
+
     auto N = int(1000);
     auto a = cache(range(N), exec, alloc);
     printf("the maximum value of range(%d) is %d\n", N, max(a, exec, alloc));

@@ -11,10 +11,10 @@ method to solve a 2d heat equation:
 auto N = uint(100);
 auto s = index_space(vec(N, N));
 auto i = indices(s);
-auto dx = 1.0 / N;
-auto x = i.map([h] (vec_t<int, 2> ij) { return ij * h - 0.5; });
-auto u = x.map([] (vec_t<double, 2> x) { return exp(-dot(x, x)); });
-auto del_squared_u = i[s.contract(1)].map([u, h] (vec_t<int, 2> ij) {
+auto h = 1.0 / N; /* grid spacing */
+auto x = i.map([h] HD (vec_t<int, 2> ij) { return ij * h - 0.5; });
+auto u = x.map([] HD (vec_t<double, 2> x) { return exp(-dot(x, x)); });
+auto del_squared_u = i[s.contract(1)].map([u, h] HD (vec_t<int, 2> ij) {
     auto i = ij[0];
     auto j = ij[1];
     return (u[vec(i + 1, j)] +
@@ -71,8 +71,8 @@ make
 bin/array_demo_dbg # runs a single-core CPU debug version of the array demo program
 ```
 
-The following will build and run the array demo, this time enablged for GPU
-execution.
+If you are on a system with a CUDA-enabled GPU, the following will build and
+run the array demo, this time enabled for GPU execution.
 
 ```bash
 ./configure --enable-cuda
