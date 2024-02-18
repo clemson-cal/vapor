@@ -84,20 +84,44 @@ current directory. Allowed keys include:
 ================================================================================
 """
 
+header = dict()
 
-header = r"""
+header["all"] = r"""
 VAPOR_HOME = {vapor}
-CXX_DBG = c++
-CXX_CPU = c++
-CXX_OMP = c++
-CXX_GPU = nvcc
-CXX_MPI = mpicxx
-
 CXXFLAGS = -std=c++17 -MMD -MP -I$(VAPOR_HOME)/include
-CXXFLAGS_DBG = -Wall -O0 -g -D VAPOR_DEBUG
-CXXFLAGS_CPU = -Ofast
-CXXFLAGS_OMP = -Ofast {omp_flags}
-CXXFLAGS_GPU = -O3 -x cu --extended-lambda -ccbin={nvcc_ccbin}
+CXX_MPI = mpicxx
+""".strip()
+
+header["dbg"] = r"""
+CXX_DBG = c++
+CXXFLAGS_DBG = -D VAPOR_DBG -Wall -O0 -g -D VAPOR_DEBUG
+""".strip()
+
+header["cpu"] = r"""
+CXX_CPU = c++
+CXXFLAGS_CPU = -D VAPOR_CPU -Ofast
+""".strip()
+
+header["omp"] = r"""
+CXX_OMP = c++
+CXXFLAGS_OMP = -D VAPOR_OMP -Ofast {omp_flags}
+""".strip()
+
+header["gpu"] = r"""
+CXX_GPU = nvcc
+CXXFLAGS_GPU = -D VAPOR_GPU -O3 -x cu --extended-lambda -ccbin={nvcc_ccbin}
+""".strip()
+
+header["gui"] = r"""
+GUI_HOME = {gui}
+CXX_GPU = c++
+CXXFLAGS_GUI += -D VAPOR_GUI
+CXXFLAGS_GUI += -Wall -O3 -ObjC++
+CXXFLAGS_GUI += -I$(GUI_HOME)/imgui
+CXXFLAGS_GUI += -I$(GUI_HOME)/imgui/backends
+CXXFLAGS_GUI += -I$(GUI_HOME)/implot
+CXXFLAGS_GUI += -I$(GUI_HOME)/imgui-filebrowser
+CXXFLAGS_GUI += $(shell sdl2-config --cflags)
 """.strip()
 
 
@@ -124,6 +148,10 @@ def get_lib(mode, deps=list(), libs=list(), lomp="-lomp", **kwargs):
         lib.append(lomp)
     if "hdf5" in deps:
         lib.append("-lhdf5")
+    if mode == "gui":
+        lib.append("-framework Metal")
+        lib.append("-framework Cocoa")
+        lib.append("$(shell sdl2-config --libs)")
     return " ".join(lib)
 
 
@@ -132,6 +160,24 @@ def get_cxx(mode, deps=list(), **kwargs):
         return "mpi"
     else:
         return mode
+
+
+def get_extra_sources(mode):
+    if mode == "gui":
+        return [
+            "$(GUI_HOME)/imgui/backends/imgui_impl_metal.mm",
+            "$(GUI_HOME)/imgui/backends/imgui_impl_sdl2.cpp",
+            "$(GUI_HOME)/imgui/imgui.cpp",
+            "$(GUI_HOME)/imgui/imgui_demo.cpp",
+            "$(GUI_HOME)/imgui/imgui_draw.cpp",
+            "$(GUI_HOME)/imgui/imgui_tables.cpp",
+            "$(GUI_HOME)/imgui/imgui_widgets.cpp",
+            "$(GUI_HOME)/implot/implot.cpp",
+            "$(GUI_HOME)/implot/implot_demo.cpp",
+            "$(GUI_HOME)/implot/implot_items.cpp",
+        ]
+    else:
+        return list()
 
 
 def skip_target(prog, mode, project):
@@ -143,6 +189,7 @@ def main():
     import json
     import argparse
     import io
+    import pathlib
 
     system = {
         "modes": ["dbg", "cpu"],
@@ -156,6 +203,7 @@ def main():
         "bin": "bin",
         "build": "build",
         "vapor": "vapor",
+        "gui": "gui",
         "programs": {},
     }
 
@@ -192,7 +240,9 @@ def main():
             return open("Makefile", "w")
 
     with open_output() as f:
-        f.write(header.format(**project, **system))
+        f.write(header["all"].format(**project, **system))
+        for mode in modes:
+            f.write(header[mode].format(**project, **system))            
         f.write("\n")
         f.write("\n")
         for mode in modes:
@@ -202,6 +252,11 @@ def main():
                 f.write(f"EXE_{mode.upper()} += {bin}/{prog}_{mode}\n")
                 f.write(f"OBJ_{mode.upper()} += {build}/{prog}_{mode}.o\n")
                 f.write(f"DEP_{mode.upper()} += {build}/{prog}_{mode}.d\n")
+                for c in map(pathlib.Path, get_extra_sources(mode)):
+                    o = c.with_suffix(".o").name
+                    d = c.with_suffix(".d").name
+                    f.write(f"OBJ_{mode.upper()} += {build}/{o}\n")
+                    f.write(f"DEP_{mode.upper()} += {build}/{d}\n")
         f.write("\n")
         for mode in modes:
             f.write(f"EXE += $(EXE_{mode.upper()})")
@@ -234,9 +289,9 @@ def main():
                     lomp=system["lomp"],
                 )
                 cxx = get_cxx(mode, **project["programs"][prog])
-                f.write(f"{bin}/{prog}_{mode}: {build}/{prog}_{mode}.o")
+                f.write(f"{bin}/{prog}_{mode}: $(OBJ_{mode.upper()})")
                 f.write("\n")
-                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $< {lib}")
+                f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $^ {lib}")
                 f.write("\n")
                 f.write(f"{build}/{prog}_{mode}.o: {src}/{prog}.cpp")
                 f.write("\n")
@@ -245,6 +300,15 @@ def main():
                 )
                 f.write("\n")
             f.write("\n")
+        for mode in modes: # extra sources are per-mode, not per-program
+            for c in map(pathlib.Path, get_extra_sources(mode)):
+                o = c.with_suffix(".o").name
+                f.write(f"{build}/{o}: {c}\n")
+                f.write(
+                    f"\t$(CXX_{cxx.upper()}) -o $@ $< $(CXXFLAGS) $(CXXFLAGS_{mode.upper()}) -c"
+                )
+                f.write("\n")
+        f.write("\n")
         f.write(footer.format(**project))
         f.write("\n")
         if args.stdout:
