@@ -117,13 +117,14 @@ void map_subset()
     auto b = a.at(first_two).map([] HD (int i) { return 0; });
     auto c = a.at(first_two) * 0; // equivalent to b above
     auto d = a.at(first_two).set(0); // also equivalent
-
+    auto e = a.add(indices(first_two).map([] (ivec_t<1>) { return 1; }));
     for (int i = 0; i < N; ++i)
     {
         printf("[%u]: %u=%u=%u=%u\n", i, b[i], i < 2 ? 0 : i, c[i], d[i]);
     }
     printf("range(5)[2:4].start[0]=%d=2\n", a[index_space(ivec(2), uvec(2))].start()[0]);
     printf("range(5)[2:4].shape[0]=%d=2\n", a[index_space(ivec(2), uvec(2))].shape()[0]);
+    print(e, " = array(1 2 2 3 4)\n");
 }
 
 void array_reductions()

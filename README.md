@@ -149,10 +149,14 @@ this: `a[subspace]` where for example, `subspace = a.space().contract(2)`. If
 starting index of 2.
 
 In-place array modifications are modeled using a paradigm inspired by Jax. If
-a is an array, the construct `a = a.at(space).map(f)` will map only the
+`a` is an array, the construct `a = a.at(space).map(f)` will map only the
 elements inside the index space through the function `f`, leaving the other
-values unchanged. The array `a.at(space).map(f)` has the same index space
-as `a`.
+values unchanged. The array `a.at(space).map(f)` has the same index space as
+`a`. It is also valid to add an array `du`, whose index space lies inside the
+index space of another array `u`, using the syntax `u.add(du)`. The index
+spaces of `u.add(du)`, and `u.mul(a)`, are both equal to `u.space()`. Note
+that `u + du` generates a failed assertion unless `u` and `du` have the same
+index spaces.
 
 
 #### Modeling exceptions

@@ -248,10 +248,12 @@ struct array_t
     }
     HD auto operator[](index_space_t<D> subspace) const
     {
-        #ifdef VAPOR_ARRAY_BOUNDS_CHECK
         assert(space().contains(subspace));
-        #endif
         return array_t<D, F>{f, subspace.di, subspace.i0};
+    }
+    HD auto extract(index_space_t<D> subspace) const
+    {
+        return this->operator[](subspace);
     }
     ivec_t<D> start() const
     {
@@ -286,7 +288,7 @@ struct array_t
         return array_selection_t<D, F>{sel, *this};
     }
     template<class G>
-    auto insert(array_t<D, G> b)
+    auto insert(array_t<D, G> b) const
     {
         return select(in(b.space(), space()), b, *this);
     }
@@ -312,10 +314,14 @@ struct array_t
     }
 
     template<class G> auto map(G g) const { return array(compose<D>(f, g), space()); }
-    template<class G> auto operator+(array_t<D, G> b) const { assert(b.space() == space()); return array(add<D>(f, b.f), space()); }
-    template<class G> auto operator-(array_t<D, G> b) const { assert(b.space() == space()); return array(sub<D>(f, b.f), space()); }
-    template<class G> auto operator*(array_t<D, G> b) const { assert(b.space() == space()); return array(mul<D>(f, b.f), space()); }
-    template<class G> auto operator/(array_t<D, G> b) const { assert(b.space() == space()); return array(div<D>(f, b.f), space()); }
+    template<class G> auto add(array_t<D, G> b) const { return insert(extract(b.space()) + b); }
+    template<class G> auto sub(array_t<D, G> b) const { return insert(extract(b.space()) - b); }
+    template<class G> auto mul(array_t<D, G> b) const { return insert(extract(b.space()) * b); }
+    template<class G> auto div(array_t<D, G> b) const { return insert(extract(b.space()) / b); }
+    template<class G> auto operator+(array_t<D, G> b) const { assert(b.space() == space()); return array(vapor::add<D>(f, b.f), space()); }
+    template<class G> auto operator-(array_t<D, G> b) const { assert(b.space() == space()); return array(vapor::sub<D>(f, b.f), space()); }
+    template<class G> auto operator*(array_t<D, G> b) const { assert(b.space() == space()); return array(vapor::mul<D>(f, b.f), space()); }
+    template<class G> auto operator/(array_t<D, G> b) const { assert(b.space() == space()); return array(vapor::div<D>(f, b.f), space()); }
     template<typename T> auto operator+(T b) const { return *this + uniform<T>(b, space()); }
     template<typename T> auto operator-(T b) const { return *this - uniform<T>(b, space()); }
     template<typename T> auto operator*(T b) const { return *this * uniform<T>(b, space()); }
@@ -365,10 +371,10 @@ struct array_selection_t
     auto map(G g) { return select(in(sel, a.space()), a.map(g), a); }
     auto set(value_type v) { return this->map(constant(v)); }
 
-    template<class G> auto operator+(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] + b, a); }
-    template<class G> auto operator-(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] - b, a); }
-    template<class G> auto operator*(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] * b, a); }
-    template<class G> auto operator/(array_t<D, G> b) const { return select(in(sel, a.space()), a[b.space()] / b, a); }
+    template<class G> auto operator+(array_t<D, G> b) const { return select(in(sel, a.space()), a.extract(b.space()) + b, a); }
+    template<class G> auto operator-(array_t<D, G> b) const { return select(in(sel, a.space()), a.extract(b.space()) - b, a); }
+    template<class G> auto operator*(array_t<D, G> b) const { return select(in(sel, a.space()), a.extract(b.space()) * b, a); }
+    template<class G> auto operator/(array_t<D, G> b) const { return select(in(sel, a.space()), a.extract(b.space()) / b, a); }
     template<typename T> auto operator+(T b) const { return *this + uniform<T>(b, sel); }
     template<typename T> auto operator-(T b) const { return *this - uniform<T>(b, sel); }
     template<typename T> auto operator*(T b) const { return *this * uniform<T>(b, sel); }
