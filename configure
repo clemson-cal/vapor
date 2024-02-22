@@ -251,23 +251,24 @@ def main():
                 if skip_target(prog, mode, project):
                     continue
                 f.write(f"EXE_{mode.upper()} += {bin}/{prog}_{mode}\n")
-                f.write(f"OBJ_{mode.upper()} += {build}/{prog}_{mode}.o\n")
                 f.write(f"DEP_{mode.upper()} += {build}/{prog}_{mode}.d\n")
+                f.write(f"OBJ_{prog.upper()}_{mode.upper()} += {build}/{prog}_{mode}.o\n")
                 for c in map(pathlib.Path, get_extra_sources(mode)):
                     o = c.with_suffix(".o").name
                     d = c.with_suffix(".d").name
-                    f.write(f"OBJ_{mode.upper()} += {build}/{o}\n")
-                    f.write(f"DEP_{mode.upper()} += {build}/{d}\n")
+                    f.write(f"OBJ_{prog.upper()}_{mode.upper()} += {build}/{o}\n")
+                    f.write(f"DEP_{prog.upper()}_{mode.upper()} += {build}/{d}\n")
         f.write("\n")
         for mode in modes:
             f.write(f"EXE += $(EXE_{mode.upper()})")
             f.write("\n")
         for mode in modes:
-            f.write(f"OBJ += $(OBJ_{mode.upper()})")
-            f.write("\n")
-        for mode in modes:
             f.write(f"DEP += $(DEP_{mode.upper()})")
             f.write("\n")
+        for mode in modes:
+            for prog in programs:
+                f.write(f"OBJ += $(OBJ_{prog.upper()}_{mode.upper()})")
+                f.write("\n")
         f.write("\n")
         for mode in modes:
             f.write(f"{mode}: $(EXE_{mode.upper()})")
@@ -290,7 +291,7 @@ def main():
                     lomp=system["lomp"],
                 )
                 cxx = get_cxx(mode, **project["programs"][prog])
-                f.write(f"{bin}/{prog}_{mode}: $(OBJ_{mode.upper()})")
+                f.write(f"{bin}/{prog}_{mode}: $(OBJ_{prog.upper()}_{mode.upper()})")
                 f.write("\n")
                 f.write(f"\t$(CXX_{cxx.upper()}) -o $@ $^ {lib}")
                 f.write("\n")
