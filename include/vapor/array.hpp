@@ -312,7 +312,22 @@ struct array_t
         else 
             return *this;
     }
-
+    /**
+     * Set an array element procedurally, if this is a memory backed array
+     * 
+     * Behavior of this function is undefined if the array is not memory
+     * backed. Use of this function is not encouraged, which is why the
+     * method name starts with an underscore. Only use this function if the
+     * buffer has a use count of one, otherwise there are no guarantees
+     * against race conditions.
+     */
+    void _set(ivec_t<D> index, value_type value)
+    {
+        #ifdef VAPOR_ARRAY_BOUNDS_CHECK
+        assert(data());
+        #endif
+        data()[dot(strides_row_major(shape()), index - start())] = value;
+    }
     template<class G> auto map(G g) const { return array(compose<D>(f, g), space()); }
     template<class G> auto add(array_t<D, G> b) const { return insert(extract(b.space()) + b); }
     template<class G> auto sub(array_t<D, G> b) const { return insert(extract(b.space()) - b); }
