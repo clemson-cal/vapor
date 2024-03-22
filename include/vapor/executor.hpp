@@ -195,8 +195,10 @@ struct omp_executor_t
         auto c = int();
         auto g = [function, &c] (ivec_t<D> i)
         {
-            #pragma omp atomic update
-            c += function(i);
+            if (auto res = function(i)) {
+                #pragma omp atomic update
+                c += function(i);
+            }
         };
         loop(space, g);
         return future::just(c);
