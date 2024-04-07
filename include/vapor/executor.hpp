@@ -344,7 +344,9 @@ struct gpu_executor_t
         for (int device = 0; device < _num_devices; ++device)
         {
             auto subspace = space.subspace(_num_devices, device);
-            loop_async(subspace, device, function);
+            if (! subspace.empty()) {
+                loop_async(subspace, device, function);
+            }
         }
         for (int device = 0; device < _num_devices; ++device)
         {
