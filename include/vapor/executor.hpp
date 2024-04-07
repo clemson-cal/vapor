@@ -234,29 +234,33 @@ __global__ static void gpu_loop(index_space_t<D> space, F function)
 {
     if constexpr (D == 1)
     {
-        int i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
-        if (i >= space.i0[0] + space.di[0]) return;
-        function(vec(i));
+        auto i = ivec(
+            space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x
+        );
+        if (space.contains(i)) {
+            function(i);
+        }
     }
-
     if constexpr (D == 2)
     {
-        int i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
-        int j = space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y;
-        if (i >= space.i0[0] + space.di[0]) return;
-        if (j >= space.i0[1] + space.di[1]) return;
-        function(vec(i, j));
+        auto i = ivec(
+            space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x,
+            space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y
+        );
+        if (space.contains(i)) {
+            function(i);
+        }
     }
-
     if constexpr (D == 3)
     {
-        int i = space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x;
-        int j = space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y;
-        int k = space.i0[2] + threadIdx.z + blockIdx.z * blockDim.z;
-        if (i >= space.i0[0] + space.di[0]) return;
-        if (j >= space.i0[1] + space.di[1]) return;
-        if (k >= space.i0[2] + space.di[2]) return;
-        function(vec(i, j, k));
+        auto i = ivec(
+            space.i0[0] + threadIdx.x + blockIdx.x * blockDim.x,
+            space.i0[1] + threadIdx.y + blockIdx.y * blockDim.y,
+            space.i0[2] + threadIdx.z + blockIdx.z * blockDim.z
+        );
+        if (space.contains(i)) {
+            function(i);
+        }
     }
 }
 
