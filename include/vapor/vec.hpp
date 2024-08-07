@@ -200,6 +200,10 @@ template<typename T, typename U, uint S> HD auto operator+(const vec_t<T, S>& x,
 template<typename T, typename U, uint S> HD auto operator-(const vec_t<T, S>& x, U b) { vec_t<decltype(T() - U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] - b; return r; }
 template<typename T, typename U, uint S> HD auto operator*(const vec_t<T, S>& x, U b) { vec_t<decltype(T() * U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] * b; return r; }
 template<typename T, typename U, uint S> HD auto operator/(const vec_t<T, S>& x, U b) { vec_t<decltype(T() / U()), S> r; for (uint m = 0; m < S; ++m) r[m] = x[m] / b; return r; }
+template<typename T, typename U, uint S> HD auto operator+(U b, const vec_t<T, S>& x) { vec_t<decltype(U() + T()), S> r; for (uint m = 0; m < S; ++m) r[m] = b + x[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator-(U b, const vec_t<T, S>& x) { vec_t<decltype(U() - T()), S> r; for (uint m = 0; m < S; ++m) r[m] = b - x[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator*(U b, const vec_t<T, S>& x) { vec_t<decltype(U() * T()), S> r; for (uint m = 0; m < S; ++m) r[m] = b * x[m]; return r; }
+template<typename T, typename U, uint S> HD auto operator/(U b, const vec_t<T, S>& x) { vec_t<decltype(U() / T()), S> r; for (uint m = 0; m < S; ++m) r[m] = b / x[m]; return r; }
 template<typename T, typename U, uint S> HD auto& operator+=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] += y[m]; } return x; }
 template<typename T, typename U, uint S> HD auto& operator-=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] -= y[m]; } return x; }
 template<typename T, typename U, uint S> HD auto& operator*=(vec_t<T, S>& x, const vec_t<U, S>& y) { for (uint m = 0; m < S; ++m) { x[m] *= y[m]; } return x; }
