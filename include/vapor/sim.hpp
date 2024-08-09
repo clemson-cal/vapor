@@ -571,6 +571,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
 
         vapor::print(sim.status_message(state, secs));
         vapor::print("\n");
+        fflush(stdout);
     }
     timeseries(state);
     checkpoint(state);
