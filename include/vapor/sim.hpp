@@ -441,7 +441,7 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
         if (strcmp(argv[n], "-h") == 0 || strcmp(argv[n], "--help") == 0)
         {
             if (auto name = sim.name())
-                printf("usage: %s [restart.h5] [key=val...]\n", name);
+                printf("usage: %s [restart.h5] [input.cfg...] [key=val...]\n", name);
             if (auto author = sim.author())
                 printf("author: %s\n", author);
             if (auto description = sim.description())
@@ -561,8 +561,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
     while (sim.should_continue(state))
     {
         timeseries(state);
-        checkpoint(state);
         product(state);
+        checkpoint(state);
 
         auto secs = time_call(sim.updates_per_batch(), [&sim, &state]
         {
@@ -574,8 +574,8 @@ int vapor::run(int argc, const char **argv, Simulation<Config, State, Product>& 
         fflush(stdout);
     }
     timeseries(state);
-    checkpoint(state);
     product(state);
+    checkpoint(state);
 
     return 0;
 }
