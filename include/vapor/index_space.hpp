@@ -285,7 +285,7 @@ struct index_space_t
  * 
  */
 template<uint D>
-auto index_space(uvec_t<D> di)
+HD auto index_space(uvec_t<D> di)
 {
     return index_space_t<D>{zeros_ivec<D>(), di};
 }
@@ -298,7 +298,7 @@ auto index_space(uvec_t<D> di)
  * 
  */
 template<uint D>
-auto index_space(ivec_t<D> i0, uvec_t<D> di)
+HD auto index_space(ivec_t<D> i0, uvec_t<D> di)
 {
     return index_space_t<D>{i0, di};
 }

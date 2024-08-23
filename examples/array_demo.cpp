@@ -117,7 +117,7 @@ void map_subset()
     auto b = a.at(first_two).map([] HD (int i) { return 0; });
     auto c = a.at(first_two) * 0; // equivalent to b above
     auto d = a.at(first_two).set(0); // also equivalent
-    auto e = a.add(indices(first_two).map([] (ivec_t<1>) { return 1; }));
+    auto e = a.add(indices(first_two).map([] HD (ivec_t<1>) { return 1; }));
     for (int i = 0; i < N; ++i)
     {
         printf("[%u]: %u=%u=%u=%u\n", i, b[i], i < 2 ? 0 : i, c[i], d[i]);

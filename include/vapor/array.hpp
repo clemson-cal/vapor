@@ -255,19 +255,19 @@ struct array_t
     {
         return this->operator[](subspace);
     }
-    ivec_t<D> start() const
+    HD ivec_t<D> start() const
     {
         return _start;
     }
-    uvec_t<D> shape() const
+    HD uvec_t<D> shape() const
     {
         return _shape;
     }
-    index_space_t<D> space() const
+    HD index_space_t<D> space() const
     {
         return index_space(start(), shape());
     }
-    uint size() const
+    HD uint size() const
     {
         return product(_shape);
     }
