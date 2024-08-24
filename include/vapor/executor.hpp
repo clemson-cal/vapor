@@ -401,6 +401,7 @@ struct gpu_executor_t
     {
         auto c_buf = allocator.allocate(sizeof(int));
         auto c_ptr = c_buf->template data<int>();
+        *c_ptr = 0;
         auto g = [function, c_ptr] HD (ivec_t<D> i)
         {
             if (auto res = function(i)) {
