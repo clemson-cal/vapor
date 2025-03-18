@@ -474,6 +474,16 @@ auto ones(index_space_t<D> space)
     return uniform<T, D>(T(1), space);
 }
 
+
+/**
+ * Lift a scalar into a D-dimensional array of shape [1,...,1].
+ */
+template<typename T, uint D>
+auto just(T val)
+{
+    return uniform<T, D>(val, ones_uvec<D>());
+}
+
 /**
  * An nd array of vector-valued indices (identity array)
  */
