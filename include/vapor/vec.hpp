@@ -60,6 +60,10 @@ struct vec_t
     {
         return data;
     }
+    HD uint size()
+    {
+        return S;
+    }
     T data[S] = {{}};
 };
 
@@ -182,13 +186,32 @@ HD auto uniform_vec(T val)
     }
     return res;
 }
+template<uint S, typename T = double, typename = std::enable_if_t<(S > 1)>>
+HD auto linspace_vec(T start, T end) -> vec_t<T, S> {
+    auto r = vec_t<T, S>{};
+    T step = (end - start) / T(S - 1);
+    for (uint i = 0; i < S; ++i) {
+        r[i] = start + step * T(i);
+    }
+    return r;
+}
+template<typename T, uint S, typename = std::enable_if_t<(S > 1)>>
+HD auto midpoint_vec(const vec_t<T, S>& v) -> vec_t<T, S - 1>
+{
+    auto r = vec_t<T, S - 1>{};
+    for (uint i = 0; i < S - 1; ++i)
+    {
+        r[i] = (v[i] + v[i + 1]) / T(2);
+    }
+    return r;
+}
 
 
 
 
 /**
  * Arithmetic operators, between vec and vec, and between vec and scalar
- * 
+ *
  */
 template<typename T, uint S> HD auto operator+(const vec_t<T, S>& x) { vec_t<T, S> r; for (uint m = 0; m < S; ++m) r[m] = +x[m]; return r; }
 template<typename T, uint S> HD auto operator-(const vec_t<T, S>& x) { vec_t<T, S> r; for (uint m = 0; m < S; ++m) r[m] = -x[m]; return r; }
