@@ -62,6 +62,15 @@ struct matrix_t
     }
     T data[M][N] = {{{}}};
 };
+template<typename T, uint M>
+HD auto identity_mat()
+{
+    matrix_t<T, M, M> result;
+    for (uint i = 0; i < M; ++i)
+        for (uint j = 0; j < M; ++j)
+            result(i, j) = (i == j) ? T(1) : T(0);
+    return result;
+}
 
 template<typename T, typename U, uint M, uint N>
 HD auto operator*(const matrix_t<T, M, N>& a, U x)
@@ -109,126 +118,52 @@ HD auto matmul(const matrix_t<T, M, N> &a, const vec_t<U, N> &b)
 
 
 
-/**
- * Calculate the inverse of a square matrix
- *
- * This implementation is intended to be pedagogical, or for testing. It might
- * not be performant or accurate enough for production settings.
- *
- * Based on an algorithm described here:
- * 
- * http://en.wikipedia.org/wiki/LU_decomposition
- *
- * adapted from C++ code by Mike Dinolfo.
- */
-template<typename T, uint M>
-HD auto inverse(const matrix_t<T, M, M> &a)
-{
-    static const double eps = 1e-12;
-    auto b = matrix_t<T, M, M>{};
+template<typename T, uint N>
+HD auto inverse(const matrix_t<T, N, N>& A) -> matrix_t<T, N, N> {
+    matrix_t<T, N, N> a = A;
+    matrix_t<T, N, N> inv = identity_mat<T, N>();
 
-    if constexpr (M == 1) {
-        b(0, 0) = 1.0 / a(0, 0);
+    for (uint i = 0; i < N; ++i) {
+        // Find pivot
+        uint pivot = i;
+        T max_val = std::abs(a(i, i));
+        for (uint j = i + 1; j < N; ++j) {
+            if (std::abs(a(j, i)) > max_val) {
+                max_val = std::abs(a(j, i));
+                pivot = j;
+            }
+        }
+        if (max_val == T(0)) {
+            #ifdef __CUDA_ARCH__
+            return identity_mat<T, N>();
+            #else
+            throw std::runtime_error("Matrix is singular and cannot be inverted.");
+            #endif
+        }
+        // Swap rows if needed
+        if (pivot != i) {
+            for (uint k = 0; k < N; ++k) {
+                std::swap(a(i, k), a(pivot, k));
+                std::swap(inv(i, k), inv(pivot, k));
+            }
+        }
+        // Normalize pivot row
+        T diag = a(i, i);
+        for (uint k = 0; k < N; ++k) {
+            a(i, k) /= diag;
+            inv(i, k) /= diag;
+        }
+        // Eliminate other rows
+        for (uint j = 0; j < N; ++j) {
+            if (j == i) continue;
+            T factor = a(j, i);
+            for (uint k = 0; k < N; ++k) {
+                a(j, k) -= factor * a(i, k);
+                inv(j, k) -= factor * inv(i, k);
+            }
+        }
     }
-    else if constexpr (M == 2) {
-        auto d = a(0, 0) * a(1, 1) - a(1, 0) * a(0, 1);
-        b(0, 0) =  a(1, 1) / d;
-        b(1, 1) =  a(0, 0) / d;
-        b(0, 1) = -a(0, 1) / d;
-        b(1, 0) = -a(1, 0) / d;
-        return b;
-    }
-    else {
-        b = a; // copy the input matrix to output matrix
-
-        for (uint i = 0; i < M; ++i)
-        {
-            if (b(i, i) < eps && b(i, i) > -eps)
-            {
-                b(i, i) = eps; // add eps value to diagonal if diagonal is zero
-            }
-        }
-        for (uint i = 1; i < M; ++i)
-        {
-            b(i, 0) /= b(0, 0); // normalize row 0
-        }
-        for (uint i = 1; i < M; ++i)
-        {
-            for (uint j = i; j < M; ++j)
-            {
-                auto sum = 0.0;
-                for (uint k = 0; k < i; ++k)
-                {
-                    sum += b(j, k) * b(k, i); // do a column of L
-                }
-                b(j, i) -= sum;
-            }
-            if (i == M - 1)
-            {
-                continue;
-            }
-            for (uint j = i + 1; j < M; ++j)
-            {
-                auto sum = 0.0;
-                for (uint k = 0; k < i; ++k)
-                {
-                    sum += b(i, k) * b(k, j);
-                }
-                b(i, j) = (b(i, j) - sum) / b(i, i); // do a row of U
-            }
-        }
-        auto d = 1.0; // compute the determinant, product of diag(U)
-
-        for (uint i = 0; i < M; ++i)
-        {
-            d *= b(i, i);
-        }
-        for (uint i = 0; i < M; ++i)
-        {
-            for (uint j = i; j < M; ++j)
-            {
-                auto x = 1.0;
-                if (i != j)
-                {
-                    x = 0.0;
-                    for (uint k = i; k < j; ++k)
-                    {
-                        x -= b(j, k) * b(k, i);
-                    }
-                }
-                b(j, i) = x / b(j, j); // invert L
-            }
-        }
-        for (uint i = 0; i < M; ++i)
-        {
-            for (uint j = i; j < M; ++j)
-            {
-                auto sum = 0.0;
-                if (i == j)
-                {
-                    continue;
-                }
-                for (uint k = i; k < j; ++k)
-                {
-                    sum += b(k, j) * (i == k ? 1.0 : b(i, k));
-                }
-                b(i, j) = -sum; // invert U
-            }
-        }
-        for (uint i = 0; i < M; ++i)
-        {
-            for (uint j = 0; j < M; ++j)
-            {
-                auto sum = 0.0;
-                for (uint k = i > j ? i : j; k < M; ++k)
-                {
-                    sum += (j == k ? 1.0 : b(j, k)) * b(k, i);
-                }
-                b(j, i) = sum; // final inversion
-            }
-        }
-        return b;
-    }
+    return inv;
 }
 
 } // namespace vapor
