@@ -38,6 +38,7 @@ SOFTWARE.
 #include <cstdio>
 #include "array.hpp"
 #include "vec.hpp"
+#include "mat.hpp"
 #include "visit_struct/visit_struct.hpp"
 
 namespace vapor {
@@ -48,7 +49,7 @@ namespace vapor {
 /**
  * Convenience for using snprintf to write into a stack-alloc'd vec of char.
  *
- * This function name is not as good as 'message', 
+ * This function name is not as good as 'message',
  */
 template<unsigned int S=256, typename... Args>
 auto format(const char* format, Args... args)
@@ -63,7 +64,7 @@ auto format(const char* format, Args... args)
 
 /**
  * Print functions for native types
- * 
+ *
  */
 static inline void print(const char *s, FILE* file=stdout)
 {
@@ -99,7 +100,7 @@ static inline void print(bool b, FILE* file=stdout)
 
 /**
  * Print function for std::string (opt-in)
- * 
+ *
  */
 #ifdef VAPOR_STD_STRING
 static inline void print(const std::string& s, FILE* file=stdout)
@@ -113,7 +114,7 @@ static inline void print(const std::string& s, FILE* file=stdout)
 
 /**
  * Print function for std::vector<T> (opt-in)
- * 
+ *
  */
 #ifdef VAPOR_STD_VECTOR
 template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
@@ -131,7 +132,7 @@ template<typename T> void print(const std::vector<T>& v, FILE* file=stdout)
 
 /**
  * Print function for std::map<T, U> (opt-in)
- * 
+ *
  */
 #ifdef VAPOR_STD_MAP
 template<typename T, typename U> void print(const std::map<T, U>& d, FILE* file=stdout)
@@ -184,6 +185,20 @@ template<uint D> void print(const index_space_t<D>& space, FILE* file=stdout)
     print("shape: ", file);
     print(space.di, file);
 }
+template<typename T, uint R, uint C> void print(const matrix_t<T, R, C>& m, FILE* file=stdout)
+{
+    for (uint i = 0; i < R; ++i)
+    {
+        print("[", file);
+        for (uint j = 0; j < C; ++j)
+        {
+            print(m(i, j), file);
+            if (j != C - 1) print(" ", file);
+        }
+        print("]", file);
+        if (i != R - 1) print("\n", file);
+    }
+}
 template<uint D, typename T> void print(const array_t<D, T>& v, FILE* file=stdout)
 {
     print("array(", file);
@@ -200,7 +215,7 @@ template<uint D, typename T> void print(const array_t<D, T>& v, FILE* file=stdou
 
 /**
  * Print functions for visitable type
- * 
+ *
  */
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
 void print(const T& target, FILE* file=stdout)
