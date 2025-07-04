@@ -24,7 +24,7 @@ auto del_squared_u = i[s.contract(1)].map([u, h] HD (vec_t<int, 2> ij) {
 });
 auto dt = h * 0.1;
 auto du = del_squared_u * dt;
-auto u_next = u.add(du).cache();
+auto u_next = (u + du).cache();
 ```
 This code is "deploy-anywhere", in the sense that it can be compiled for execution
 on a CPU or a GPU, if one is available. Vapor will take advantage of as many CPU

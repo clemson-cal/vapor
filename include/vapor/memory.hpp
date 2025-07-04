@@ -258,7 +258,7 @@ private:
  * adds a use count to an otherwise raw pointer value.
  *
  * Reference counting is disabled in device code, since each GPU thread would
- * otherwise try to upate the use count. It is consistent with required
+ * otherwise try to update the use count. It is consistent with required
  * behavior, since arrays are only allocated or freed in host code anyway.
  */
 template<class T>
@@ -398,8 +398,8 @@ private:
  *
  * The allocations returned are thread-safe, and can safely outlive this
  * allocator, however they cannot be used in device code, and should not be
- * used in performance-critical code, as repeated calls to system malloc/free
- * will be incurred than with the pool allocator.
+ * used in performance-critical code, as more repeated calls to system
+ * malloc/free will be incurred than with the pool allocator.
  *
  */
 class shared_ptr_allocator_t
