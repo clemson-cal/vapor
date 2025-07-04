@@ -112,16 +112,5 @@ auto legendre() -> vec_t<T, N + 1> {
     }
 }
 
-template<typename T, uint S>
-void print(const vec_t<T, S>& p) {
-    printf("poly: ");
-    for (uint i = 0; i < S; ++i) {
-        if (i > 0) printf(" + ");
-        printf("%g", double(p[i]));
-        if (i > 0) printf("*x^%u", i);
-    }
-    printf("\n");
-}
-
 } // namespace poly
 } // namespace vapor
