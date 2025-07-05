@@ -37,7 +37,7 @@ namespace poly {
 
 template<typename T, typename U, uint S, typename V = decltype(T() * U())>
 auto eval(const vec_t<T, S>& p, U x) -> V {
-    auto r = V(0);
+    auto r = V{};
     for (int i = S - 1; i >= 0; --i) {
         r *= x;
         r += p[i];

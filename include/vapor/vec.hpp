@@ -262,13 +262,50 @@ HD auto operator!=(const vec_t<T, S>& x, const vec_t<U, S>& y)
     return false;
 }
 
+template<typename T, uint S>
+HD uint argmin(const vec_t<T, S>& v)
+{
+    uint idx = 0;
+    T m = v[0];
+    for (uint i = 1; i < S; ++i)
+    {
+        if (v[i] < m)
+        {
+            m = v[i];
+            idx = i;
+        }
+    }
+    return idx;
+}
 
+template<typename T, uint S>
+HD uint argmax(const vec_t<T, S>& v)
+{
+    uint idx = 0;
+    T m = v[0];
+    for (uint i = 1; i < S; ++i)
+    {
+        if (v[i] > m)
+        {
+            m = v[i];
+            idx = i;
+        }
+    }
+    return idx;
+}
 
+template<typename T, uint S>
+HD T min(const vec_t<T, S>& v)
+{
+    return v[argmin(v)];
+}
 
-/**
- * Return the dot product of two vec's
- *
- */
+template<typename T, uint S>
+HD T max(const vec_t<T, S>& v)
+{
+    return v[argmax(v)];
+}
+
 template<typename A, typename B, uint S, typename C = decltype(A() * B())>
 HD auto dot(vec_t<A, S> a, vec_t<B, S> b) -> C
 {
