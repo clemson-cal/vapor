@@ -107,11 +107,22 @@ HD auto matmul(const matrix_t<T, M, K> &a, const matrix_t<U, K, N> &b)
 template<typename T, typename U, uint M, uint N>
 HD auto matmul(const matrix_t<T, M, N> &a, const vec_t<U, N> &b)
 {
-    vec_t<decltype(T() * U()), N> c;
+    vec_t<decltype(T() * U()), M> c;
 
     for (uint i = 0; i < M; ++i)
         for (uint j = 0; j < N; ++j)
             c[i] += a(i, j) * b[j];
+    return c;
+}
+
+template<typename T, typename U, uint M, uint N>
+HD auto matmul(const vec_t<T, M> &a, const matrix_t<U, M, N> &b)
+{
+    vec_t<decltype(T() * U()), N> c = {};
+
+    for (uint j = 0; j < N; ++j)
+        for (uint i = 0; i < M; ++i)
+            c[j] += a[i] * b(i, j);
     return c;
 }
 
