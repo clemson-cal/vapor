@@ -52,7 +52,7 @@ template<uint D, typename T> auto uniform(T val, index_space_t<D> space);
 
 /**
  * An exception class indicating that an array of optionals contained a none
- * 
+ *
  */
 class cache_unwrap_exception : public std::exception
 {
@@ -76,7 +76,7 @@ private:
 
 
 /**
- * 
+ *
  */
 template<uint D, typename T, class B>
 struct lookup_t
@@ -208,7 +208,7 @@ auto cache_unwrap(const array_t<D, F>& a)
  * the same index space as a. Array elements are computed lazily, meaning that
  * b = a.map(f).map(g).map(h) triggers the execution h(g(f(i)) each time b[i]
  * appears.
- * 
+ *
  * An array is 'cached' to a memory-backed array by calling a.cache(exec,
  * alloc), where exec is an executor and alloc is an allocator. The executor
  * can be a GPU executor on GPU-enabled platforms, or a multi-core executor
@@ -228,7 +228,7 @@ auto cache_unwrap(const array_t<D, F>& a)
  * elements inside the index space through the function f, leaving the other
  * values unchanged.
  *
- * 
+ *
  */
 template<uint D, class F>
 struct array_t
@@ -309,12 +309,12 @@ struct array_t
     {
         if constexpr (C)
             return vapor::cache(*this);
-        else 
+        else
             return *this;
     }
     /**
      * Set an array element procedurally, if this is a memory backed array
-     * 
+     *
      * Behavior of this function is undefined if the array is not memory
      * backed. Use of this function is not encouraged, which is why the
      * method name starts with an underscore. Only use this function if the
@@ -367,15 +367,15 @@ struct array_t
  * An array selection is what is returned by a.at(subspace)
  *
  * The resulting object can be mapped over; the arrays
- * 
+ *
  * a.insert(a[subspace].map(f))
- * 
+ *
  * and
- * 
+ *
  * a.at(subspace).map(f)
  *
  * are fully equivalent to one another.
- * 
+ *
  */
 template<uint D, class F>
 struct array_selection_t
@@ -518,7 +518,7 @@ inline auto range(int i0, int i1)
 }
 
 /**
- * 
+ *
  */
 template<class E, class F, class G, uint D>
 auto select(array_t<D, E> c, array_t<D, F> a, array_t<D, G> b)
@@ -571,6 +571,8 @@ T reduce(const array_t<D, F>& a, R reducer, T start, E& executor, A& allocator)
     }
     return result;
 }
+
+
 
 
 

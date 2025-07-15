@@ -36,7 +36,7 @@ namespace vapor {
 
 /**
  * A singleton instance providing a default executor and allocator
- * 
+ *
  */
 class Runtime
 {

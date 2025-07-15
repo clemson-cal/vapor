@@ -61,7 +61,7 @@ namespace vapor {
  * An RAII read-write block of host, device, or managed memory
  *
  * On non-CUDA platforms the memory is ordinary CPU memory
- * 
+ *
  */
 class buffer_t
 {
@@ -94,11 +94,11 @@ public:
     }
     /**
      * Allocate or re-allocate this buffer
-     * 
+     *
      * The device argument is used to indicate whether the buffer is to be
      * managed (device = -1, the default) or explicitly allocated on a
      * device.
-     * 
+     *
      */
     void allocate(size_t bytes, int device=-1)
     {
@@ -142,16 +142,16 @@ public:
     }
     /**
      * Read a value of a concrete type from the buffer
-     * 
+     *
      * Important: this function is blocking when the buffer is explicitly
      * allocated on a device, as it calls the cudaMemcpy, which waits for
      * the completion of kernel launches on the current stream.
-     * 
+     *
      * When the buffer is managed, this function directly dereferencing a
      * pointer, and returns immediately. When the buffer is managed, it is
      * therefore the responsibility of calling code to ensure the completion
      * of any preceding kernel launch which could write to the memory.
-     * 
+     *
      * The reason this function works this way, is that if the buffer is
      * managed, multiple devices could have in-flight kernels writing to this
      * memory, so it's not clear which subset of the devices might need to be
