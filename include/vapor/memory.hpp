@@ -102,7 +102,7 @@ public:
      */
     void allocate(size_t bytes, int device=-1)
     {
-        if (bytes > _bytes || device != _device) {
+        if (bytes != _bytes || device != _device) {
             release();
             _bytes = bytes;
             _device = device;
