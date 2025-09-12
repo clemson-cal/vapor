@@ -27,7 +27,6 @@ SOFTWARE.
 
 #pragma once
 #include <type_traits>
-#include <cmath>
 #include "compat.hpp"
 
 namespace vapor {
@@ -378,6 +377,25 @@ HD auto append(vec_t<T, S> t, T val) -> vec_t<T, S + 1>
     }
     res[S] = val;
     return res;
+}
+
+/**
+ * Concatenate two vectors into a single vector.
+ */
+template<typename T, uint S1, uint S2>
+HD auto concat(const vec_t<T, S1>& v1, const vec_t<T, S2>& v2) -> vec_t<T, S1 + S2>
+{
+    auto result = vec_t<T, S1 + S2>{};
+
+    for (uint i = 0; i < S1; ++i)
+    {
+        result[i] = v1[i];
+    }
+    for (uint i = 0; i < S2; ++i)
+    {
+        result[S1 + i] = v2[i];
+    }
+    return result;
 }
 
 /**
