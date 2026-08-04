@@ -363,27 +363,31 @@ public:
             use_counts[n] = 0;
         }
     }
-    allocation_t allocate(size_t bytes, int device=-1) const // First tentative change, could probably be done better
+    allocation_t allocate(size_t bytes, int device=-1) const
     {
-        // Pass 1: prefer a free slot that's already the exact size — guaranteed no-op inside buffer_t::allocate
+        long fallback = -1;
+
         for (size_t n = 0; n < num_allocations; ++n)
         {
-            if (use_counts[n] == 0 && allocations[n].bytes() == bytes && allocations[n].device() == device)
+            bool free = use_counts[n] == 0 && (allocations[n].bytes() == 0 || allocations[n].device() == device);
+
+            if (free && allocations[n].bytes() == bytes)
             {
+                // Perfect fit — take it immediately, no need to look further.
                 allocations[n].allocate(bytes, device);
                 return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);
             }
-        }
-        // Pass 2: fall back to the original behavior — any free slot, possibly forcing a real realloc
-        for (size_t n = 0; n < num_allocations; ++n)
-        {
-            if (use_counts[n] == 0 && (allocations[n].bytes() == 0 || allocations[n].device() == device))
+            if (free && fallback == -1)
             {
-                allocations[n].allocate(bytes, device);
-                return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);
+                // Not a perfect fit, but usable — remember it only if we haven't already got a backup.
+                fallback = n;
             }
         }
-        assert(false); // the pool is out of allocations
+
+        // Never found a perfect fit — use the backup (this is the only case that pays the real allocation cost).
+        assert(fallback != -1); // the pool is out of allocations
+        allocations[fallback].allocate(bytes, device);
+        return ref_counted_ptr_t<buffer_t>(&allocations[fallback], &use_counts[fallback]);
     }
     ~pool_allocator_t()
     {
