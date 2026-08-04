@@ -363,8 +363,18 @@ public:
             use_counts[n] = 0;
         }
     }
-    allocation_t allocate(size_t bytes, int device=-1) const
+    allocation_t allocate(size_t bytes, int device=-1) const // First tentative change, could probably be done better
     {
+        // Pass 1: prefer a free slot that's already the exact size — guaranteed no-op inside buffer_t::allocate
+        for (size_t n = 0; n < num_allocations; ++n)
+        {
+            if (use_counts[n] == 0 && allocations[n].bytes() == bytes && allocations[n].device() == device)
+            {
+                allocations[n].allocate(bytes, device);
+                return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);
+            }
+        }
+        // Pass 2: fall back to the original behavior — any free slot, possibly forcing a real realloc
         for (size_t n = 0; n < num_allocations; ++n)
         {
             if (use_counts[n] == 0 && (allocations[n].bytes() == 0 || allocations[n].device() == device))
