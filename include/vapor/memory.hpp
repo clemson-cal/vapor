@@ -365,15 +365,29 @@ public:
     }
     allocation_t allocate(size_t bytes, int device=-1) const
     {
+        size_t fallback = num_allocations; // sentinel: no eligible slot found yet
+
         for (size_t n = 0; n < num_allocations; ++n)
         {
-            if (use_counts[n] == 0 && (allocations[n].bytes() == 0 || allocations[n].device() == device))
+            bool free = use_counts[n] == 0 && (allocations[n].bytes() == 0 || allocations[n].device() == device);
+
+            if (free && allocations[n].bytes() == bytes)
             {
+                // Perfect fit — take it immediately, no need to look further.
                 allocations[n].allocate(bytes, device);
                 return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);
             }
+            if (free && fallback == num_allocations)
+            {
+                // Not a perfect fit, but usable — remember it only if we haven't already got a backup.
+                fallback = n;
+            }
         }
-        assert(false); // the pool is out of allocations
+
+        // Never found a perfect fit — use the backup (this is the only case that pays the real allocation cost).
+        assert(fallback != num_allocations); // the pool is out of allocations
+        allocations[fallback].allocate(bytes, device);
+        return ref_counted_ptr_t<buffer_t>(&allocations[fallback], &use_counts[fallback]);
     }
     ~pool_allocator_t()
     {
