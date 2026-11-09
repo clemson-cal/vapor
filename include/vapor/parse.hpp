@@ -336,10 +336,10 @@ static inline void scan(const char* str, uint size, std::string& val)
 template<typename T, typename = std::enable_if_t<visit_struct::traits::is_visitable<T>::value>>
 void set_from_key_vals(T& target, const char *str)
 {
-    auto found = false;
-
-    scan_key_val(str, '\n', [&target, &found] (const char* l, size_t nl, const char* r, size_t nr)
+    scan_key_val(str, '\n', [&target] (const char* l, size_t nl, const char* r, size_t nr)
     {
+        auto found = false;
+        
         visit_struct::for_each(target, [l, nl, r, nr, &found] (auto key, auto& val)
         {
             auto size = nl > strlen(key) ? nl : strlen(key);
