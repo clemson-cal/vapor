@@ -365,7 +365,8 @@ public:
     }
     allocation_t allocate(size_t bytes, int device=-1) const
     {
-        size_t fallback = num_allocations; // sentinel: no eligible slot found yet
+        size_t unused = num_allocations;    // first free slot that has never held a buffer (sentinel: none yet)
+        size_t resizable = num_allocations; // first free slot holding a buffer of another size (sentinel: none yet)
 
         for (size_t n = 0; n < num_allocations; ++n)
         {
@@ -377,14 +378,20 @@ public:
                 allocations[n].allocate(bytes, device);
                 return ref_counted_ptr_t<buffer_t>(&allocations[n], &use_counts[n]);
             }
-            if (free && fallback == num_allocations)
+            if (free && allocations[n].bytes() == 0 && unused == num_allocations)
             {
-                // Not a perfect fit, but usable — remember it only if we haven't already got a backup.
-                fallback = n;
+                unused = n;
+            }
+            if (free && allocations[n].bytes() != 0 && resizable == num_allocations)
+            {
+                resizable = n;
             }
         }
 
-        // Never found a perfect fit — use the backup (this is the only case that pays the real allocation cost).
+        // Never found a perfect fit. Prefer an unused slot: resizing a used one frees a buffer whose size is
+        // usually requested again soon, so two sizes would keep trading places in one slot and every step would
+        // pay a free and a malloc (cudaFree/cudaMalloc on the GPU). Resize only when no unused slot is left.
+        size_t fallback = unused != num_allocations ? unused : resizable;
         assert(fallback != num_allocations); // the pool is out of allocations
         allocations[fallback].allocate(bytes, device);
         return ref_counted_ptr_t<buffer_t>(&allocations[fallback], &use_counts[fallback]);
