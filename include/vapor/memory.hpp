@@ -392,6 +392,17 @@ public:
         // usually requested again soon, so two sizes would keep trading places in one slot and every step would
         // pay a free and a malloc (cudaFree/cudaMalloc on the GPU). Resize only when no unused slot is left.
         size_t fallback = unused != num_allocations ? unused : resizable;
+        if (fallback == num_allocations)
+        {
+            for (size_t n = 0; n < num_allocations; ++n)
+            {
+                if (use_counts[n] == 0)
+                {
+                    fallback = n;
+                    break;
+                }
+            }
+        }
         assert(fallback != num_allocations); // the pool is out of allocations
         allocations[fallback].allocate(bytes, device);
         return ref_counted_ptr_t<buffer_t>(&allocations[fallback], &use_counts[fallback]);
